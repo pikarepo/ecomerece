@@ -6,9 +6,9 @@ import { HomeRepository } from './infrastructure/home.repository';
 import { HomeController } from './presentation/home.controller';
 
 export const createHomeModule = () => {
-    const homeRepo = new HomeRepository();
-    const homeAppSvc = new HomeAppService(homeRepo, eventBus, createImageStorageModule());
-    const homeController = new HomeController(homeAppSvc);
+  const homeRepo = new HomeRepository();
+  const homeAppSvc = new HomeAppService(homeRepo, eventBus, createImageStorageModule());
+  const homeController = new HomeController(homeAppSvc);
 
-    return { homeAppSvc, homeController };
+  return { homeAppSvc, homeController };
 };

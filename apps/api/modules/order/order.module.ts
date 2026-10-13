@@ -10,15 +10,18 @@ import { OrderRepository } from './infrastructure/order.repository';
 import { OrderController } from './presentation/order.controller';
 
 export function createOrder() {
-    const orderRepo = new OrderRepository();
-    const orderInternalService = new OrderInternalService(orderRepo);
-    const orderApplicationService = new OrderApplicationService(
-        orderRepo,
-        queryBus,
-        eventBus,
-        commandBus,
-    );
-    queryBus.register(EnsureActiveOrderGetByIdQuery, new EnsureActiveOrderGetByIdHandler(orderInternalService));
-    const orderController = new OrderController(orderApplicationService);
-    return { orderController };
+  const orderRepo = new OrderRepository();
+  const orderInternalService = new OrderInternalService(orderRepo);
+  const orderApplicationService = new OrderApplicationService(
+    orderRepo,
+    queryBus,
+    eventBus,
+    commandBus,
+  );
+  queryBus.register(
+    EnsureActiveOrderGetByIdQuery,
+    new EnsureActiveOrderGetByIdHandler(orderInternalService),
+  );
+  const orderController = new OrderController(orderApplicationService);
+  return { orderController };
 }

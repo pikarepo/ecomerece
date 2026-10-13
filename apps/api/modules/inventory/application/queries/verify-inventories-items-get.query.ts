@@ -4,29 +4,29 @@ import type { IQuery } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 
 export class VerifyInventoriesItemsGetQuery
-    implements
-        IQuery<{
-            validIds: Id[];
-            notFoundIds: Id[];
-            deletedIds: Id[];
-            availableStockIds: Id[];
-            buyableIds: Id[];
-            inventoriesReadModel: InventoryReadModel[];
-        }>
+  implements
+    IQuery<{
+      validIds: Id[];
+      notFoundIds: Id[];
+      deletedIds: Id[];
+      availableStockIds: Id[];
+      buyableIds: Id[];
+      inventoriesReadModel: InventoryReadModel[];
+    }>
 {
-    readonly __result?: {
-        validIds: Id[];
-        notFoundIds: Id[];
-        deletedIds: Id[];
-        availableStockIds: Id[];
-        buyableIds: Id[];
-        inventoriesReadModel: InventoryReadModel[];
-    };
-    readonly type = 'VerifyInventoriesItemsGetQuery';
-    public readonly payload: { inventoryItems: OrderItem[] };
+  readonly __result?: {
+    validIds: Id[];
+    notFoundIds: Id[];
+    deletedIds: Id[];
+    availableStockIds: Id[];
+    buyableIds: Id[];
+    inventoriesReadModel: InventoryReadModel[];
+  };
+  readonly type = 'VerifyInventoriesItemsGetQuery';
+  public readonly payload: { inventoryItems: OrderItem[] };
 
-    constructor(...args: unknown[]) {
-        const [payload] = args as [{ inventoryItems: OrderItem[] }];
-        this.payload = payload;
-    }
+  constructor(...args: unknown[]) {
+    const [payload] = args as [{ inventoryItems: OrderItem[] }];
+    this.payload = payload;
+  }
 }

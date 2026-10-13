@@ -6,4 +6,4 @@ export * from './product-discalimer.dto';
 export * from './product-image.dto';
 export * from './product-ingredients.dto';
 export * from './product-meta.dto';
-export * from './product-query.dto'
+export * from './product-query.dto';

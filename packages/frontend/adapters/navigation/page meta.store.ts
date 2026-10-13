@@ -1,15 +1,14 @@
 // page-meta.store.ts
 import { create } from 'zustand';
-import { BreadcrumbItem } from './navigation.types';
-
+import type { BreadcrumbItem } from './navigation.types';
 
 interface PageMetaState {
-    breadcrumbs: BreadcrumbItem[];
-    pageTitle: string;
-    pageSubtitle: string | null;
+  breadcrumbs: BreadcrumbItem[];
+  pageTitle: string;
+  pageSubtitle: string | null;
 
-    setPageMeta: (title: string, subtitle?: string | null, breadcrumbs?: BreadcrumbItem[]) => void;
-    resetPageMeta: () => void;
+  setPageMeta: (title: string, subtitle?: string | null, breadcrumbs?: BreadcrumbItem[]) => void;
+  resetPageMeta: () => void;
 }
 
 /**
@@ -20,12 +19,12 @@ interface PageMetaState {
  * re-render those unrelated pieces of UI too.
  */
 export const usePageMetaStore = create<PageMetaState>()((set) => ({
-    breadcrumbs: [],
-    pageTitle: '',
-    pageSubtitle: null,
+  breadcrumbs: [],
+  pageTitle: '',
+  pageSubtitle: null,
 
-    setPageMeta: (title, subtitle = null, breadcrumbs = []) =>
-        set({ pageTitle: title, pageSubtitle: subtitle, breadcrumbs }),
+  setPageMeta: (title, subtitle = null, breadcrumbs = []) =>
+    set({ pageTitle: title, pageSubtitle: subtitle, breadcrumbs }),
 
-    resetPageMeta: () => set({ breadcrumbs: [], pageTitle: '', pageSubtitle: null }),
+  resetPageMeta: () => set({ breadcrumbs: [], pageTitle: '', pageSubtitle: null }),
 }));

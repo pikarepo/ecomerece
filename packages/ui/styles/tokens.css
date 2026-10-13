@@ -1,0 +1,198 @@
+/* ============================================================
+   OS-Grade UI — Tokens (DESIGN.md §8 / Appendix C)
+   Single source of truth. No `dark:` variants anywhere in markup:
+   components bind to rgb(var(--token)) which swaps per theme.
+
+   v3.0 — this file is the THEME layer (colour channels, shadows for the
+   `system` skin, color-scheme) plus skin defaults. Skin files (§37) are
+   generated into /skins/<id>.css by packages/ui/scripts/build-skins.ts and
+   loaded AFTER this file, inside `@layer skins`.
+
+   The token block MUST live in `@layer theme` (declared by Tailwind's
+   `@import "tailwindcss"`). Skin selectors use `:where()` (specificity 0), so
+   they cannot out-rank these rules by specificity — they rely on the cascade
+   layer order: `theme < base < components < utilities < skins`. Left unlayered,
+   these variables form the implicit last layer and would beat every skin.
+   ============================================================ */
+
+@layer theme {
+  /* ─── LIGHT (default) ────────────────────────────────────────────────── */
+  :root {
+    color-scheme: light;
+
+    /* A0 (v3.1): the font stack lives HERE as a real variable, never only in a
+     css font-family shorthand — a missing var() makes the whole declaration
+     invalid at computed-value time and the browser falls back to its default. */
+    --font-ui:
+      -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto,
+      Inter, sans-serif;
+    --font-display: var(--font-ui);
+    --display-tracking: -0.02em;
+
+    /* Task 06 — cool slate ramp (OKLCH-derived, ~hue 255): one hue family
+       across neutrals so light/dark read as the same material, not two grays. */
+    --canvas: 241 245 249; /* #F1F5F9 */
+    --surface-1: 248 250 252; /* #F8FAFC */
+    --surface-2: 252 253 255; /* #FCFDFF */
+    --surface-3: 255 255 255; /* #FFFFFF */
+    --surface-4: 255 255 255; /* #FFFFFF — topmost layer only */
+
+    /* Glass material (§14.1) — frosted chrome surface. CONSUMED by the `glass`
+       skin via `rgb(var(--glass)/…)` (skins/glass.ts); no Tailwind utility maps
+       to it — the @theme `--color-glass` alias was removed in Task 02-B. */
+    --glass: 255 255 255;
+
+    --ink: 15 23 42; /* #0F172A */
+    --ink-2: 71 85 105; /* #475569 */
+    --ink-3: 91 100 112; /* #5B6470 — caption ink, ≥5.4:1 on canvas */
+    --ink-4: 148 163 184; /* #94A3B8 */
+
+    --line: 15 23 42; /* hairlines = ink at 5–15% */
+
+    --accent: 37 99 235; /* #2563EB — white ink = 5.2:1 */
+    --accent-ink: 255 255 255; /* white sits ON the accent fill */
+
+    --success: 21 128 61; /* #15803D */
+    --warning: 180 83 9; /* #B45309 */
+    --danger: 220 38 38; /* #DC2626 */
+    --info: 37 99 235; /* #2563EB */
+
+    --shadow-sm: 0 1px 2px rgb(15 18 26 / 0.06), 0 1px 3px rgb(15 18 26 / 0.04);
+    --shadow-md: 0 4px 14px rgb(15 18 26 / 0.08), 0 1px 3px rgb(15 18 26 / 0.05);
+    --shadow-lg: 0 16px 40px rgb(15 18 26 / 0.14), 0 2px 8px rgb(15 18 26 / 0.06);
+
+    /* ═══ Skin-engine defaults (§8, §42.1) — the `system` skin's geometry,
+     motion and scene. A generated skin file overrides these per mode. ═══ */
+    --r-chip: 8px;
+    --r-control: 14px;
+    --r-card: 20px;
+    --r-sheet: 28px;
+    --stroke: 1px;
+    --ease: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+    --dur: 200ms;
+    --dur-slow: 300ms;
+    --press-scale: 0.97;
+    --scene: rgb(var(--canvas));
+  }
+
+  /* Retired in v3.0 (Appendix E.4): the dark `--glass` blocks were removed.
+   Frosted chrome is now `mat-chrome`; the `glass` skin supplies blur values. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+
+      --canvas: 11 15 23; /* #0B0F17 */
+      --surface-1: 19 26 38; /* #131A26 */
+      --surface-2: 27 36 50; /* #1B2432 */
+      --surface-3: 37 48 65; /* #253041 */
+      --surface-4: 49 62 82; /* #313E52 */
+
+      --ink: 232 238 247; /* #E8EEF7 */
+      --ink-2: 169 181 198; /* #A9B5C6 */
+      /* Task 06: ink-3 carries captions and must clear 4.5:1 on the topmost
+       surface — #A0ABBD ≈ 4.66:1 on surface-4 (#313E52). */
+      --ink-3: 160 171 189; /* #A0ABBD */
+      --ink-4: 91 102 117; /* #5B6675 */
+
+      --line: 255 255 255;
+
+      --accent: 96 165 250; /* #60A5FA */
+      --accent-ink: 11 18 32; /* #0B1220 — DARK ink on the accent fill */
+
+      --success: 74 222 128; /* #4ADE80 */
+      --warning: 251 191 36; /* #FBBF24 */
+      --danger: 248 113 113; /* #F87171 */
+      --info: 96 165 250;
+
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+      --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
+      --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
+    }
+  }
+
+  /* ─── DARK (explicit override) — identical values ──────────────────────── */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --canvas: 11 15 23;
+    --surface-1: 19 26 38;
+    --surface-2: 27 36 50;
+    --surface-3: 37 48 65;
+    --surface-4: 49 62 82;
+
+    --ink: 232 238 247;
+    --ink-2: 169 181 198;
+    --ink-3: 160 171 189; /* #A0ABBD — 4.6:1 on surface-4 */
+    --ink-4: 91 102 117;
+
+    --line: 255 255 255;
+
+    --accent: 96 165 250;
+    --accent-ink: 11 18 32;
+
+    --success: 74 222 128;
+    --warning: 251 191 36;
+    --danger: 248 113 113;
+    --info: 96 165 250;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
+  }
+}
+
+/* ─── Base resets ──────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background: var(--scene); /* skins may paint a scene; system = canvas */
+    background-color: rgb(var(--canvas)); /* always a solid fallback (§41 V8) */
+    /* G8: `fixed` makes iOS Safari repaint/zoom the scene on every scroll —
+       skins' scene gradients must tile with the document instead. */
+    background-attachment: scroll;
+    color: rgb(var(--ink));
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background-color: rgb(var(--accent) / 0.25);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--line) / 0.18);
+    border-radius: 8px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--line) / 0.28);
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ─── Reduced motion ───────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must override author transitions for reduced motion */
+    transition-duration: 1ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must override author animations for reduced motion */
+    animation-duration: 1ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must stop looping for reduced motion */
+    animation-iteration-count: 1 !important;
+    /* biome-ignore lint/complexity/noImportantStyles: must stop smooth scroll for reduced motion */
+    scroll-behavior: auto !important;
+  }
+}

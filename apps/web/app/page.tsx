@@ -1,43 +1,16 @@
-import { HomeResponseReadModel } from '@ecomerece/shared';
-import HomeContent from './client/home/HomeContent';
+import Link from 'next/link';
 
-export const revalidate = process.env.NODE_ENV === 'development' ? false : 3600;
-
-const EMPTY_LAYOUT: HomeResponseReadModel = {
-  slides: [],
-  promos: [],
-  categories: [],
-  features: [],
-  productContainers: [],
-} as any;
-
-async function getHomeLayout(): Promise<HomeResponseReadModel> {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-  try {
-    const res = await fetch(`${baseUrl}/home`, {
-      ...(process.env.NODE_ENV === 'development'
-        ? { cache: 'no-store' }
-        : { next: { revalidate: 3600 } }),
-    });
-
-    if (!res.ok) {
-      return EMPTY_LAYOUT;
-    }
-
-    const payload = await res.json();
-    if (!payload.success) {
-      return EMPTY_LAYOUT;
-    }
-
-    return payload.data;
-  } catch {
-    return EMPTY_LAYOUT;
-  }
-}
-
-export default async function Home() {
-  const homeLayout = await getHomeLayout();
-
-  return <HomeContent initialData={homeLayout} />;
+export default function Home() {
+  return (
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-6">
+      <h1 className="text-3xl font-bold tracking-tight">Storefront</h1>
+      <p className="text-sm text-ink-2">Under construction.</p>
+      <Link
+        href="/design"
+        className="mat-primary inline-flex min-h-11 items-center gap-2 rounded-control px-5 text-sm font-semibold text-accent-ink transition-all duration-skin ease-skin active:scale-[var(--press-scale)]"
+      >
+        Design gallery →
+      </Link>
+    </main>
+  );
 }

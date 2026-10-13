@@ -5,20 +5,20 @@ import { AddressMapper } from '../infrastructure/address.mapper';
 import type { AddressRepository } from '../infrastructure/address.repository';
 
 export class AddressInternalService extends BaseService {
-    constructor(private readonly addressRepo: AddressRepository) {
-        super();
-    }
+  constructor(private readonly addressRepo: AddressRepository) {
+    super();
+  }
 
-    async ensureActiveAddressGetById(
-        addressId: Id,
-    ): Promise<{ address: AddressReadModel | null; active: boolean }> {
-        const address = await this.addressRepo.FindById(addressId);
-        if (!address) return { address: null, active: false };
+  async ensureActiveAddressGetById(
+    addressId: Id,
+  ): Promise<{ address: AddressReadModel | null; active: boolean }> {
+    const address = await this.addressRepo.FindById(addressId);
+    if (!address) return { address: null, active: false };
 
-        const AddressReadModel = AddressMapper.aggregateToReadModel(address);
+    const AddressReadModel = AddressMapper.aggregateToReadModel(address);
 
-        if (address.delete.isDeleted) return { address: AddressReadModel, active: false };
+    if (address.delete.isDeleted) return { address: AddressReadModel, active: false };
 
-        return { address: AddressReadModel, active: true };
-    }
+    return { address: AddressReadModel, active: true };
+  }
 }

@@ -2,76 +2,76 @@ import { BadRequestError } from '../../../apps/api/errors/app-error';
 import type { EnumVO } from './enum.vo';
 
 export class EnumCollectionVO<T extends string, E extends EnumVO<T>> {
-    private constructor(private readonly _values: readonly E[]) { }
+  private constructor(private readonly _values: readonly E[]) {}
 
-    static create<T extends string, E extends EnumVO<T>>(
-        values: readonly E[] = [],
-    ): EnumCollectionVO<T, E> {
-        const unique: E[] = [];
+  static create<T extends string, E extends EnumVO<T>>(
+    values: readonly E[] = [],
+  ): EnumCollectionVO<T, E> {
+    const unique: E[] = [];
 
-        for (const value of values) {
-            if (unique.some((v) => v.equals(value))) {
-                throw new BadRequestError(`'${value.value}' already exists in the collection.`);
-            }
+    for (const value of values) {
+      if (unique.some((v) => v.equals(value))) {
+        throw new BadRequestError(`'${value.value}' already exists in the collection.`);
+      }
 
-            unique.push(value);
-        }
-
-        return new EnumCollectionVO(Object.freeze(unique));
+      unique.push(value);
     }
 
-    static fromStrings<T extends string, E extends EnumVO<T>>(
-        values: readonly string[],
-        factory: (value: string) => E,
-    ): EnumCollectionVO<T, E> {
-        return EnumCollectionVO.create(values.map(factory));
+    return new EnumCollectionVO(Object.freeze(unique));
+  }
+
+  static fromStrings<T extends string, E extends EnumVO<T>>(
+    values: readonly string[],
+    factory: (value: string) => E,
+  ): EnumCollectionVO<T, E> {
+    return EnumCollectionVO.create(values.map(factory));
+  }
+
+  get value(): readonly E[] {
+    return this._values;
+  }
+
+  has(value: E): boolean {
+    return this._values.some((v) => v.equals(value));
+  }
+
+  add(value: E): EnumCollectionVO<T, E> {
+    if (this.has(value)) {
+      throw new BadRequestError(`'${value.value}' already exists in the collection.`);
     }
 
-    get value(): readonly E[] {
-        return this._values;
+    return EnumCollectionVO.create([...this._values, value]);
+  }
+
+  remove(value: E): EnumCollectionVO<T, E> {
+    return EnumCollectionVO.create(this._values.filter((v) => !v.equals(value)));
+  }
+
+  equals(other: EnumCollectionVO<T, E>): boolean {
+    if (this._values.length !== other._values.length) {
+      return false;
     }
 
-    has(value: E): boolean {
-        return this._values.some((v) => v.equals(value));
-    }
+    return this._values.every((value, index) => value.equals(other._values[index]));
+  }
 
-    add(value: E): EnumCollectionVO<T, E> {
-        if (this.has(value)) {
-            throw new BadRequestError(`'${value.value}' already exists in the collection.`);
-        }
+  get count(): number {
+    return this._values.length;
+  }
 
-        return EnumCollectionVO.create([...this._values, value]);
-    }
+  get isEmpty(): boolean {
+    return this._values.length === 0;
+  }
 
-    remove(value: E): EnumCollectionVO<T, E> {
-        return EnumCollectionVO.create(this._values.filter((v) => !v.equals(value)));
-    }
+  toArray(): readonly E[] {
+    return [...this._values];
+  }
 
-    equals(other: EnumCollectionVO<T, E>): boolean {
-        if (this._values.length !== other._values.length) {
-            return false;
-        }
+  toValues(): readonly T[] {
+    return this._values.map((v) => v.value);
+  }
 
-        return this._values.every((value, index) => value.equals(other._values[index]));
-    }
-
-    get count(): number {
-        return this._values.length;
-    }
-
-    get isEmpty(): boolean {
-        return this._values.length === 0;
-    }
-
-    toArray(): readonly E[] {
-        return [...this._values];
-    }
-
-    toValues(): readonly T[] {
-        return this._values.map((v) => v.value);
-    }
-
-    toString(): string {
-        return this.toValues().join(', ');
-    }
+  toString(): string {
+    return this.toValues().join(', ');
+  }
 }

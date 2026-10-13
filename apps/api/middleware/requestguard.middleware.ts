@@ -12,13 +12,13 @@ import { HTTPException } from 'hono/http-exception';
 type GuardStatus = 400 | 413 | 414;
 
 function guardError(status: GuardStatus, code: string, message: string): HTTPException {
-    return new HTTPException(status, {
-        message,
-        res: new Response(JSON.stringify({ success: false, error: { code, message } }), {
-            status,
-            headers: { 'Content-Type': 'application/json' },
-        }),
-    });
+  return new HTTPException(status, {
+    message,
+    res: new Response(JSON.stringify({ success: false, error: { code, message } }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  });
 }
 
 // ─── 1. URL Length Guard ────────────────────────────────────────────────────────
@@ -31,18 +31,18 @@ function guardError(status: GuardStatus, code: string, message: string): HTTPExc
  * @example app.use('*', urlLengthGuard(2048))
  */
 export function urlLengthGuard(maxLength = 2048) {
-    return async (c: Context, next: Next) => {
-        const url = new URL(c.req.url);
-        const requestUri = `${url.pathname}${url.search}`;
-        if (requestUri.length > maxLength) {
-            throw guardError(
-                414,
-                'URI_TOO_LONG',
-                `Request URI exceeds maximum length of ${maxLength} characters`,
-            );
-        }
-        await next();
-    };
+  return async (c: Context, next: Next) => {
+    const url = new URL(c.req.url);
+    const requestUri = `${url.pathname}${url.search}`;
+    if (requestUri.length > maxLength) {
+      throw guardError(
+        414,
+        'URI_TOO_LONG',
+        `Request URI exceeds maximum length of ${maxLength} characters`,
+      );
+    }
+    await next();
+  };
 }
 
 // ─── 2. Query String Length Guard ───────────────────────────────────────────────
@@ -55,18 +55,18 @@ export function urlLengthGuard(maxLength = 2048) {
  * @example app.use('*', queryLengthGuard(1024))
  */
 export function queryLengthGuard(maxLength = 1024) {
-    return async (c: Context, next: Next) => {
-        const { search } = new URL(c.req.url);
-        const queryString = search.startsWith('?') ? search.slice(1) : search;
-        if (queryString.length > maxLength) {
-            throw guardError(
-                414,
-                'QUERY_TOO_LONG',
-                `Query string exceeds maximum length of ${maxLength} characters`,
-            );
-        }
-        await next();
-    };
+  return async (c: Context, next: Next) => {
+    const { search } = new URL(c.req.url);
+    const queryString = search.startsWith('?') ? search.slice(1) : search;
+    if (queryString.length > maxLength) {
+      throw guardError(
+        414,
+        'QUERY_TOO_LONG',
+        `Query string exceeds maximum length of ${maxLength} characters`,
+      );
+    }
+    await next();
+  };
 }
 
 // ─── 3. Route Param Length Guard ────────────────────────────────────────────────
@@ -80,19 +80,19 @@ export function queryLengthGuard(maxLength = 1024) {
  * @example app.use('*', paramLengthGuard(256))
  */
 export function paramLengthGuard(maxLength = 256) {
-    return async (c: Context, next: Next) => {
-        const params = c.req.param();
-        for (const [key, value] of Object.entries(params)) {
-            if (value.length > maxLength) {
-                throw guardError(
-                    414,
-                    'PARAM_TOO_LONG',
-                    `Route parameter "${key}" exceeds maximum length of ${maxLength} characters`,
-                );
-            }
-        }
-        await next();
-    };
+  return async (c: Context, next: Next) => {
+    const params = c.req.param();
+    for (const [key, value] of Object.entries(params)) {
+      if (value.length > maxLength) {
+        throw guardError(
+          414,
+          'PARAM_TOO_LONG',
+          `Route parameter "${key}" exceeds maximum length of ${maxLength} characters`,
+        );
+      }
+    }
+    await next();
+  };
 }
 
 // ─── 4. Body Size Guard ─────────────────────────────────────────────────────────
@@ -113,29 +113,29 @@ export function paramLengthGuard(maxLength = 256) {
  * @example app.use('*', bodySizeGuard(1_000_000)) // 1 MB
  */
 export function bodySizeGuard(maxBytes = 1_000_000) {
-    return honoBodyLimit({
-        maxSize: maxBytes,
-        onError: () =>
-            new Response(
-                JSON.stringify({
-                    success: false,
-                    error: {
-                        code: 'PAYLOAD_TOO_LARGE',
-                        message: `Request body exceeds maximum size of ${maxBytes} bytes`,
-                    },
-                }),
-                { status: 413, headers: { 'Content-Type': 'application/json' } },
-            ),
-    });
+  return honoBodyLimit({
+    maxSize: maxBytes,
+    onError: () =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: `Request body exceeds maximum size of ${maxBytes} bytes`,
+          },
+        }),
+        { status: 413, headers: { 'Content-Type': 'application/json' } },
+      ),
+  });
 }
 
 // ─── 5 & 6. JSON Depth / Size Guard ─────────────────────────────────────────────
 
 export interface JsonComplexityOptions {
-    /** Max allowed nesting depth. Default 10. */
-    maxDepth?: number;
-    /** Max allowed total object keys + array elements, counted across the whole payload. Default 10_000. */
-    maxNodes?: number;
+  /** Max allowed nesting depth. Default 10. */
+  maxDepth?: number;
+  /** Max allowed total object keys + array elements, counted across the whole payload. Default 10_000. */
+  maxNodes?: number;
 }
 
 type ComplexityViolation = { type: 'depth' | 'nodes'; limit: number };
@@ -149,36 +149,36 @@ type ComplexityViolation = { type: 'depth' | 'nodes'; limit: number };
  * depth/count.
  */
 function findJsonComplexityViolation(
-    root: unknown,
-    { maxDepth = 10, maxNodes = 10_000 }: JsonComplexityOptions,
+  root: unknown,
+  { maxDepth = 10, maxNodes = 10_000 }: JsonComplexityOptions,
 ): ComplexityViolation | null {
-    const stack: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 0 }];
-    let nodeCount = 0;
+  const stack: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 0 }];
+  let nodeCount = 0;
 
-    while (stack.length > 0) {
-        const { value, depth } = stack.pop()!;
+  while (stack.length > 0) {
+    const { value, depth } = stack.pop()!;
 
-        if (depth > maxDepth) {
-            return { type: 'depth', limit: maxDepth };
-        }
-
-        if (value !== null && typeof value === 'object') {
-            const children = Array.isArray(value)
-                ? value
-                : Object.values(value as Record<string, unknown>);
-
-            nodeCount += children.length;
-            if (nodeCount > maxNodes) {
-                return { type: 'nodes', limit: maxNodes };
-            }
-
-            for (const child of children) {
-                stack.push({ value: child, depth: depth + 1 });
-            }
-        }
+    if (depth > maxDepth) {
+      return { type: 'depth', limit: maxDepth };
     }
 
-    return null;
+    if (value !== null && typeof value === 'object') {
+      const children = Array.isArray(value)
+        ? value
+        : Object.values(value as Record<string, unknown>);
+
+      nodeCount += children.length;
+      if (nodeCount > maxNodes) {
+        return { type: 'nodes', limit: maxNodes };
+      }
+
+      for (const child of children) {
+        stack.push({ value: child, depth: depth + 1 });
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -201,58 +201,58 @@ function findJsonComplexityViolation(
  * @example app.use('*', jsonComplexityGuard({ maxDepth: 10, maxNodes: 10_000 }))
  */
 export function jsonComplexityGuard(options: JsonComplexityOptions = {}) {
-    return async (c: Context, next: Next) => {
-        if (c.req.method === 'GET' || c.req.method === 'HEAD') {
-            return next();
-        }
+  return async (c: Context, next: Next) => {
+    if (c.req.method === 'GET' || c.req.method === 'HEAD') {
+      return next();
+    }
 
-        const contentType = c.req.header('content-type') ?? '';
-        if (!contentType.includes('application/json')) {
-            return next();
-        }
+    const contentType = c.req.header('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      return next();
+    }
 
-        let payload: unknown;
-        try {
-            payload = await c.req.json();
-        } catch {
-            return next(); // let downstream report malformed JSON
-        }
+    let payload: unknown;
+    try {
+      payload = await c.req.json();
+    } catch {
+      return next(); // let downstream report malformed JSON
+    }
 
-        const violation = findJsonComplexityViolation(payload, options);
-        if (violation) {
-            const message =
-                violation.type === 'depth'
-                    ? `JSON payload exceeds maximum nesting depth of ${violation.limit}`
-                    : `JSON payload exceeds maximum size of ${violation.limit} keys/elements`;
-            throw guardError(
-                413,
-                violation.type === 'depth' ? 'JSON_TOO_DEEP' : 'JSON_TOO_LARGE',
-                message,
-            );
-        }
+    const violation = findJsonComplexityViolation(payload, options);
+    if (violation) {
+      const message =
+        violation.type === 'depth'
+          ? `JSON payload exceeds maximum nesting depth of ${violation.limit}`
+          : `JSON payload exceeds maximum size of ${violation.limit} keys/elements`;
+      throw guardError(
+        413,
+        violation.type === 'depth' ? 'JSON_TOO_DEEP' : 'JSON_TOO_LARGE',
+        message,
+      );
+    }
 
-        return next();
-    };
+    return next();
+  };
 }
 
 // ─── Composer ────────────────────────────────────────────────────────────────
 
 export interface RequestGuardOptions {
-    maxUrlLength?: number;
-    maxQueryLength?: number;
-    maxParamLength?: number;
-    maxBodyBytes?: number;
-    maxJsonDepth?: number;
-    maxJsonNodes?: number;
+  maxUrlLength?: number;
+  maxQueryLength?: number;
+  maxParamLength?: number;
+  maxBodyBytes?: number;
+  maxJsonDepth?: number;
+  maxJsonNodes?: number;
 }
 
 const DEFAULT_GUARD_OPTIONS: Required<RequestGuardOptions> = {
-    maxUrlLength: 2048,
-    maxQueryLength: 1024,
-    maxParamLength: 256,
-    maxBodyBytes: 1_000_000,
-    maxJsonDepth: 10,
-    maxJsonNodes: 10_000,
+  maxUrlLength: 2048,
+  maxQueryLength: 1024,
+  maxParamLength: 256,
+  maxBodyBytes: 1_000_000,
+  maxJsonDepth: 10,
+  maxJsonNodes: 10_000,
 };
 
 /**
@@ -267,14 +267,14 @@ const DEFAULT_GUARD_OPTIONS: Required<RequestGuardOptions> = {
  * app.use('*', ...requestGuards({ maxBodyBytes: 2_000_000, maxJsonDepth: 6 }));
  */
 export function requestGuards(options: RequestGuardOptions = {}) {
-    const opts = { ...DEFAULT_GUARD_OPTIONS, ...options };
-    return [
-        urlLengthGuard(opts.maxUrlLength),
-        queryLengthGuard(opts.maxQueryLength),
-        paramLengthGuard(opts.maxParamLength),
-        bodySizeGuard(opts.maxBodyBytes),
-        jsonComplexityGuard({ maxDepth: opts.maxJsonDepth, maxNodes: opts.maxJsonNodes }),
-    ];
+  const opts = { ...DEFAULT_GUARD_OPTIONS, ...options };
+  return [
+    urlLengthGuard(opts.maxUrlLength),
+    queryLengthGuard(opts.maxQueryLength),
+    paramLengthGuard(opts.maxParamLength),
+    bodySizeGuard(opts.maxBodyBytes),
+    jsonComplexityGuard({ maxDepth: opts.maxJsonDepth, maxNodes: opts.maxJsonNodes }),
+  ];
 }
 
 // ─── Usage Example ────────────────────────────────────────────────────────────

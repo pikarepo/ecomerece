@@ -6,17 +6,12 @@
 import { useHistoryStackStore } from './history stack.store';
 import { usePageMetaStore } from './page meta.store';
 
-
-
+export * from './command palette.store';
+export * from './history stack.store';
+export * from './page meta.store';
 export * from './shell.store';
 export * from './tabs.store';
-export * from './page meta.store';
-export * from './command palette.store';
 export * from './wizard.store';
-export * from './history stack.store';
-
-
-
 
 /**
  * Compat helper mirroring the old monolithic store's `resetNavigation`,
@@ -24,6 +19,6 @@ export * from './history stack.store';
  * breadcrumbs/title and the back-stack together. Call outside render.
  */
 export const resetNavigationState = () => {
-    usePageMetaStore.getState().resetPageMeta();
-    useHistoryStackStore.getState().clearHistory();
+  usePageMetaStore.getState().resetPageMeta();
+  useHistoryStackStore.getState().clearHistory();
 };

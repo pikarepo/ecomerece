@@ -14,7 +14,12 @@ homeRoutes.get('/', homeController.getHome);
 homeRoutes.post('/categories', authMiddleware, adminMiddleware, homeController.addCategory);
 homeRoutes.patch('/categories', authMiddleware, adminMiddleware, homeController.updateCategory);
 homeRoutes.delete('/categories', authMiddleware, adminMiddleware, homeController.removeCategory);
-homeRoutes.patch('/categories/reorder', authMiddleware, adminMiddleware, homeController.reorderCategories);
+homeRoutes.patch(
+  '/categories/reorder',
+  authMiddleware,
+  adminMiddleware,
+  homeController.reorderCategories,
+);
 
 // Slides
 homeRoutes.post('/slides', authMiddleware, adminMiddleware, homeController.addSlide);
@@ -37,6 +42,11 @@ homeRoutes.delete('/features', authMiddleware, adminMiddleware, homeController.r
 homeRoutes.post('/containers', authMiddleware, adminMiddleware, homeController.addContainer);
 homeRoutes.patch('/containers', authMiddleware, adminMiddleware, homeController.updateContainer);
 homeRoutes.delete('/containers', authMiddleware, adminMiddleware, homeController.removeContainer);
-homeRoutes.patch('/containers/reorder', authMiddleware, adminMiddleware, homeController.reorderContainers);
+homeRoutes.patch(
+  '/containers/reorder',
+  authMiddleware,
+  adminMiddleware,
+  homeController.reorderContainers,
+);
 
 export default homeRoutes;

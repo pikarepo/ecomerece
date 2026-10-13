@@ -1,6 +1,6 @@
 import { commandBus } from '../../core/infrastructure/buses/in-memory-command-bus';
-import { queryBus } from '../../core/infrastructure/buses/in-memory-query-bus';
 import { eventBus } from '../../core/infrastructure/buses/in-memory-event-bus';
+import { queryBus } from '../../core/infrastructure/buses/in-memory-query-bus';
 import { ReserveInventoryHandler } from './application/command-handlers/reserve-inventory.handler';
 import { ReserveInventoryCommand } from './application/commands/reserve-inventory.command';
 import { InventoryApplicationService } from './application/inventory.app.service';
@@ -11,22 +11,22 @@ import { InventoryReposityory } from './infrastructure/inventory.repository';
 import { InventoryController } from './presentation/inventory.controller';
 
 export function createInventoryModule() {
-    const inventoryRepo = new InventoryReposityory();
-    const inventoryInternalServcie = new InventoryInternalServcie(inventoryRepo);
-    queryBus.register(
-        VerifyInventoriesItemsGetQuery,
-        new VerifyInventoriesItemsGetQueryHander(inventoryInternalServcie),
-    );
-    commandBus.register(
-        ReserveInventoryCommand.name,
-        new ReserveInventoryHandler(inventoryInternalServcie),
-    );
-    const inventoryApplicationService = new InventoryApplicationService(
-        inventoryRepo,
-        queryBus,
-        eventBus,
-    );
-    const inventoryController = new InventoryController(inventoryApplicationService);
+  const inventoryRepo = new InventoryReposityory();
+  const inventoryInternalServcie = new InventoryInternalServcie(inventoryRepo);
+  queryBus.register(
+    VerifyInventoriesItemsGetQuery,
+    new VerifyInventoriesItemsGetQueryHander(inventoryInternalServcie),
+  );
+  commandBus.register(
+    ReserveInventoryCommand.name,
+    new ReserveInventoryHandler(inventoryInternalServcie),
+  );
+  const inventoryApplicationService = new InventoryApplicationService(
+    inventoryRepo,
+    queryBus,
+    eventBus,
+  );
+  const inventoryController = new InventoryController(inventoryApplicationService);
 
-    return { inventoryController };
+  return { inventoryController };
 }

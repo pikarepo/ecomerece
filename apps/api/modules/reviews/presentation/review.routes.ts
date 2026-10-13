@@ -12,8 +12,8 @@ reviewRoutes.get('/product/:id', controller.getReviewsByProductId);
 reviewRoutes.get('/:id', controller.getReviewById);
 reviewRoutes.post('/my', authMiddleware, controller.create);
 reviewRoutes.get(
-    '/admin/all',
-    authMiddleware,
-    adminMiddleware,
-    controller.getAdminPaginatedReviews,
+  '/admin/all',
+  authMiddleware,
+  adminMiddleware,
+  controller.getAdminPaginatedReviews,
 );

@@ -5,17 +5,21 @@
 ```bash
 bun install              # install all workspace deps
 bun run dev              # API (8000) + Web (3000) concurrently via --filter
+bun run gate             # FULL gate (lint → typecheck → test → build), fails fast
+bun run gate --no-build  # same minus `next build` (fast local iteration)
 bun run typecheck        # tsc --noEmit across all workspaces
-bun run lint             # biome lint src
-bun run lint:fix         # biome check src --write
-bun run format           # biome format src --write
-bun run check            # biome check src
+bun run lint             # biome check packages/ui
+bun run lint:fix         # biome check packages/ui --write
+bun run format           # biome format packages/ui --write
+bun run check            # biome check packages/ui
 bun test                 # test suite
 bun run test:watch       # test suite in watch mode
-# NOTE: `bun run lint:imports` references scripts/check-imports.ts which does not exist.
 ```
 
-**Validator order:** `lint:fix` -> `typecheck` -> `test`
+**Validator order:** `lint:fix` → `typecheck` → `test` → `next build`. All four are wired
+into `bun run gate` (read-only lint; step fails fast, non-zero exit). Lint scope is
+`packages/ui` — the UI surface the workflow owns; `apps/api`/`apps/web` are not yet
+biome-clean and stay out of the gate.
 
 ## Architecture
 
@@ -71,5 +75,6 @@ bun test --watch            # watch mode
 - Rate limiter keys on `cf-connecting-ip` or `x-forwarded-for` header
 - Auth middleware checks live DB state (ban/block/delete) after JWT verification
 - `lucide-react` pinned to `0.468.0` and `react`/`react-dom` pinned to `19.2.8` via root `overrides`
+- `packages/ui` component files rendered by tests need `/** @jsxImportSource react */` as line 1: the root `tsconfig.json` sets `jsxImportSource: hono/jsx`, so `bun test` from the repo root otherwise compiles component JSX to Hono nodes React can't render. Hooks in plain `.ts` are unaffected.
+- React 19's `onChange` does NOT fire under happy-dom synthetic events (only `onInput` does) — assert value changes via props/geometry instead.
 - Production: `pm2 start ecosystem.config.js` (fork mode, Bun, port 8000)
-- Root `lint:imports` script is broken (references missing `scripts/check-imports.ts`)

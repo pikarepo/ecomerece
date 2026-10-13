@@ -1,231 +1,110 @@
 @import "tailwindcss";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "@ecomerece/ui/tokens.css";
+@import "@ecomerece/ui/engine.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Deterministic cascade-layer order. Tokens.css lives in `theme`, the engine
+ * in `base`/`components`, and generated skin files in `skins` (loaded as a
+ * separate stylesheet AFTER this file). Declaring `skins` here keeps it the
+ * LAST layer even if a skin stylesheet ever parsed first — skin variables
+ * must win over tokens.css (whose selectors are beaten on specificity by
+ * `:where()`-zeroed skin selectors, so layers are the only mechanism).
+ */
+@layer properties, theme, base, components, utilities, skins;
+
+/* Scan @ecomerece/ui source for class names too — the package is consumed as
+ * workspace source, and without this Tailwind purges classes that only appear
+ * inside the package (z-modal, duration-slow, overlay surfaces, hover states,
+ * glass slots, …).
+ */
+@source "../../../packages/ui";
+
+@theme {
+  --color-canvas: rgb(var(--canvas));
+  --color-surface-1: rgb(var(--surface-1));
+  --color-surface-2: rgb(var(--surface-2));
+  --color-surface-3: rgb(var(--surface-3));
+  --color-surface-4: rgb(var(--surface-4));
+
+  --color-ink: rgb(var(--ink));
+  --color-ink-2: rgb(var(--ink-2));
+  --color-ink-3: rgb(var(--ink-3));
+  --color-ink-4: rgb(var(--ink-4));
+  --color-line: rgb(var(--line));
+
+  --color-accent: rgb(var(--accent));
+  --color-accent-ink: rgb(var(--accent-ink));
+  --color-success: rgb(var(--success));
+  --color-warning: rgb(var(--warning));
+  --color-danger: rgb(var(--danger));
+  --color-info: rgb(var(--info));
+
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  /* DESIGN.md §17 — motion resolves through the active skin. The fixed
+     reference curves stay available for one-off choreography. */
+  --ease-skin: var(--ease);
+  --ease-skin-exit: var(--ease-exit);
+  --transition-duration-skin: var(--dur);
+  --transition-duration-skin-slow: var(--dur-slow);
+
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+
+  --z-index-base: 0;
+  --z-index-raised: 10;
+  --z-index-sticky: 20;
+  --z-index-chrome: 30;
+  --z-index-overlay: 40;
+  --z-index-modal: 50;
+  --z-index-toast: 60;
+
+  --container-prose: 68ch;
+  --container-shell: 1200px;
+
+  /* DESIGN.md §12 — radius aliases resolve through ROLE variables, so legacy
+     `rounded-sm / rounded / rounded-lg / rounded-xl` markup keeps working AND
+     follows the active skin's geometry (not Tailwind's default rem scale). */
+  --radius-sm: var(--r-chip);
+  --radius-DEFAULT: var(--r-control);
+  --radius-lg: var(--r-card);
+  --radius-xl: var(--r-sheet);
+  --radius-chip: var(--r-chip);
+  --radius-control: var(--r-control);
+  --radius-card: var(--r-card);
+  --radius-sheet: var(--r-sheet);
+
+  /* DESIGN.md §18 — replaced, not extended (order matters) */
+  --breakpoint-xs: 360px;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1440px;
+  --breakpoint-2xl: 1920px;
+  --breakpoint-3xl: 2560px;
+  --breakpoint-4xl: 3200px;
+
+  /* A0 (v3.1): font chain starts at the skin-definable --font-ui (defined in
+     tokens.css :root). A skin declaring typography.fontUi flows through here
+     with zero code changes. */
+  --font-sans: var(--font-ui);
 }
 
-@keyframes slide {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(200%);
-  }
+/* A0/A3 (v3.1): the display face as a utility (one display heading per screen,
+   §15). Resolves through skin variables — avoids the --font-display var
+   self-reference a namespace token would create. */
+@utility font-display {
+  font-family: var(--font-display);
+  font-weight: var(--display-weight, 700);
+  letter-spacing: var(--display-tracking, -0.02em);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+/* Height / pointer guards (§18.3) — raw media variants */
+@custom-variant tall (@media (min-height: 560px));
+@custom-variant short (@media (max-height: 559px));
+@custom-variant touch (@media (pointer: coarse));
+@custom-variant fine (@media (pointer: fine));
 
-/* Theme colors follow the app theme toggle (.dark on <html>), not the OS preference.
-   This keeps text dark-on-white in light mode even when the OS is in dark mode. */
-.dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* ============ SCROLLBAR STYLING (transparent track) ============ */
-/* For Webkit browsers (Chrome, Safari, Edge) */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-  background: transparent;
-  /* no background on track */
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-  /* no track background */
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
-  /* subtle thumb */
-  border-radius: 10px;
-  border: none;
-  /* no border */
-  transition: background 0.3s;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.5);
-}
-
-/* Dark theme overrides */
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-/* For Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
-  /* thumb + transparent track */
-}
-
-.dark * {
-  scrollbar-color: rgba(236, 234, 234, 0.58) transparent;
-}
-
-/* Optional: Hide scrollbar entirely on specific elements (e.g., horizontal product scroll) */
-.hide-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-
-@keyframes pulseBlur {
-  0% {
-    filter: blur(7px);
-  }
-
-  50% {
-    filter: blur(4px);
-  }
-
-  /* matches blur-md (~8px) */
-  100% {
-    filter: blur(7px);
-  }
-}
-
-.animate-pulse-blur {
-  animation: pulseBlur 2s ease-in-out infinite;
-}
-
-
-
-
-#engine-boot-splash {
-  position: fixed;
-  inset: 0;
-  z-index: 99999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
-  transition: opacity 0.3s ease-out;
-  pointer-events: auto;
-}
-
-/* Add this class when fading out */
-#engine-boot-splash[style*="opacity: 0"] {
-  pointer-events: none;
-}
-
-.dark #engine-boot-splash {
-  background-color: #090d16;
-}
-
-/* Global Top Loader Bar */
-.global-loader-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10000;
-  height: 3px;
-  width: 100%;
-  overflow: hidden;
-  background-color: rgba(99, 102, 241, 0.15);
-  pointer-events: none;
-}
-
-.global-loader-bar {
-  height: 100%;
-  width: 100%;
-  background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899, #6366f1);
-  background-size: 200% 100%;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.7), 0 0 4px rgba(236, 72, 153, 0.5);
-  animation:
-    topLoaderSlide 1.5s cubic-bezier(0.65, 0, 0.35, 1) infinite,
-    topLoaderGradient 2s linear infinite;
-}
-
-/* Slide Animation */
-@keyframes topLoaderSlide {
-  0% {
-    transform: translateX(-100%) scaleX(0.2);
-  }
-
-  50% {
-    transform: translateX(-10%) scaleX(0.6);
-  }
-
-  100% {
-    transform: translateX(100%) scaleX(1);
-  }
-}
-
-/* Color Shift Animation */
-@keyframes topLoaderGradient {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  100% {
-    background-position: 200% 50%;
-  }
-}
-
-/* Centered Screen Overlay */
-.loader-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  background-color: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(4px);
-  pointer-events: none;
-}
-
-/* Glowing Round Spinner */
-.round-loader {
-  width: 50px;
-  height: 50px;
-  border: 4px solid rgba(99, 102, 241, 0.2);
-  border-top-color: #6366f1;
-  border-right-color: #a855f7;
-  border-radius: 50%;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.4);
-  animation: roundSpinner 0.8s linear infinite;
-}
-
-/* Rotation Animation */
-@keyframes roundSpinner {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
+/* Retired in v3.0 (Appendix E.4): the glass-surface utility. Frosted chrome
+   is now `mat-chrome`; the active skin supplies blur values. */

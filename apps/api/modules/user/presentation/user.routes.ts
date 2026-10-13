@@ -10,7 +10,12 @@ usersRoutes.post('/init', initAuthMiddleware, userController.initUser);
 usersRoutes.get('/me', authMiddleware, userController.getMe);
 usersRoutes.delete('/me/soft', authMiddleware, userController.softDeleteMe);
 usersRoutes.get('/', authMiddleware, userController.getPaginatedUsers);
-usersRoutes.get('/admin/all', authMiddleware, adminMiddleware, userController.getAdminPaginatedUsers);
+usersRoutes.get(
+  '/admin/all',
+  authMiddleware,
+  adminMiddleware,
+  userController.getAdminPaginatedUsers,
+);
 usersRoutes.patch('/block/lift', authMiddleware, adminMiddleware, userController.blockLift);
 usersRoutes.patch('/ban/lift', authMiddleware, adminMiddleware, userController.banLift);
 usersRoutes.patch('/ban/extend', authMiddleware, adminMiddleware, userController.extendBan);

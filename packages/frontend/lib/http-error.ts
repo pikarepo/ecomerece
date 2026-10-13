@@ -6,28 +6,26 @@
 // error.code exactly the way a backend caller would branch on AppError
 // subclasses — without ever seeing the raw envelope.
 
-import { ApiIssue } from "@ecomerece/shared";
-
-
+import type { ApiIssue } from '@ecomerece/shared';
 
 export class HttpError extends Error {
-    constructor(
-        public readonly status: number,
-        public readonly code: string,
-        message: string,
-        public readonly issues?: ApiIssue[],
-    ) {
-        super(message);
-        this.name = 'HttpError';
-    }
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly issues?: ApiIssue[],
+  ) {
+    super(message);
+    this.name = 'HttpError';
+  }
 
-    /** True for the Zod/Mongoose validation shape — safe to render per-field. */
-    get isValidationError(): boolean {
-        return this.code === 'VALIDATION_ERROR' && !!this.issues?.length;
-    }
+  /** True for the Zod/Mongoose validation shape — safe to render per-field. */
+  get isValidationError(): boolean {
+    return this.code === 'VALIDATION_ERROR' && !!this.issues?.length;
+  }
 
-    /** True for network failures where the request never reached the server. */
-    get isNetworkError(): boolean {
-        return this.code === 'NETWORK_ERROR';
-    }
+  /** True for network failures where the request never reached the server. */
+  get isNetworkError(): boolean {
+    return this.code === 'NETWORK_ERROR';
+  }
 }

@@ -1,0 +1,731 @@
+/* ═══ GENERATED FILE — material skin (DESIGN.md §37). Do not edit. ═══ */
+/* Source: packages/ui/skins/material.ts → compiled by packages/ui/scripts/build-skins.ts */
+
+@layer skins {
+  /* light */
+  :where(:root[data-skin="material"]),
+  :where([data-skin="material"]) {
+    --r-chip: 8px;
+    --r-control: 999px;
+    --r-card: 12px;
+    --r-sheet: 28px;
+    --stroke: 1px;
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+    --dur: 250ms;
+    --dur-slow: 350ms;
+    --press-scale: 1;
+    --scene: rgb(var(--canvas));
+    --display-weight: 500;
+    --k-s1: 0.04;
+    --k-s2: 0.05;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+    --shadow-lg: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+    --m-ground-bg: rgb(var(--canvas));
+    --m-ground-edge: transparent;
+    --m-ground-shadow: none;
+    --m-panel-bg: rgb(var(--surface-1));
+    --m-panel-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-panel-edge: transparent;
+    --m-panel-shadow: none;
+    --m-card-bg: rgb(var(--surface-2));
+    --m-card-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-card-edge: transparent;
+    --m-card-shadow: var(--shadow-sm);
+    --m-raised-bg: rgb(var(--surface-3));
+    --m-raised-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-raised-edge: rgb(var(--ink-3));
+    --m-raised-shadow: none;
+    --m-overlay-bg: rgb(var(--surface-4));
+    --m-overlay-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s2)),
+      rgb(var(--accent) / var(--k-s2))
+    );
+    --m-overlay-edge: transparent;
+    --m-overlay-shadow: var(--shadow-lg);
+    --m-chrome-bg: rgb(var(--surface-2));
+    --m-chrome-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s2)),
+      rgb(var(--accent) / var(--k-s2))
+    );
+    --m-chrome-edge: transparent;
+    --m-chrome-shadow: none;
+    --m-chrome-backdrop: none;
+    --m-well-bg: rgb(var(--surface-1));
+    --m-well-edge: rgb(var(--ink-3));
+    --m-well-shadow: none;
+    --m-control-bg: rgb(var(--surface-3));
+    --m-control-edge: rgb(var(--ink-3));
+    --m-control-shadow: none;
+    --m-control-hover-bg: rgb(var(--surface-4));
+    --m-control-hover-sheen: linear-gradient(rgb(var(--accent) / 0.05), rgb(var(--accent) / 0.05));
+    --m-control-press-bg: rgb(var(--surface-3));
+    --m-control-press-sheen: linear-gradient(rgb(var(--accent) / 0.07), rgb(var(--accent) / 0.07));
+    --m-control-press-shadow: none;
+    --m-primary-bg: rgb(var(--accent));
+    --m-primary-edge: transparent;
+    --m-primary-shadow: var(--shadow-sm);
+  }
+
+  /* dark: auto (follows the OS) */
+  @media (prefers-color-scheme: dark) {
+    :where(:root:not([data-theme="light"])[data-skin="material"]),
+    :where(:root:not([data-theme="light"]) [data-skin="material"]) {
+      --r-chip: 8px;
+      --r-control: 999px;
+      --r-card: 12px;
+      --r-sheet: 28px;
+      --stroke: 1px;
+      --ease: cubic-bezier(0.2, 0, 0, 1);
+      --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+      --dur: 250ms;
+      --dur-slow: 350ms;
+      --press-scale: 1;
+      --scene: rgb(var(--canvas));
+      --display-weight: 500;
+      --k-s1: 0.03;
+      --k-s2: 0.03;
+      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+      --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+      --shadow-lg: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+      --m-ground-bg: rgb(var(--canvas));
+      --m-ground-edge: transparent;
+      --m-ground-shadow: none;
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-panel-sheen: linear-gradient(
+        rgb(var(--accent) / var(--k-s1)),
+        rgb(var(--accent) / var(--k-s1))
+      );
+      --m-panel-edge: transparent;
+      --m-panel-shadow: none;
+      --m-card-bg: rgb(var(--surface-2));
+      --m-card-sheen: linear-gradient(
+        rgb(var(--accent) / var(--k-s1)),
+        rgb(var(--accent) / var(--k-s1))
+      );
+      --m-card-edge: transparent;
+      --m-card-shadow: var(--shadow-sm);
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-raised-sheen: linear-gradient(
+        rgb(var(--accent) / var(--k-s1)),
+        rgb(var(--accent) / var(--k-s1))
+      );
+      --m-raised-edge: rgb(var(--ink-3));
+      --m-raised-shadow: none;
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-overlay-sheen: linear-gradient(
+        rgb(var(--accent) / var(--k-s2)),
+        rgb(var(--accent) / var(--k-s2))
+      );
+      --m-overlay-edge: transparent;
+      --m-overlay-shadow: var(--shadow-lg);
+      --m-chrome-bg: rgb(var(--surface-2));
+      --m-chrome-sheen: linear-gradient(
+        rgb(var(--accent) / var(--k-s2)),
+        rgb(var(--accent) / var(--k-s2))
+      );
+      --m-chrome-edge: transparent;
+      --m-chrome-shadow: none;
+      --m-chrome-backdrop: none;
+      --m-well-bg: rgb(var(--surface-1));
+      --m-well-edge: rgb(var(--ink-3));
+      --m-well-shadow: none;
+      --m-control-bg: rgb(var(--surface-3));
+      --m-control-edge: rgb(var(--ink-3));
+      --m-control-shadow: none;
+      --m-control-hover-bg: rgb(var(--surface-4));
+      --m-control-hover-sheen: linear-gradient(
+        rgb(var(--accent) / 0.05),
+        rgb(var(--accent) / 0.05)
+      );
+      --m-control-press-bg: rgb(var(--surface-3));
+      --m-control-press-sheen: linear-gradient(
+        rgb(var(--accent) / 0.07),
+        rgb(var(--accent) / 0.07)
+      );
+      --m-control-press-shadow: none;
+      --m-primary-bg: rgb(var(--accent));
+      --m-primary-edge: transparent;
+      --m-primary-shadow: var(--shadow-sm);
+    }
+  }
+
+  /* dark: explicit override */
+  :where(:root[data-theme="dark"][data-skin="material"]),
+  :where(:root[data-theme="dark"] [data-skin="material"]) {
+    --r-chip: 8px;
+    --r-control: 999px;
+    --r-card: 12px;
+    --r-sheet: 28px;
+    --stroke: 1px;
+    --ease: cubic-bezier(0.2, 0, 0, 1);
+    --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+    --dur: 250ms;
+    --dur-slow: 350ms;
+    --press-scale: 1;
+    --scene: rgb(var(--canvas));
+    --display-weight: 500;
+    --k-s1: 0.03;
+    --k-s2: 0.03;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 2px 6px 2px rgb(0 0 0 / 0.15);
+    --shadow-lg: 0 1px 3px rgb(0 0 0 / 0.3), 0 4px 8px 3px rgb(0 0 0 / 0.15);
+    --m-ground-bg: rgb(var(--canvas));
+    --m-ground-edge: transparent;
+    --m-ground-shadow: none;
+    --m-panel-bg: rgb(var(--surface-1));
+    --m-panel-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-panel-edge: transparent;
+    --m-panel-shadow: none;
+    --m-card-bg: rgb(var(--surface-2));
+    --m-card-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-card-edge: transparent;
+    --m-card-shadow: var(--shadow-sm);
+    --m-raised-bg: rgb(var(--surface-3));
+    --m-raised-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s1)),
+      rgb(var(--accent) / var(--k-s1))
+    );
+    --m-raised-edge: rgb(var(--ink-3));
+    --m-raised-shadow: none;
+    --m-overlay-bg: rgb(var(--surface-4));
+    --m-overlay-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s2)),
+      rgb(var(--accent) / var(--k-s2))
+    );
+    --m-overlay-edge: transparent;
+    --m-overlay-shadow: var(--shadow-lg);
+    --m-chrome-bg: rgb(var(--surface-2));
+    --m-chrome-sheen: linear-gradient(
+      rgb(var(--accent) / var(--k-s2)),
+      rgb(var(--accent) / var(--k-s2))
+    );
+    --m-chrome-edge: transparent;
+    --m-chrome-shadow: none;
+    --m-chrome-backdrop: none;
+    --m-well-bg: rgb(var(--surface-1));
+    --m-well-edge: rgb(var(--ink-3));
+    --m-well-shadow: none;
+    --m-control-bg: rgb(var(--surface-3));
+    --m-control-edge: rgb(var(--ink-3));
+    --m-control-shadow: none;
+    --m-control-hover-bg: rgb(var(--surface-4));
+    --m-control-hover-sheen: linear-gradient(rgb(var(--accent) / 0.05), rgb(var(--accent) / 0.05));
+    --m-control-press-bg: rgb(var(--surface-3));
+    --m-control-press-sheen: linear-gradient(rgb(var(--accent) / 0.07), rgb(var(--accent) / 0.07));
+    --m-control-press-shadow: none;
+    --m-primary-bg: rgb(var(--accent));
+    --m-primary-edge: transparent;
+    --m-primary-shadow: var(--shadow-sm);
+  }
+
+  /* fallback: no backdrop-filter support */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :where(:root[data-skin="material"]),
+    :where([data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root:not([data-theme="light"])[data-skin="material"]),
+    :where(:root:not([data-theme="light"]) [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root[data-theme="dark"][data-skin="material"]),
+    :where(:root[data-theme="dark"] [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+  }
+
+  /* fallback: reduced transparency */
+  @media (prefers-reduced-transparency: reduce) {
+    :where(:root[data-skin="material"]),
+    :where([data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root:not([data-theme="light"])[data-skin="material"]),
+    :where(:root:not([data-theme="light"]) [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root[data-theme="dark"][data-skin="material"]),
+    :where(:root[data-theme="dark"] [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+  }
+
+  /* fallback: more contrast → edge forced to contrastEdge */
+  @media (prefers-contrast: more) {
+    :where(:root[data-skin="material"]),
+    :where([data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root:not([data-theme="light"])[data-skin="material"]),
+    :where(:root:not([data-theme="light"]) [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+    :where(:root[data-theme="dark"][data-skin="material"]),
+    :where(:root[data-theme="dark"] [data-skin="material"]) {
+      --scene: rgb(var(--canvas));
+      --m-ground-sheen: none;
+      --m-ground-backdrop: none;
+      --m-ground-z: 0px;
+      --m-panel-sheen: none;
+      --m-panel-backdrop: none;
+      --m-panel-z: 0px;
+      --m-card-sheen: none;
+      --m-card-backdrop: none;
+      --m-card-z: 0px;
+      --m-raised-sheen: none;
+      --m-raised-backdrop: none;
+      --m-raised-z: 0px;
+      --m-overlay-sheen: none;
+      --m-overlay-backdrop: none;
+      --m-overlay-z: 0px;
+      --m-chrome-sheen: none;
+      --m-chrome-backdrop: none;
+      --m-chrome-z: 0px;
+      --m-well-sheen: none;
+      --m-well-backdrop: none;
+      --m-well-z: 0px;
+      --m-control-sheen: none;
+      --m-control-backdrop: none;
+      --m-control-z: 0px;
+      --m-primary-sheen: none;
+      --m-primary-backdrop: none;
+      --m-primary-z: 0px;
+      --m-card-t1-sheen: none;
+      --m-card-t1-backdrop: none;
+      --m-card-t2-sheen: none;
+      --m-card-t2-backdrop: none;
+      --m-card-t3-sheen: none;
+      --m-card-t3-backdrop: none;
+      --m-card-t4-sheen: none;
+      --m-card-t4-backdrop: none;
+      --m-ground-bg: rgb(var(--canvas));
+      --m-panel-bg: rgb(var(--surface-1));
+      --m-card-bg: rgb(var(--surface-2));
+      --m-raised-bg: rgb(var(--surface-3));
+      --m-overlay-bg: rgb(var(--surface-4));
+      --m-chrome-bg: rgb(var(--surface-3));
+      --m-well-bg: rgb(var(--surface-1));
+      --m-control-bg: rgb(var(--surface-3));
+      --m-primary-bg: rgb(var(--accent));
+    }
+  }
+
+  /* fallback: data-fidelity="low" */
+  :where(:root[data-fidelity="low"][data-skin="material"]),
+  :where(:root[data-fidelity="low"] [data-skin="material"]) {
+    --scene: rgb(var(--canvas));
+    --m-ground-sheen: none;
+    --m-ground-backdrop: none;
+    --m-ground-z: 0px;
+    --m-panel-sheen: none;
+    --m-panel-backdrop: none;
+    --m-panel-z: 0px;
+    --m-card-sheen: none;
+    --m-card-backdrop: none;
+    --m-card-z: 0px;
+    --m-raised-sheen: none;
+    --m-raised-backdrop: none;
+    --m-raised-z: 0px;
+    --m-overlay-sheen: none;
+    --m-overlay-backdrop: none;
+    --m-overlay-z: 0px;
+    --m-chrome-sheen: none;
+    --m-chrome-backdrop: none;
+    --m-chrome-z: 0px;
+    --m-well-sheen: none;
+    --m-well-backdrop: none;
+    --m-well-z: 0px;
+    --m-control-sheen: none;
+    --m-control-backdrop: none;
+    --m-control-z: 0px;
+    --m-primary-sheen: none;
+    --m-primary-backdrop: none;
+    --m-primary-z: 0px;
+    --m-card-t1-sheen: none;
+    --m-card-t1-backdrop: none;
+    --m-card-t2-sheen: none;
+    --m-card-t2-backdrop: none;
+    --m-card-t3-sheen: none;
+    --m-card-t3-backdrop: none;
+    --m-card-t4-sheen: none;
+    --m-card-t4-backdrop: none;
+    --m-ground-bg: rgb(var(--canvas));
+    --m-panel-bg: rgb(var(--surface-1));
+    --m-card-bg: rgb(var(--surface-2));
+    --m-raised-bg: rgb(var(--surface-3));
+    --m-overlay-bg: rgb(var(--surface-4));
+    --m-chrome-bg: rgb(var(--surface-3));
+    --m-well-bg: rgb(var(--surface-1));
+    --m-control-bg: rgb(var(--surface-3));
+    --m-primary-bg: rgb(var(--accent));
+  }
+} /* end @layer skins */

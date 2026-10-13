@@ -8,8 +8,8 @@ import { OrderItemsInternalService } from './application/order-item.internal';
 import { OrderItemsRepository } from './infrastructure/order-item.repository';
 
 export function createOrderItemsModule() {
-    const unitOfWork = new UnitOfWork();
-    const itemsRepo = new OrderItemsRepository(unitOfWork);
-    const orderItemsInternalService = new OrderItemsInternalService(itemsRepo, eventBus);
-    commandBus.register(CreateItemsCommand.name, new CreateItemsHandler(orderItemsInternalService));
+  const unitOfWork = new UnitOfWork();
+  const itemsRepo = new OrderItemsRepository(unitOfWork);
+  const orderItemsInternalService = new OrderItemsInternalService(itemsRepo, eventBus);
+  commandBus.register(CreateItemsCommand.name, new CreateItemsHandler(orderItemsInternalService));
 }

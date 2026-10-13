@@ -5,8 +5,8 @@ import { ReviewRepository } from './infrastructure/review.repository';
 import { ReviewController } from './presentation/review.controller';
 
 export function createReviewModule() {
-    const reviewRepo = new ReviewRepository();
-    const applicationService = new ReviewApplicationService(queryBus, reviewRepo, eventBus);
-    const controller = new ReviewController(applicationService);
-    return { reviewRepo, applicationService, controller };
+  const reviewRepo = new ReviewRepository();
+  const applicationService = new ReviewApplicationService(queryBus, reviewRepo, eventBus);
+  const controller = new ReviewController(applicationService);
+  return { reviewRepo, applicationService, controller };
 }

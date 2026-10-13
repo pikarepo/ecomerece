@@ -1,2 +1,2 @@
-export * from './inventory.hook'
-export * from './inventory.service'
+export * from './inventory.hook';
+export * from './inventory.service';

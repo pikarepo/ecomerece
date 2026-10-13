@@ -12,20 +12,20 @@ productVariantRoutes.post('/my', authMiddleware, controller.createMyProductVaria
 productVariantRoutes.patch('/my/price', authMiddleware, controller.updateMyVariantPrice);
 productVariantRoutes.patch('/my/meta', authMiddleware, controller.updateMyVariantMeta);
 productVariantRoutes.patch(
-    '/my/appereance/toggle',
-    authMiddleware,
-    controller.toggleMyVaraintAppereance,
+  '/my/appereance/toggle',
+  authMiddleware,
+  controller.toggleMyVaraintAppereance,
 );
 productVariantRoutes.delete('/my/delete/soft', authMiddleware, controller.softDeleteMyVariant);
 productVariantRoutes.patch(
-    '/recover/:id',
-    authMiddleware,
-    adminMiddleware,
-    controller.recoverVariant,
+  '/recover/:id',
+  authMiddleware,
+  adminMiddleware,
+  controller.recoverVariant,
 );
 productVariantRoutes.get(
-    '/admin/all',
-    authMiddleware,
-    adminMiddleware,
-    controller.getAdminPaginatedVariants,
+  '/admin/all',
+  authMiddleware,
+  adminMiddleware,
+  controller.getAdminPaginatedVariants,
 );

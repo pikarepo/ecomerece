@@ -1,22 +1,22 @@
-import { IEvent } from '../../../events/event-bus.interface';
-import { EffectiveDate, Id, Name, Title } from '../../../value-objects';
+import type { IEvent } from '../../../events/event-bus.interface';
+import { EffectiveDate, type Id, type Name, type Title } from '../../../value-objects';
 
 export interface ProductDisclaimerItem {
-    name: Name;
-    title: Title;
+  name: Name;
+  title: Title;
 }
 
 export class ProductDisclaimersAddedEvent
-    implements IEvent<{ productId: Id; actorId: Id; items: ProductDisclaimerItem[] }>
+  implements IEvent<{ productId: Id; actorId: Id; items: ProductDisclaimerItem[] }>
 {
-    readonly type = 'product.disclaimers-added';
-    readonly occurredOn = EffectiveDate.today();
+  readonly type = 'product.disclaimers-added';
+  readonly occurredOn = EffectiveDate.today();
 
-    constructor(
-        public readonly payload: {
-            productId: Id;
-            actorId: Id;
-            items: ProductDisclaimerItem[];
-        },
-    ) {}
+  constructor(
+    public readonly payload: {
+      productId: Id;
+      actorId: Id;
+      items: ProductDisclaimerItem[];
+    },
+  ) {}
 }

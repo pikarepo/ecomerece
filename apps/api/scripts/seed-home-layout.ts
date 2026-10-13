@@ -5,8 +5,9 @@
  * Run from repo root:
  *   bun run apps/api/scripts/seed-home-layout.ts
  */
-import { config } from 'dotenv';
+
 import { resolve } from 'node:path';
+import { config } from 'dotenv';
 
 // Load env BEFORE any dynamic import that reads process.env at module load time
 // (mongo.ts checks MONGO_URI at import, so we must use dynamic imports below)
@@ -22,17 +23,25 @@ const { Id } = await import('@ecomerece/domain');
 
 const HAIRCARE_CATEGORY_ID = '01a0a4ba-6660-714e-a85d-e95b3d442fb2';
 const SKINCARE_CATEGORY_ID = '01a0a516-1c89-7123-8db2-4c0a66facf82';
-const HAIRCARE_IMAGE = 'https://res.cloudinary.com/ezabelpf/image/upload/v1789470076/categories/0f43de91-c410-4ad2-8c72-b7e6ef8c147e.jpg';
-const SKINCARE_IMAGE = 'https://res.cloudinary.com/ezabelpf/image/upload/v1789476085/categories/e544f969-3e36-4a98-bf19-a18256470449.jpg';
+const HAIRCARE_IMAGE =
+  'https://res.cloudinary.com/ezabelpf/image/upload/v1789470076/categories/0f43de91-c410-4ad2-8c72-b7e6ef8c147e.jpg';
+const SKINCARE_IMAGE =
+  'https://res.cloudinary.com/ezabelpf/image/upload/v1789476085/categories/e544f969-3e36-4a98-bf19-a18256470449.jpg';
 
 // First images of seeded products — used for hero slides & promos
 const SLIDE_IMAGES = {
-  hairShampoo: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485109/products/hydra-silk-shampoo/img-1.jpg.jpg',
-  hairConditioner: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485115/products/argan-repair-conditioner/img-1.jpg.jpg',
-  hairOil: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485130/products/coconut-nourish-hair-oil/img-1.jpg.jpg',
-  skinMoisturiser: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485150/products/hyaluronic-acid-moisturiser/img-1.jpg.jpg',
-  skinSerum: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485155/products/vitamin-c-brightening-serum/img-1.jpg.jpg',
-  skinCleanser: 'https://res.cloudinary.com/ezabelpf/image/upload/v1789485224/products/tea-tree-balancing-cleanser/img-1.jpg.jpg',
+  hairShampoo:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485109/products/hydra-silk-shampoo/img-1.jpg.jpg',
+  hairConditioner:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485115/products/argan-repair-conditioner/img-1.jpg.jpg',
+  hairOil:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485130/products/coconut-nourish-hair-oil/img-1.jpg.jpg',
+  skinMoisturiser:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485150/products/hyaluronic-acid-moisturiser/img-1.jpg.jpg',
+  skinSerum:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485155/products/vitamin-c-brightening-serum/img-1.jpg.jpg',
+  skinCleanser:
+    'https://res.cloudinary.com/ezabelpf/image/upload/v1789485224/products/tea-tree-balancing-cleanser/img-1.jpg.jpg',
 };
 
 // Helper: generate a UUID v7 string using the domain Id value object (same as all other seeding)
@@ -71,7 +80,7 @@ const homePayload = {
     },
     {
       id: uuid(),
-      tag: 'Editor\'s Pick',
+      tag: "Editor's Pick",
       title: 'Repair & Restore — Deep Conditioning',
       subhead: 'Strengthen from root to tip',
       subtitle: 'Keratin bond technology for frizz-free results',
@@ -251,11 +260,31 @@ async function main() {
   });
 
   console.log('[home-seed] Summary:');
-  console.log('  slides:', result?.slides?.length, result?.slides?.map((s: any) => s.title));
-  console.log('  promos:', result?.promos?.length, result?.promos?.map((p: any) => p.title));
-  console.log('  categories:', result?.categories?.length, result?.categories?.map((c: any) => c.name));
-  console.log('  features:', result?.features?.length, result?.features?.map((f: any) => f.title));
-  console.log('  productContainers:', result?.productContainers?.length, result?.productContainers?.map((c: any) => c.heading));
+  console.log(
+    '  slides:',
+    result?.slides?.length,
+    result?.slides?.map((s: any) => s.title),
+  );
+  console.log(
+    '  promos:',
+    result?.promos?.length,
+    result?.promos?.map((p: any) => p.title),
+  );
+  console.log(
+    '  categories:',
+    result?.categories?.length,
+    result?.categories?.map((c: any) => c.name),
+  );
+  console.log(
+    '  features:',
+    result?.features?.length,
+    result?.features?.map((f: any) => f.title),
+  );
+  console.log(
+    '  productContainers:',
+    result?.productContainers?.length,
+    result?.productContainers?.map((c: any) => c.heading),
+  );
 
   await mongoose.disconnect();
   console.log('[home-seed] done.');

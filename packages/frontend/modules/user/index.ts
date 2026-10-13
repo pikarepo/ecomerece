@@ -1,3 +1,3 @@
-export * from './use-user'
-export * from './user.service'
-export * from './useProfileManager'
+export * from './use-user';
+export * from './useProfileManager';
+export * from './user.service';

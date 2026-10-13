@@ -1,4 +1,3 @@
-
 export * from './events';
 export * from './inventory.aggregate';
 export * from './ports/i-inventory-repository';

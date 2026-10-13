@@ -1,35 +1,35 @@
 {
-    "name": "api",
-    "version": "1.0.0",
-    "scripts": {
-        "dev": "bun run --watch ./index.ts",
-        "build": "bun run typecheck && rm -rf dist && bun build ./index.ts --target=bun --outdir=dist --splitting",
-        "start": "NODE_ENV=production bun run ./dist/index.js",
-        "typecheck": "tsc --noEmit"
-    },
-    "dependencies": {
-        "@ecomerece/domain": "workspace:*",
-        "@ecomerece/shared": "workspace:*",
-        "@hono/clerk-auth": "^3.1.1",
-        "@supabase/supabase-js": "^2.114.0",
-        "bson": "6",
-        "dotenv": "^17.4.2",
-        "hono": "^4.12.26",
-        "jose": "^6.2.3",
-        "mongoose": "8",
-        "redis": "^6.0.0",
-        "uuid": "^14.0.1",
-        "zod": "^4.4.3"
-    },
-    "devDependencies": {
-        "@biomejs/biome": "^2.5.2",
-        "@eslint/js": "^10.0.1",
-        "@types/bun": "latest",
-        "@types/node": "^25.9.1",
-        "typescript": "5.9",
-        "typescript-eslint": "^8.62.0"
-    },
-    "trustedDependencies": [
-        "@clerk/shared"
-    ]
+  "name": "api",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "bun run --watch ./index.ts",
+    "build": "bun run typecheck && rm -rf dist && bun build ./index.ts --target=bun --outdir=dist --splitting",
+    "start": "NODE_ENV=production bun run ./dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ecomerece/domain": "workspace:*",
+    "@ecomerece/shared": "workspace:*",
+    "@hono/clerk-auth": "^3.1.1",
+    "@supabase/supabase-js": "^2.114.0",
+    "bson": "6",
+    "dotenv": "^17.4.2",
+    "hono": "^4.12.26",
+    "jose": "^6.2.3",
+    "mongoose": "8",
+    "redis": "^6.0.0",
+    "uuid": "^14.0.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.2",
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "latest",
+    "@types/node": "^25.9.1",
+    "typescript": "5.9",
+    "typescript-eslint": "^8.62.0"
+  },
+  "trustedDependencies": [
+    "@clerk/shared"
+  ]
 }

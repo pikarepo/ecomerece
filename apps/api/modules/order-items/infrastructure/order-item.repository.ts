@@ -7,88 +7,88 @@ import { OrderItemsMapper } from './order-item.mapper';
 import { OrderItemsModel, type OrderItemsPersistence } from './order-item.model';
 
 export class OrderItemsRepository
-    extends MongoRepository<OrderItemsPersistence>
-    implements IOrderItemsRepository
+  extends MongoRepository<OrderItemsPersistence>
+  implements IOrderItemsRepository
 {
-    constructor(private readonly unitOfWork: UnitOfWork) {
-        super(OrderItemsModel);
+  constructor(private readonly unitOfWork: UnitOfWork) {
+    super(OrderItemsModel);
+  }
+
+  async FindById(id: Id): Promise<OrderItemsAggregate | null> {
+    const doc = await super.findById(id.value);
+    if (!doc) return null;
+    return OrderItemsMapper.persistenceToAggregate(doc);
+  }
+  async FindByIdOrThrow(id: Id): Promise<OrderItemsAggregate> {
+    const doc = await super.findById(id.value);
+    if (!doc) throw new BadRequestError('Order item not found.');
+    return OrderItemsMapper.persistenceToAggregate(doc);
+  }
+
+  async Save(item: OrderItemsAggregate): Promise<void> {
+    const data = OrderItemsMapper.aggregateToPersistence(item);
+    const result = await super.updateOne(
+      {
+        _id: item.id.value,
+        version: item.version.value,
+      },
+      {
+        $set: data,
+        $inc: { version: 1 },
+      },
+    );
+
+    if (result.modifiedCount === 0) {
+      throw new ConcurrencyError();
     }
+  }
 
-    async FindById(id: Id): Promise<OrderItemsAggregate | null> {
-        const doc = await super.findById(id.value);
-        if (!doc) return null;
-        return OrderItemsMapper.persistenceToAggregate(doc);
+  async SaveMany(items: OrderItemsAggregate[]): Promise<void> {
+    if (items.length === 0) return;
+    const bulkOps = [];
+    for (const item of items) {
+      const data = OrderItemsMapper.aggregateToPersistence(item);
+      bulkOps.push({
+        updateOne: {
+          filter: {
+            _id: item.id.value,
+            version: item.version.value,
+          },
+          update: {
+            $set: data,
+            $inc: { version: 1 },
+          },
+        },
+      });
     }
-    async FindByIdOrThrow(id: Id): Promise<OrderItemsAggregate> {
-        const doc = await super.findById(id.value);
-        if (!doc) throw new BadRequestError('Order item not found.');
-        return OrderItemsMapper.persistenceToAggregate(doc);
-    }
+    const result = await super.updateMany(bulkOps, { ordered: false });
 
-    async Save(item: OrderItemsAggregate): Promise<void> {
-        const data = OrderItemsMapper.aggregateToPersistence(item);
-        const result = await super.updateOne(
-            {
-                _id: item.id.value,
-                version: item.version.value,
-            },
-            {
-                $set: data,
-                $inc: { version: 1 },
-            },
-        );
+    if (result.modifiedCount !== items.length)
+      throw new ConcurrencyError('One or more items were concurrently modified.');
+  }
 
-        if (result.modifiedCount === 0) {
-            throw new ConcurrencyError();
-        }
-    }
+  async Delete(id: Id): Promise<void> {
+    await super.findByIdAndDelete(id.value);
+  }
 
-    async SaveMany(items: OrderItemsAggregate[]): Promise<void> {
-        if (items.length === 0) return;
-        const bulkOps = [];
-        for (const item of items) {
-            const data = OrderItemsMapper.aggregateToPersistence(item);
-            bulkOps.push({
-                updateOne: {
-                    filter: {
-                        _id: item.id.value,
-                        version: item.version.value,
-                    },
-                    update: {
-                        $set: data,
-                        $inc: { version: 1 },
-                    },
-                },
-            });
-        }
-        const result = await super.updateMany(bulkOps, { ordered: false });
+  async Create(item: OrderItemsAggregate): Promise<void> {
+    const persistantProduct = OrderItemsMapper.aggregateToPersistence(item);
+    const productDoc = new OrderItemsModel(persistantProduct);
 
-        if (result.modifiedCount !== items.length)
-            throw new ConcurrencyError('One or more items were concurrently modified.');
-    }
+    await super.create(productDoc);
+  }
 
-    async Delete(id: Id): Promise<void> {
-        await super.findByIdAndDelete(id.value);
-    }
+  async Exists(id: Id): Promise<boolean> {
+    return !!(await super.exists({
+      _id: id.value,
+    }));
+  }
 
-    async Create(item: OrderItemsAggregate): Promise<void> {
-        const persistantProduct = OrderItemsMapper.aggregateToPersistence(item);
-        const productDoc = new OrderItemsModel(persistantProduct);
+  async createMany(items: OrderItemsAggregate[]): Promise<void> {
+    if (!items || items.length === 0) return;
 
-        await super.create(productDoc);
-    }
+    const persistentItems = items.map(OrderItemsMapper.aggregateToPersistence);
 
-    async Exists(id: Id): Promise<boolean> {
-        return !!(await super.exists({
-            _id: id.value,
-        }));
-    }
-
-    async createMany(items: OrderItemsAggregate[]): Promise<void> {
-        if (!items || items.length === 0) return;
-
-        const persistentItems = items.map(OrderItemsMapper.aggregateToPersistence);
-
-        await super.bulkCreate(persistentItems, { ordered: false });
-    }
+    await super.bulkCreate(persistentItems, { ordered: false });
+  }
 }

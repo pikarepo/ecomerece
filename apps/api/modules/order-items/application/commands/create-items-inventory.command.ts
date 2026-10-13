@@ -5,16 +5,16 @@ import type { Money } from '@ecomerece/domain/value-objects/money.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 
 export class CreateItemsCommand implements ICommand<{}> {
-    constructor(
-        public readonly items: {
-            id: Id;
-            orderId: Id;
-            vendorId: Id;
-            productId: Id;
-            variantId: Id;
-            quantity: Quantity;
-            waitingTime: ExpirationDate;
-            price: Money;
-        }[],
-    ) {}
+  constructor(
+    public readonly items: {
+      id: Id;
+      orderId: Id;
+      vendorId: Id;
+      productId: Id;
+      variantId: Id;
+      quantity: Quantity;
+      waitingTime: ExpirationDate;
+      price: Money;
+    }[],
+  ) {}
 }
