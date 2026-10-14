@@ -3,6 +3,13 @@ import { bundledSkins } from '../../skins';
 import { supportsWebgl2 } from '../skin/capabilities';
 import type { Lighting, Pbr, Role, Skin } from '../skin/types';
 import { SLAB_ROLES } from '../skin/types';
+import {
+  RESIZE_DEBOUNCE_MS,
+  slabCapFor,
+  slabPixelRatio,
+  slabShadowMapSize,
+  slabShadowsEnabled,
+} from './devicePolicy';
 
 const CANDIDATE_SELECTOR =
   '.mat-panel, .mat-card, .mat-raised, .mat-well, .mat-control, .mat-primary';
@@ -147,6 +154,16 @@ export function createSlabEngine(
 
   let rAFId: number | null = null;
   let ensureTimeout: ReturnType<typeof setTimeout> | null = null;
+  let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Lazy boot (todo/11): three + the GL context are created only when a
+  // webgl-slabs skin is actually active. A failed boot never retries.
+  let bootPromise: Promise<boolean> | null = null;
+  let bootFailed = false;
+
+  // Fail-safe (todo/11): consecutive throwing frames → drop to pure 2D.
+  let renderFailures = 0;
+  let lastNotifiedFallback = '';
 
   // Guard degradation tracking
   let renderCount = 0;
@@ -163,8 +180,16 @@ export function createSlabEngine(
     rAFId = requestAnimationFrame(() => {
       rAFId = null;
       if (disposed || !active) return;
-      update();
-      render();
+      try {
+        update();
+        render();
+        renderFailures = 0;
+      } catch {
+        // A throwing frame (tile-based GPU hiccup, driver error) must never
+        // take the page down — 3 consecutive failures ⇒ drop to pure 2D.
+        renderFailures++;
+        if (renderFailures >= 3) failTo2D();
+      }
     });
   }
 
@@ -174,9 +199,35 @@ export function createSlabEngine(
     ensureTimeout = setTimeout(() => {
       ensureTimeout = null;
       if (disposed || !active) return;
-      ensure();
+      try {
+        ensure();
+      } catch {
+        failTo2D();
+        return;
+      }
       schedule();
     }, 150);
+  }
+
+  /** Shadows are the biggest GPU cost — off on small devices and after guard step 1. */
+  function shadowsAllowed(): boolean {
+    return degradationStep === 0 && slabShadowsEnabled(window.innerWidth);
+  }
+
+  /** Never let an engine callback exception reach the page (todo/11). */
+  function notifyFallback(fallbackId: string) {
+    if (!fallbackId || fallbackId === lastNotifiedFallback) return;
+    lastNotifiedFallback = fallbackId;
+    try {
+      onFallback(fallbackId);
+    } catch {}
+  }
+
+  /** Hard failure → deactivate and hand the skin back to its 2D fallback. */
+  function failTo2D(explicitFallback?: string) {
+    const fallbackId = explicitFallback ?? currentSkin?.fallback ?? 'system';
+    deactivate();
+    notifyFallback(fallbackId);
   }
 
   function invalidateElevations() {
@@ -336,17 +387,18 @@ export function createSlabEngine(
     keyLight.target.position.set(0, 0, 0);
     scene.add(keyLight.target);
 
-    keyLight.castShadow = degradationStep === 0;
+    keyLight.castShadow = shadowsAllowed();
     keyLight.shadow.camera.left = -0.75 * W;
     keyLight.shadow.camera.right = 0.75 * W;
     keyLight.shadow.camera.top = 0.75 * H;
     keyLight.shadow.camera.bottom = -0.75 * H;
     keyLight.shadow.camera.near = 1;
     keyLight.shadow.camera.far = 4 * R;
-    // 1024² is plenty for screen-space slabs and roughly halves the shadow
-    // pass cost vs 2048² (the single biggest GPU cost of the engine).
-    keyLight.shadow.mapSize.width = 1024;
-    keyLight.shadow.mapSize.height = 1024;
+    // 1024² desktop / 512² small-device (slabShadowMapSize) — the shadow pass
+    // is the single biggest GPU cost of the engine.
+    const mapSize = slabShadowMapSize(W);
+    keyLight.shadow.mapSize.width = mapSize;
+    keyLight.shadow.mapSize.height = mapSize;
     keyLight.shadow.radius = lighting.shadow.softness;
     keyLight.shadow.camera.updateProjectionMatrix();
     scene.add(keyLight);
@@ -362,7 +414,7 @@ export function createSlabEngine(
     shadowCatcher = new T.Mesh(catcherGeom, catcherMat);
     shadowCatcher.position.set(0, 0, 0.002);
     shadowCatcher.receiveShadow = true;
-    shadowCatcher.visible = degradationStep === 0;
+    shadowCatcher.visible = shadowsAllowed();
     scene.add(shadowCatcher);
   }
 
@@ -391,11 +443,7 @@ export function createSlabEngine(
 
     const rootStyle = getComputedStyle(document.documentElement);
     const W = window.innerWidth;
-    const isMobile = W <= 430;
-    const baseCap = isMobile
-      ? (currentSkin.slabCap?.mobile ?? 36)
-      : (currentSkin.slabCap?.desktop ?? 80);
-    const effectiveCap = Math.max(4, Math.floor(baseCap * activeCapScale));
+    const effectiveCap = slabCapFor(currentSkin.slabCap, W, activeCapScale);
 
     const candidates = Array.from(container.querySelectorAll<HTMLElement>(CANDIDATE_SELECTOR));
 
@@ -474,7 +522,7 @@ export function createSlabEngine(
         }
 
         const mesh = new T.Mesh(geom, [frontMat, wallMat]);
-        mesh.castShadow = degradationStep === 0;
+        mesh.castShadow = shadowsAllowed();
         mesh.receiveShadow = false;
         mesh.visible = false;
         scene.add(mesh);
@@ -667,6 +715,90 @@ export function createSlabEngine(
     schedule();
   }
 
+  function rendererReady(): boolean {
+    return !!(THREE && renderer && scene && camera && canvas);
+  }
+
+  function onContextLost(e: Event) {
+    e.preventDefault();
+    const fallbackId = currentSkin?.fallback ?? 'system';
+    deactivate();
+    notifyFallback(fallbackId);
+  }
+
+  /**
+   * Lazily load three + create the WebGL context (todo/11). Called only when
+   * a webgl-slabs skin is actually active — phones showing a 2D skin never
+   * download the engine chunk. The result is cached and a failed boot never
+   * retries (`bootFailed`), so a broken GPU cannot loop.
+   */
+  function ensureBooted(): Promise<boolean> {
+    if (rendererReady()) return Promise.resolve(true);
+    if (bootFailed) return Promise.resolve(false);
+    if (!bootPromise) {
+      bootPromise = (async () => {
+        try {
+          const mod = await import('three');
+          if (disposed) return false;
+          THREE = mod;
+          const T = mod;
+
+          canvas = document.createElement('canvas');
+          canvas.style.position = 'fixed';
+          canvas.style.inset = '0';
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+          canvas.style.zIndex = '-9';
+          canvas.style.pointerEvents = 'none';
+          canvas.style.display = 'none';
+          canvas.addEventListener('webglcontextlost', onContextLost);
+          document.body.appendChild(canvas);
+
+          try {
+            renderer = new T.WebGLRenderer({ canvas, alpha: true, antialias: true });
+          } catch {
+            // Context creation refused (common on low-end mobile GPUs) → inert 2D.
+            canvas.remove();
+            canvas = null;
+            return false;
+          }
+
+          // todo/11: phones cap at 1.5 DPR — a full-screen 2x canvas plus the
+          // shadow pass is what loses the context on tile-based GPUs.
+          renderer.setPixelRatio(slabPixelRatio(window.devicePixelRatio || 1, window.innerWidth));
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = T.PCFSoftShadowMap;
+          renderer.outputColorSpace = T.SRGBColorSpace;
+          renderer.toneMapping = T.NoToneMapping;
+
+          scene = new T.Scene();
+
+          const W = window.innerWidth;
+          const H = window.innerHeight;
+          const D = H / 2 / Math.tan(((FOV / 2) * Math.PI) / 180);
+
+          camera = new T.PerspectiveCamera(FOV, W / H, 0.1, 10000);
+          camera.position.set(0, 0, D);
+          camera.lookAt(0, 0, 0);
+
+          renderer.setSize(W, H);
+          return true;
+        } catch {
+          renderer = null;
+          scene = null;
+          camera = null;
+          if (canvas?.parentNode) canvas.parentNode.removeChild(canvas);
+          canvas = null;
+          return false;
+        }
+      })().then((ok) => {
+        if (!ok) bootFailed = true;
+        return ok;
+      });
+    }
+    return bootPromise;
+  }
+
   function checkActivation() {
     if (disposed) return;
     const skinId = document.documentElement.getAttribute('data-skin') || 'system';
@@ -684,21 +816,49 @@ export function createSlabEngine(
     }
 
     // Check WebGL2 availability (probed once app-wide — see capabilities.ts).
+    // No WebGL2 (low-end phones, emulators, battery-saver modes) ⇒ hand the
+    // 3D skin straight back to its 2D fallback, and never even load three.
     if (!supportsWebgl2()) {
       deactivate();
+      notifyFallback(skin.fallback ?? 'system');
       return;
     }
 
-    if (!active) {
-      activate(skin);
-    } else if (currentSkinId !== skinId) {
-      currentSkinId = skinId;
-      reconfigure(skin);
+    // Boot already failed ⇒ same 2D hand-off, no retry loop.
+    if (bootFailed) {
+      deactivate();
+      notifyFallback(skin.fallback ?? 'system');
+      return;
+    }
+
+    if (!rendererReady()) {
+      ensureBooted().then((ok) => {
+        if (disposed) return;
+        if (ok) {
+          checkActivation();
+        } else {
+          deactivate();
+          notifyFallback(skin.fallback ?? 'system');
+        }
+      });
+      return;
+    }
+
+    try {
+      if (!active) {
+        activate(skin);
+      } else if (currentSkinId !== skinId) {
+        currentSkinId = skinId;
+        reconfigure(skin);
+      }
+    } catch {
+      // An engine init error must degrade to 2D, never crash the page (todo/11).
+      failTo2D(skin.fallback ?? 'system');
     }
   }
 
   function activate(skin: Skin) {
-    if (!canvas) return;
+    if (!canvas || !renderer || !scene) return;
     active = true;
     currentSkinId = skin.id;
     canvas.style.display = 'block';
@@ -716,10 +876,35 @@ export function createSlabEngine(
   }
 
   function onResize() {
+    if (disposed) return;
+    // Trailing debounce (todo/11): mobile browsers fire `resize` continuously
+    // while the URL bar collapses/expands — re-running the full geometry
+    // rebuild per event janks scrolling on phones.
+    if (resizeTimer !== null) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resizeTimer = null;
+      applyResize();
+    }, RESIZE_DEBOUNCE_MS);
+  }
+
+  function applyResize() {
     if (disposed || !renderer || !camera) return;
+    try {
+      doResize();
+    } catch {
+      failTo2D();
+    }
+  }
+
+  function doResize() {
+    if (!renderer || !camera) return;
     const W = window.innerWidth;
     const H = window.innerHeight;
     const D = H / 2 / Math.tan(((FOV / 2) * Math.PI) / 180);
+
+    // Re-apply the small-device pixel-ratio policy (rotation can cross the
+    // small-viewport boundary) before resizing the drawing buffer.
+    renderer.setPixelRatio(slabPixelRatio(window.devicePixelRatio || 1, W));
 
     camera.aspect = W / H;
     camera.position.set(0, 0, D);
@@ -734,77 +919,35 @@ export function createSlabEngine(
       keyLight.shadow.camera.bottom = -0.75 * H;
       const R = Math.max(W, H) * 1.2;
       keyLight.shadow.camera.far = 4 * R;
+      const mapSize = slabShadowMapSize(W);
+      if (keyLight.shadow.mapSize.width !== mapSize) {
+        keyLight.shadow.mapSize.set(mapSize, mapSize);
+        keyLight.shadow.map?.dispose();
+        keyLight.shadow.map = null;
+      }
+      keyLight.castShadow = shadowsAllowed();
       keyLight.shadow.camera.updateProjectionMatrix();
     }
 
     if (shadowCatcher) {
+      shadowCatcher.visible = shadowsAllowed();
       shadowCatcher.geometry.dispose();
       if (THREE) shadowCatcher.geometry = new THREE.PlaneGeometry(2 * W, 2 * H);
+    }
+
+    for (const rec of records) {
+      rec.mesh.castShadow = shadowsAllowed();
     }
 
     ensure();
     schedule();
   }
 
-  async function init() {
-    try {
-      THREE = await import('three');
-    } catch {
-      // Three.js not available; engine remains inert
-      return;
-    }
-
+  // Synchronous, allocation-light: three + the GL context are NOT created
+  // here — ensureBooted() loads them lazily the moment a webgl-slabs skin is
+  // active (todo/11: 2D-skin phones never download the engine chunk).
+  function init() {
     if (disposed) return;
-    const T = THREE;
-
-    canvas = document.createElement('canvas');
-    canvas.style.position = 'fixed';
-    canvas.style.inset = '0';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
-    canvas.style.zIndex = '-9';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.display = 'none';
-
-    canvas.addEventListener('webglcontextlost', (e) => {
-      e.preventDefault();
-      onFallback(currentSkin?.fallback ?? 'system');
-      deactivate();
-    });
-
-    document.body.appendChild(canvas);
-
-    try {
-      renderer = new T.WebGLRenderer({
-        canvas,
-        alpha: true,
-        antialias: true,
-      });
-    } catch {
-      canvas.remove();
-      canvas = null;
-      return;
-    }
-
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = T.PCFSoftShadowMap;
-    renderer.outputColorSpace = T.SRGBColorSpace;
-    renderer.toneMapping = T.NoToneMapping;
-
-    scene = new T.Scene();
-
-    const W = window.innerWidth;
-    const H = window.innerHeight;
-    const D = H / 2 / Math.tan(((FOV / 2) * Math.PI) / 180);
-
-    camera = new T.PerspectiveCamera(FOV, W / H, 0.1, 10000);
-    camera.position.set(0, 0, D);
-    camera.lookAt(0, 0, 0);
-
-    renderer.setSize(W, H);
-
-    // Window / container listeners
     window.addEventListener('scroll', schedule, { capture: true, passive: true });
     window.addEventListener('resize', onResize, { passive: true });
 
@@ -861,37 +1004,63 @@ export function createSlabEngine(
 
   init();
 
+  // Shared by dispose() and any fatal engine error: release every listener,
+  // observer, timer, GL resource and the canvas itself — idempotent.
+  function teardownRuntime() {
+    active = false;
+    currentSkin = null;
+    currentSkinId = '';
+
+    if (rAFId !== null) {
+      cancelAnimationFrame(rAFId);
+      rAFId = null;
+    }
+    if (ensureTimeout !== null) {
+      clearTimeout(ensureTimeout);
+      ensureTimeout = null;
+    }
+    if (resizeTimer !== null) {
+      clearTimeout(resizeTimer);
+      resizeTimer = null;
+    }
+
+    window.removeEventListener('scroll', schedule, { capture: true });
+    window.removeEventListener('resize', onResize);
+
+    container.removeEventListener('pointerover', onPointerStateChange, { capture: true });
+    container.removeEventListener('pointerout', onPointerStateChange, { capture: true });
+    container.removeEventListener('pointerdown', onPointerStateChange, { capture: true });
+    container.removeEventListener('pointerup', onPointerStateChange, { capture: true });
+
+    rootObserver?.disconnect();
+    rootObserver = null;
+    domObserver?.disconnect();
+    domObserver = null;
+
+    clearSlabFlags();
+    teardownScene();
+
+    if (renderer) {
+      try {
+        renderer.dispose();
+        renderer.forceContextLoss();
+      } catch {}
+      renderer = null;
+    }
+    scene = null;
+    camera = null;
+
+    if (canvas?.parentNode) {
+      canvas.parentNode.removeChild(canvas);
+    }
+    canvas = null;
+  }
+
   return {
     dispose() {
       if (disposed) return;
       disposed = true;
-      active = false;
-
-      if (rAFId !== null) cancelAnimationFrame(rAFId);
-      if (ensureTimeout !== null) clearTimeout(ensureTimeout);
-
-      window.removeEventListener('scroll', schedule, { capture: true });
-      window.removeEventListener('resize', onResize);
-
-      container.removeEventListener('pointerover', onPointerStateChange, { capture: true });
-      container.removeEventListener('pointerout', onPointerStateChange, { capture: true });
-      container.removeEventListener('pointerdown', onPointerStateChange, { capture: true });
-      container.removeEventListener('pointerup', onPointerStateChange, { capture: true });
-
-      rootObserver?.disconnect();
-      domObserver?.disconnect();
-
-      clearSlabFlags();
-      teardownScene();
-
-      if (renderer) {
-        renderer.dispose();
-        renderer.forceContextLoss();
-      }
-
-      if (canvas?.parentNode) {
-        canvas.parentNode.removeChild(canvas);
-      }
+      teardownRuntime();
     },
   };
 }

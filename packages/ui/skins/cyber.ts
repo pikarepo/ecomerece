@@ -100,6 +100,7 @@ export const cyber: Skin = {
         bg: 'rgb(var(--k-tint-a))',
         edge: 'rgb(var(--k-hue-1))',
         shadow: '0 0 12px rgb(var(--k-hue-1)/var(--k-g))',
+        glow: 'rgb(var(--k-hue-1))',
         hover: {
           bg: 'rgb(var(--k-tint-b))',
           edge: 'rgb(var(--k-hue-2))',
@@ -111,6 +112,7 @@ export const cyber: Skin = {
         bg: 'rgb(var(--accent))',
         edge: 'rgb(var(--k-hue-1))',
         shadow: '0 0 16px rgb(var(--k-hue-1)/var(--k-g))',
+        glow: 'rgb(var(--k-hue-1))',
       },
       well: {
         bg: 'rgb(var(--k-tint-b))',

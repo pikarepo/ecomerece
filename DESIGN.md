@@ -2860,6 +2860,7 @@ Before opening a PR for a new skin:
 | `onSelectedKeysChange` | `(keys) => void` | presence enables the select column |
 | `bulkBar` | `(selected, clear) => ReactNode` | bar shown above the table while rows are selected |
 | `summary` | `ReactNode[]` | cells aligned to `columns`, rendered in `<tfoot>` |
+| `columnGroups` | `{ label, span, align? }[]` | grouped header row above the column headers (`scope="colgroup"`, spans in column order; completion of the batch 17 wishlist row) |
 
 The select column uses a header select-all (tri-state via `aria-checked="mixed"`) plus per-row
 checkboxes; selection is click-driven (not change-driven) so it is harness-stable. Selected rows
@@ -3096,3 +3097,97 @@ New file `components/surface/ReadMore.tsx` (exported from the surface barrel):
 | Export | Signature | Notes |
 |---|---|---|
 | `ReadMore` | `lines?` (3), `moreLabel?` ("Read more"), `lessLabel?` ("Show less"), `expanded?` (controlled), `onExpandedChange?` | CSS `line-clamp` collapse; toggle is a real `<button>` with `aria-expanded`/`aria-controls`; `focusRing()` + `active:scale-[var(--press-scale)]` |
+
+### E.5.29 todo/08 completion — as-built (batches 11/12/17/18 leftovers)
+
+Closes every open row traced back to `todo/08` in the master backlog:
+
+| Export | File | Signature | Notes |
+|---|---|---|---|
+| `Stopwatch` | `data/Stopwatch.tsx` | `running?` (controlled), `autoStart?`, `initialMs?`, `intervalMs?` (50), `formatter?`, `controls?`, `onChange?`, `onReset?`, `onRunningChange?` | wall-clock accurate (Date.now deltas, no tick drift); `role="timer"`; optional Start/Pause + Reset buttons (`mat-control`, `focusRing()`, press scale) |
+| `formatStopwatch` | `data/Stopwatch.tsx` | `(ms) => string` | `mm:ss.cc` (or `h:mm:ss.cc` past an hour) |
+| `BusinessHours` | `data/BusinessHours.tsx` | `open`, `close` (24h `HH:MM`), `timezone?`, `days?` (Mon–Fri), `now?` (frozen clock), `openLabel?`, `closedLabel?`, `showNext?` | open/closed dot + `closes 5:00 PM` / `opens Mon 9:00 AM`; `role="status"` |
+| `businessStatus` / `parseHm` / `formatClock12` | `data/BusinessHours.tsx` | pure helpers | timezone-correct via `Intl` weekday/hour parts, `local` fallback on error |
+| `GaugeKPI` | `data/GaugeKPI.tsx` | `label`, `value`, `min?`, `max?` (100), `hint?`, `format?` | 270° SVG arc, `surface-3` track + `accent` value (§23: solid tokens, no gradients), `role="img"` + descriptive `aria-label` |
+| `SyncStatus` | `data/Status.tsx` | `state: synced \| syncing \| offline \| error`, `lastSyncedAt?`, `label?` | dot + text, `role="status" aria-live="polite"`, optional `<time>` stamp |
+| `SaveStatus` | `data/Status.tsx` | `state: saved \| saving \| error \| idle`, `label?` | document save line (`All changes saved` / `Saving…` / `Couldn't save changes`) |
+| `ConnectionQuality` | `data/Status.tsx` | `level: good \| fair \| poor \| offline`, `label?` | 4-bar signal glyph (filled = accent), `role="img"` + `aria-label` |
+| `BatteryIndicator` | `data/Status.tsx` | `level` (0–100, clamped), `charging?`, `showLabel?`, `label?` | battery glyph; red ≤20 ≤ amber ≤50 < green; `role="img"` |
+| `Table.columnGroups` | `data/Table.tsx` | `{ label, span, align? }[]` | colgroup row above the column headers (see E.5.9) |
+
+Tests: `test/batch08-completion.test.tsx` (15 cases). Design page: "todo/08 completion —
+stopwatch · business hours · gauge · status" section (data tab) + grouped headers on the
+batch 17 table demo.
+
+### E.5.30 Effect buttons — as-built (batch 38, todo/09 §C)
+
+New file `components/controls/EffectButton.tsx` (exported from the controls barrel).
+The visual identity of each effect is a SKIN decision — components bind tokens only:
+shimmer reads `--m-<role>-sheen`, glow reads `--m-<role>-glow`, ripple paints with
+`currentColor`, magnetic is transform-only. A new optional `Material.glow?` slot
+(emitted as `--m-<role>-glow`) lets a skin own the emissive halo — `cyber` overrides
+it in dark mode with `rgb(var(--k-hue-1))`; every other skin falls back to
+`rgb(var(--accent))`, so no component ever names a literal colour.
+
+| Export | Signature | Notes |
+|---|---|---|
+| `EffectButton` | `effect: 'ripple' \| 'magnetic' \| 'shimmer' \| 'glow'`, `variant?: 'primary' \| 'secondary'`, `material?` (role), `strength?` (6) | one button, four effects; `mat-primary`/`mat-control` role fill |
+| `RippleButton` | `EffectButtonProps` minus `effect` | `onPointerDown` spawns a `currentColor` ripple (`.fx-ripple`) |
+| `MagneticButton` | ″ | pointer-follow translate (`strength`, default 6px); reduced-motion aware; resets on leave |
+| `ShimmerButton` | ″ | `--m-fx-sheen` overlay (`.fx-shimmer`) sweeps once on hover/focus — no looping animation (I6) |
+| `GlowButton` | ″ | `--m-fx-glow-color` drop-shadow halo on hover/focus |
+
+CSS primitives (`.fx-btn`/`.fx-shimmer`/`.fx-glow`/`.fx-ripple` + `fx-ripple` keyframes)
+live in `styles/engine.css` utilities layer.
+
+Tests: `test/batch38-effects.test.tsx` (5 cases). Design page: "Effect buttons (batch 38)"
+section (controls tab).
+
+### E.5.31 Gradient border button — as-built (batch 39, todo/09 §C)
+
+New file `components/controls/GradientBorderButton.tsx` (exported from the controls
+barrel). A single `<button>` whose 1px ring is drawn by a masked `::before` pseudo
+(`.fx-gradbtn`, utilities layer of `engine.css`): `linear-gradient(135deg, …)` over
+`--m-<role>-glow` → `--m-<role>-edge`, with token fallbacks supplied in CSS
+(`--m-fx-grad-a/b-fallback`) so markup stays `--m-*`-only. The variant fill
+(`mat-primary`/`mat-control`) sits under the ring; the label is a `relative z-10`
+span so the ring never covers it.
+
+| Export | Signature | Notes |
+|---|---|---|
+| `GradientBorderButton` | `variant?: 'primary' \| 'secondary'`, `size?: 'sm' \| 'md' \| 'lg'`, `material?` (role) + native button props | ring source defaults to the variant role; `material` overrides it |
+
+Tests: `test/batch39-gradient-border.test.tsx` (4 cases). Design page: "Gradient border
+button (batch 39)" section (controls tab).
+
+### E.5.32 Confirmation controls — as-built (batch 40, todo/09 §C)
+
+New file `components/controls/Confirm.tsx` (exported from the controls barrel). Three
+gesture gates that must be satisfied before `onConfirm` fires — no accidental
+destructive taps. Fills use theme token utilities (`bg-accent/25`, `bg-danger`) and the
+`mat-*` roles; no raw custom properties (markup-contract clean).
+
+| Export | Signature | Notes |
+|---|---|---|
+| `HoldToConfirmButton` | `onConfirm?`, `duration?` (1200), `variant?` (`danger`\|`primary`\|`secondary`), `size?`, `holdingLabel?`, `confirmedLabel?` + native props | interval-driven fill (`bg-accent/25`); releases early cancel; keyboard hold (Space/Enter) works |
+| `SwipeToConfirm` | `onConfirm?`, `threshold?` (0.9), `thumbLabel?`, `disabled?` | `mat-well` track + `mat-primary` thumb; confirms when dragged past `threshold × (width − height)`; keyboard Enter/Space confirms |
+| `DoubleClickToConfirm` | `onConfirm?`, `timeout?` (400), `variant?`, `size?`, `armedLabel?` | first click arms (`data-armed`, shows `armedLabel`), second within `timeout` confirms; disarm timer clears on unmount |
+
+Tests: `test/batch40-confirm.test.tsx` (4 cases). Design page: "Confirmation controls
+(batch 40)" section (controls tab).
+
+### E.5.33 Timed buttons — as-built (batch 41, todo/09 §C)
+
+New file `components/controls/Cooldown.tsx` (exported from the controls barrel). Three
+time-gated buttons sharing one 250ms interval loop so the visible remaining time is
+consistent. Labels accept render functions for localisation; `aria-live="polite"` and
+`data-cooling`/`data-counting` expose state. `mat-*` + theme token utilities only.
+
+| Export | Signature | Notes |
+|---|---|---|
+| `CooldownButton` | `seconds?` (30), `onActivate?`, `cooldownLabel?(secondsLeft)`, `variant?`, `size?` + native props | disabled while cooling; fires `onActivate` then starts the cooldown |
+| `ResendCodeButton` | `onResend?`, `seconds?` (30), `resendLabel?` ("Resend code"), `coolingLabel?` | thin `CooldownButton` wrapper; default cooling label "Resend in {s}s" |
+| `CountdownButton` | `seconds?` (5), `onComplete?`, `countdownLabel?(secondsLeft)`, `variant?`, `size?`, `auto?` (true) | counts down on mount, disabled while counting, then re-enables and fires `onComplete` |
+
+Tests: `test/batch41-timed-buttons.test.tsx` (3 cases). Design page: "Timed buttons
+(batch 41)" section (controls tab).

@@ -18,25 +18,24 @@ export function Countdown({
   className,
   ...props
 }: CountdownProps) {
-  const [ms, setMs] = useState<number>(() => {
-    const t = typeof target === 'string' || typeof target === 'number' ? new Date(target) : target;
-    return Math.max(0, t.getTime() - Date.now());
-  });
+  const [ms, setMs] = useState<number | null>(null);
 
   useEffect(() => {
     const t = typeof target === 'string' || typeof target === 'number' ? new Date(target) : target;
-    const id = setInterval(() => {
+    const tick = () => {
       const remaining = Math.max(0, t.getTime() - Date.now());
       setMs(remaining);
       if (remaining === 0) {
         clearInterval(id);
         onComplete?.();
       }
-    }, intervalMs);
+    };
+    const id = setInterval(tick, intervalMs);
+    tick();
     return () => clearInterval(id);
   }, [target, intervalMs, onComplete]);
 
-  const label = formatter ? formatter(ms) : `${Math.floor(ms / 1000)}s`;
+  const label = ms === null ? '' : formatter ? formatter(ms) : `${Math.floor(ms / 1000)}s`;
 
   return (
     <span className={cn(className)} {...props}>

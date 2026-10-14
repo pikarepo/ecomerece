@@ -2,857 +2,781 @@
 /* Source: packages/ui/skins/skeuo-3d.ts → compiled by packages/ui/scripts/build-skins.ts */
 
 @layer skins {
-  /* light */
-  :where(:root[data-skin="skeuo-3d"]),
-  :where([data-skin="skeuo-3d"]) {
-    --r-chip: 6px;
-    --r-control: 12px;
-    --r-card: 16px;
-    --r-sheet: 22px;
-    --stroke: 1px;
-    --ease: cubic-bezier(0.25, 0.8, 0.3, 1);
-    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-    --dur: 180ms;
-    --dur-slow: 260ms;
-    --press-scale: 0.97;
-    --scene: rgb(var(--canvas));
-    --font-ui:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto,
-      Inter, sans-serif;
-    --display-weight: 700;
-    --k-tint-a: 244 245 247;
-    --k-tint-b: 237 239 242;
-    --k-hi: 255 255 255;
-    --k-lo: 11 13 18;
-    --k-gloss: 0.55;
-    --k-s: 0.06;
-    --shadow-sm: 0 1px 2px rgb(15 18 26 / 0.06), 0 1px 3px rgb(15 18 26 / 0.04);
-    --shadow-md: 0 4px 14px rgb(15 18 26 / 0.08), 0 1px 3px rgb(15 18 26 / 0.05);
-    --shadow-lg: 0 16px 40px rgb(15 18 26 / 0.14), 0 2px 8px rgb(15 18 26 / 0.06);
-    --m-ground-bg: rgb(var(--canvas));
-    --m-ground-edge: transparent;
-    --m-ground-shadow: none;
-    --m-ground-z: 0px;
-    --m-panel-bg: rgb(var(--k-tint-b));
-    --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-panel-edge: rgb(var(--k-lo) / 0.18);
-    --m-panel-shadow: none;
-    --m-panel-z: 4px;
-    --m-card-bg: rgb(var(--k-tint-a));
-    --m-card-sheen:
-      linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-card-edge: rgb(var(--k-lo) / 0.18);
-    --m-card-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9), inset 0 -1px 0 rgb(var(--k-lo) / 0.12), 0 1px 2px rgb(
-        var(--k-lo) /
-        0.2
-      ), 0 10px 20px -6px rgb(var(--k-lo) / 0.22);
-    --m-card-z: 8px;
-    --m-raised-bg: rgb(var(--k-tint-b));
-    --m-raised-sheen:
-      linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-raised-edge: rgb(var(--k-lo) / 0.18);
-    --m-raised-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 2px rgb(var(--k-lo) / 0.2),
-      0 8px 16px -6px rgb(var(--k-lo) / 0.2);
-    --m-raised-z: 14px;
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-overlay-sheen: linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--k-gloss)),
-      rgb(255 255 255 / 0) 34%
-    );
-    --m-overlay-edge: rgb(var(--k-lo) / 0.18);
-    --m-overlay-shadow:
-      0 24px 48px -12px rgb(var(--k-lo) / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.9);
-    --m-overlay-z: 28px;
-    --m-chrome-bg: rgb(var(--k-tint-a));
-    --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-chrome-edge: rgb(var(--k-lo) / 0.18);
-    --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.8), 0 2px 6px rgb(var(--k-lo) / 0.15);
-    --m-chrome-backdrop: none;
-    --m-chrome-z: 20px;
-    --m-well-bg: rgb(var(--k-tint-b));
-    --m-well-edge: rgb(var(--k-lo) / 0.3);
-    --m-well-shadow: inset 0 2px 5px rgb(var(--k-lo) / 0.3), 0 1px 0 rgb(255 255 255 / 0.8);
-    --m-well-z: 0px;
-    --m-control-bg: rgb(var(--k-tint-a));
-    --m-control-sheen: linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--k-gloss)) 0,
-      rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-      transparent 51%
-    );
-    --m-control-edge: rgb(var(--k-lo) / 0.45);
-    --m-control-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 1px rgb(var(--k-lo) / 0.3),
-      0 3px 6px rgb(var(--k-lo) / 0.2);
-    --m-control-z: 6px;
-    --m-control-hover-bg: rgb(var(--surface-4));
-    --m-control-hover-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.9), 0 1px 1px rgb(var(--k-lo) / 0.3),
-      0 3px 6px rgb(var(--k-lo) / 0.2);
-    --m-control-press-bg: rgb(var(--surface-3));
-    --m-control-press-sheen: none;
-    --m-control-press-shadow: inset 0 3px 6px rgb(var(--k-lo) / 0.35);
-    --m-primary-bg: rgb(var(--accent));
-    --m-primary-sheen: linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--k-gloss)) 0,
-      rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-      transparent 51%
-    );
-    --m-primary-edge: rgb(var(--k-lo) / 0.45);
-    --m-primary-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.5), 0 1px 1px rgb(var(--k-lo) / 0.3),
-      0 3px 6px rgb(var(--k-lo) / 0.2);
-    --m-primary-z: 6px;
-  }
+/* light */
+:where(:root[data-skin="skeuo-3d"]),
+:where([data-skin="skeuo-3d"]) {
+  --r-chip: 6px;
+  --r-control: 12px;
+  --r-card: 16px;
+  --r-sheet: 22px;
+  --stroke: 1px;
+  --ease: cubic-bezier(.25,.8,.3,1);
+  --ease-exit: cubic-bezier(.4,0,1,1);
+  --dur: 180ms;
+  --dur-slow: 260ms;
+  --press-scale: 0.97;
+  --scene: rgb(var(--canvas));
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', Roboto, Inter, sans-serif;
+  --display-weight: 700;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --k-gloss: 0.55;
+  --k-s: 0.06;
+  --shadow-sm: 0 1px 2px rgb(15 18 26/.06), 0 1px 3px rgb(15 18 26/.04);
+  --shadow-md: 0 4px 14px rgb(15 18 26/.08), 0 1px 3px rgb(15 18 26/.05);
+  --shadow-lg: 0 16px 40px rgb(15 18 26/.14), 0 2px 8px rgb(15 18 26/.06);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--k-tint-b));
+  --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-panel-edge: rgb(var(--k-lo)/.18);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--k-tint-a));
+  --m-card-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-card-edge: rgb(var(--k-lo)/.18);
+  --m-card-shadow: inset 0 1px 0 rgb(255 255 255/.9), inset 0 -1px 0 rgb(var(--k-lo)/.12), 0 1px 2px rgb(var(--k-lo)/.20), 0 10px 20px -6px rgb(var(--k-lo)/.22);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--k-tint-b));
+  --m-raised-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-raised-edge: rgb(var(--k-lo)/.18);
+  --m-raised-shadow: inset 0 1px 0 rgb(255 255 255/.9), 0 1px 2px rgb(var(--k-lo)/.20), 0 8px 16px -6px rgb(var(--k-lo)/.20);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 34%);
+  --m-overlay-edge: rgb(var(--k-lo)/.18);
+  --m-overlay-shadow: 0 24px 48px -12px rgb(var(--k-lo)/.35), inset 0 1px 0 rgb(255 255 255/.9);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--k-tint-a));
+  --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-chrome-edge: rgb(var(--k-lo)/.18);
+  --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255/.8), 0 2px 6px rgb(var(--k-lo)/.15);
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--k-tint-b));
+  --m-well-edge: rgb(var(--k-lo)/.30);
+  --m-well-shadow: inset 0 2px 5px rgb(var(--k-lo)/.30), 0 1px 0 rgb(255 255 255/.8);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--k-tint-a));
+  --m-control-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-control-edge: rgb(var(--k-lo)/.45);
+  --m-control-shadow: inset 0 1px 0 rgb(255 255 255/.9), 0 1px 1px rgb(var(--k-lo)/.30), 0 3px 6px rgb(var(--k-lo)/.20);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-4));
+  --m-control-hover-shadow: inset 0 1px 0 rgb(255 255 255/.9), 0 1px 1px rgb(var(--k-lo)/.30), 0 3px 6px rgb(var(--k-lo)/.20);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-sheen: none;
+  --m-control-press-shadow: inset 0 3px 6px rgb(var(--k-lo)/.35);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-primary-edge: rgb(var(--k-lo)/.45);
+  --m-primary-shadow: inset 0 1px 0 rgb(255 255 255/.5), 0 1px 1px rgb(var(--k-lo)/.30), 0 3px 6px rgb(var(--k-lo)/.20);
+  --m-primary-z: 6px;
+}
 
-  /* real-3d §2.3 — slabbed surfaces hand painting to the WebGL canvas */
-  [data-skin="skeuo-3d"] [data-slab="on"] {
-    background: none;
-    border-color: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+/* real-3d §2.3 — slabbed surfaces hand painting to the WebGL canvas */
+[data-skin="skeuo-3d"] [data-slab="on"] {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 
-  [data-skin="skeuo-3d"] .mat-control[data-slab="on"]:hover,
-  [data-skin="skeuo-3d"] .mat-control[data-slab="on"]:active {
-    background: none;
-    box-shadow: none;
-    border-color: transparent;
-  }
+[data-skin="skeuo-3d"] .mat-control[data-slab="on"]:hover,
+[data-skin="skeuo-3d"] .mat-control[data-slab="on"]:active {
+  background: none;
+  box-shadow: none;
+  border-color: transparent;
+}
 
-  /* dark: auto (follows the OS) */
-  @media (prefers-color-scheme: dark) {
-    :where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
-      --r-chip: 6px;
-      --r-control: 12px;
-      --r-card: 16px;
-      --r-sheet: 22px;
-      --stroke: 1px;
-      --ease: cubic-bezier(0.25, 0.8, 0.3, 1);
-      --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-      --dur: 180ms;
-      --dur-slow: 260ms;
-      --press-scale: 0.97;
-      --scene: rgb(var(--canvas));
-      --font-ui:
-        -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto,
-        Inter, sans-serif;
-      --display-weight: 700;
-      --k-tint-a: 29 31 35;
-      --k-tint-b: 21 23 26;
-      --k-hi: 255 255 255;
-      --k-lo: 0 0 0;
-      --k-gloss: 0.03;
-      --k-s: 0.04;
-      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-      --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
-      --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
-      --m-ground-bg: rgb(var(--canvas));
-      --m-ground-edge: transparent;
-      --m-ground-shadow: none;
-      --m-ground-z: 0px;
-      --m-panel-bg: rgb(var(--k-tint-b));
-      --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      --m-panel-edge: rgb(var(--k-lo) / 0.35);
-      --m-panel-shadow: none;
-      --m-panel-z: 4px;
-      --m-card-bg: rgb(var(--k-tint-a));
-      --m-card-sheen:
-        linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      --m-card-edge: rgb(var(--k-lo) / 0.35);
-      --m-card-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.45),
-        0 1px 2px rgb(0 0 0 / 0.4), 0 10px 20px -6px rgb(0 0 0 / 0.45);
-      --m-card-z: 8px;
-      --m-raised-bg: rgb(var(--k-tint-b));
-      --m-raised-sheen:
-        linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      --m-raised-edge: rgb(var(--k-lo) / 0.35);
-      --m-raised-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.4);
-      --m-raised-z: 14px;
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-overlay-edge: rgb(var(--k-lo) / 0.35);
-      --m-overlay-shadow:
-        0 24px 48px -12px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.08);
-      --m-overlay-z: 28px;
-      --m-chrome-bg: rgb(var(--k-tint-a));
-      --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-      --m-chrome-edge: rgb(var(--k-lo) / 0.35);
-      --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 6px rgb(0 0 0 / 0.35);
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 20px;
-      --m-well-bg: rgb(var(--k-tint-b));
-      --m-well-edge: rgb(var(--k-lo) / 0.55);
-      --m-well-shadow: inset 0 2px 5px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.06);
-      --m-well-z: 0px;
-      --m-control-bg: rgb(var(--k-tint-a));
-      --m-control-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / var(--k-gloss)) 0,
-        rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-        transparent 51%
-      );
-      --m-control-edge: rgb(var(--k-lo) / 0.55);
-      --m-control-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 1px rgb(0 0 0 / 0.4),
-        0 3px 6px rgb(0 0 0 / 0.3);
-      --m-control-z: 6px;
-      --m-control-hover-bg: rgb(var(--surface-3));
-      --m-control-hover-shadow:
-        inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 1px rgb(0 0 0 / 0.4),
-        0 3px 6px rgb(0 0 0 / 0.3);
-      --m-control-press-bg: rgb(var(--surface-3));
-      --m-control-press-sheen: none;
-      --m-control-press-shadow: inset 0 3px 6px rgb(0 0 0 / 0.5);
-      --m-primary-bg: rgb(var(--accent));
-      --m-primary-sheen: linear-gradient(
-        180deg,
-        rgb(255 255 255 / var(--k-gloss)) 0,
-        rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-        transparent 51%
-      );
-      --m-primary-edge: rgb(var(--k-lo) / 0.55);
-      --m-primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 1px rgb(0 0 0 / 0.4);
-      --m-primary-z: 6px;
-    }
+/* dark: auto (follows the OS) */
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
+  --r-chip: 6px;
+  --r-control: 12px;
+  --r-card: 16px;
+  --r-sheet: 22px;
+  --stroke: 1px;
+  --ease: cubic-bezier(.25,.8,.3,1);
+  --ease-exit: cubic-bezier(.4,0,1,1);
+  --dur: 180ms;
+  --dur-slow: 260ms;
+  --press-scale: 0.97;
+  --scene: rgb(var(--canvas));
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', Roboto, Inter, sans-serif;
+  --display-weight: 700;
+  --k-tint-a: 29 31 35;
+  --k-tint-b: 21 23 26;
+  --k-hi: 255 255 255;
+  --k-lo: 0 0 0;
+  --k-gloss: 0.03;
+  --k-s: 0.04;
+  --shadow-sm: 0 1px 2px rgb(0 0 0/.35);
+  --shadow-md: 0 4px 12px rgb(0 0 0/.40);
+  --shadow-lg: 0 8px 28px rgb(0 0 0/.50);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--k-tint-b));
+  --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-panel-edge: rgb(var(--k-lo)/.35);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--k-tint-a));
+  --m-card-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-card-edge: rgb(var(--k-lo)/.35);
+  --m-card-shadow: inset 0 1px 0 rgb(255 255 255/.08), inset 0 -1px 0 rgb(0 0 0/.45), 0 1px 2px rgb(0 0 0/.4), 0 10px 20px -6px rgb(0 0 0/.45);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--k-tint-b));
+  --m-raised-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-raised-edge: rgb(var(--k-lo)/.35);
+  --m-raised-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 2px rgb(0 0 0/.4);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-edge: rgb(var(--k-lo)/.35);
+  --m-overlay-shadow: 0 24px 48px -12px rgb(0 0 0/.55), inset 0 1px 0 rgb(255 255 255/.08);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--k-tint-a));
+  --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-chrome-edge: rgb(var(--k-lo)/.35);
+  --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255/.06), 0 2px 6px rgb(0 0 0/.35);
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--k-tint-b));
+  --m-well-edge: rgb(var(--k-lo)/.55);
+  --m-well-shadow: inset 0 2px 5px rgb(0 0 0/.45), 0 1px 0 rgb(255 255 255/.06);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--k-tint-a));
+  --m-control-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-control-edge: rgb(var(--k-lo)/.55);
+  --m-control-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 1px rgb(0 0 0/.4), 0 3px 6px rgb(0 0 0/.30);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-3));
+  --m-control-hover-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 1px rgb(0 0 0/.4), 0 3px 6px rgb(0 0 0/.30);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-sheen: none;
+  --m-control-press-shadow: inset 0 3px 6px rgb(0 0 0/.5);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-primary-edge: rgb(var(--k-lo)/.55);
+  --m-primary-shadow: inset 0 1px 0 rgb(255 255 255/.2), 0 1px 1px rgb(0 0 0/.4);
+  --m-primary-z: 6px;
   }
+}
 
-  /* dark: explicit override */
-  :where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
-  :where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
-    --r-chip: 6px;
-    --r-control: 12px;
-    --r-card: 16px;
-    --r-sheet: 22px;
-    --stroke: 1px;
-    --ease: cubic-bezier(0.25, 0.8, 0.3, 1);
-    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-    --dur: 180ms;
-    --dur-slow: 260ms;
-    --press-scale: 0.97;
-    --scene: rgb(var(--canvas));
-    --font-ui:
-      -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable", "Segoe UI", Roboto,
-      Inter, sans-serif;
-    --display-weight: 700;
-    --k-tint-a: 29 31 35;
-    --k-tint-b: 21 23 26;
-    --k-hi: 255 255 255;
-    --k-lo: 0 0 0;
-    --k-gloss: 0.03;
-    --k-s: 0.04;
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
-    --m-ground-bg: rgb(var(--canvas));
-    --m-ground-edge: transparent;
-    --m-ground-shadow: none;
-    --m-ground-z: 0px;
-    --m-panel-bg: rgb(var(--k-tint-b));
-    --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-panel-edge: rgb(var(--k-lo) / 0.35);
-    --m-panel-shadow: none;
-    --m-panel-z: 4px;
-    --m-card-bg: rgb(var(--k-tint-a));
-    --m-card-sheen:
-      linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-card-edge: rgb(var(--k-lo) / 0.35);
-    --m-card-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08), inset 0 -1px 0 rgb(0 0 0 / 0.45),
-      0 1px 2px rgb(0 0 0 / 0.4), 0 10px 20px -6px rgb(0 0 0 / 0.45);
-    --m-card-z: 8px;
-    --m-raised-bg: rgb(var(--k-tint-b));
-    --m-raised-sheen:
-      linear-gradient(180deg, rgb(255 255 255 / var(--k-gloss)), rgb(255 255 255 / 0) 40%),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-raised-edge: rgb(var(--k-lo) / 0.35);
-    --m-raised-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.4);
-    --m-raised-z: 14px;
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-overlay-edge: rgb(var(--k-lo) / 0.35);
-    --m-overlay-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.55), inset 0 1px 0 rgb(255 255 255 / 0.08);
-    --m-overlay-z: 28px;
-    --m-chrome-bg: rgb(var(--k-tint-a));
-    --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-    --m-chrome-edge: rgb(var(--k-lo) / 0.35);
-    --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 2px 6px rgb(0 0 0 / 0.35);
-    --m-chrome-backdrop: none;
-    --m-chrome-z: 20px;
-    --m-well-bg: rgb(var(--k-tint-b));
-    --m-well-edge: rgb(var(--k-lo) / 0.55);
-    --m-well-shadow: inset 0 2px 5px rgb(0 0 0 / 0.45), 0 1px 0 rgb(255 255 255 / 0.06);
-    --m-well-z: 0px;
-    --m-control-bg: rgb(var(--k-tint-a));
-    --m-control-sheen: linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--k-gloss)) 0,
-      rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-      transparent 51%
-    );
-    --m-control-edge: rgb(var(--k-lo) / 0.55);
-    --m-control-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 1px rgb(0 0 0 / 0.4), 0 3px 6px rgb(0 0 0 / 0.3);
-    --m-control-z: 6px;
-    --m-control-hover-bg: rgb(var(--surface-3));
-    --m-control-hover-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.08), 0 1px 1px rgb(0 0 0 / 0.4), 0 3px 6px rgb(0 0 0 / 0.3);
-    --m-control-press-bg: rgb(var(--surface-3));
-    --m-control-press-sheen: none;
-    --m-control-press-shadow: inset 0 3px 6px rgb(0 0 0 / 0.5);
-    --m-primary-bg: rgb(var(--accent));
-    --m-primary-sheen: linear-gradient(
-      180deg,
-      rgb(255 255 255 / var(--k-gloss)) 0,
-      rgb(255 255 255 / calc(var(--k-gloss) * 0.3)) 50%,
-      transparent 51%
-    );
-    --m-primary-edge: rgb(var(--k-lo) / 0.55);
-    --m-primary-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2), 0 1px 1px rgb(0 0 0 / 0.4);
-    --m-primary-z: 6px;
-  }
+/* dark: explicit override */
+:where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
+:where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
+  --r-chip: 6px;
+  --r-control: 12px;
+  --r-card: 16px;
+  --r-sheet: 22px;
+  --stroke: 1px;
+  --ease: cubic-bezier(.25,.8,.3,1);
+  --ease-exit: cubic-bezier(.4,0,1,1);
+  --dur: 180ms;
+  --dur-slow: 260ms;
+  --press-scale: 0.97;
+  --scene: rgb(var(--canvas));
+  --font-ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI Variable', 'Segoe UI', Roboto, Inter, sans-serif;
+  --display-weight: 700;
+  --k-tint-a: 29 31 35;
+  --k-tint-b: 21 23 26;
+  --k-hi: 255 255 255;
+  --k-lo: 0 0 0;
+  --k-gloss: 0.03;
+  --k-s: 0.04;
+  --shadow-sm: 0 1px 2px rgb(0 0 0/.35);
+  --shadow-md: 0 4px 12px rgb(0 0 0/.40);
+  --shadow-lg: 0 8px 28px rgb(0 0 0/.50);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--k-tint-b));
+  --m-panel-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-panel-edge: rgb(var(--k-lo)/.35);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--k-tint-a));
+  --m-card-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-card-edge: rgb(var(--k-lo)/.35);
+  --m-card-shadow: inset 0 1px 0 rgb(255 255 255/.08), inset 0 -1px 0 rgb(0 0 0/.45), 0 1px 2px rgb(0 0 0/.4), 0 10px 20px -6px rgb(0 0 0/.45);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--k-tint-b));
+  --m-raised-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)), rgb(255 255 255/0) 40%), url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-raised-edge: rgb(var(--k-lo)/.35);
+  --m-raised-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 2px rgb(0 0 0/.4);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-edge: rgb(var(--k-lo)/.35);
+  --m-overlay-shadow: 0 24px 48px -12px rgb(0 0 0/.55), inset 0 1px 0 rgb(255 255 255/.08);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--k-tint-a));
+  --m-chrome-sheen: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --m-chrome-edge: rgb(var(--k-lo)/.35);
+  --m-chrome-shadow: inset 0 1px 0 rgb(255 255 255/.06), 0 2px 6px rgb(0 0 0/.35);
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--k-tint-b));
+  --m-well-edge: rgb(var(--k-lo)/.55);
+  --m-well-shadow: inset 0 2px 5px rgb(0 0 0/.45), 0 1px 0 rgb(255 255 255/.06);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--k-tint-a));
+  --m-control-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-control-edge: rgb(var(--k-lo)/.55);
+  --m-control-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 1px rgb(0 0 0/.4), 0 3px 6px rgb(0 0 0/.30);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-3));
+  --m-control-hover-shadow: inset 0 1px 0 rgb(255 255 255/.08), 0 1px 1px rgb(0 0 0/.4), 0 3px 6px rgb(0 0 0/.30);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-sheen: none;
+  --m-control-press-shadow: inset 0 3px 6px rgb(0 0 0/.5);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-sheen: linear-gradient(180deg, rgb(255 255 255/var(--k-gloss)) 0, rgb(255 255 255/calc(var(--k-gloss) * .3)) 50%, transparent 51%);
+  --m-primary-edge: rgb(var(--k-lo)/.55);
+  --m-primary-shadow: inset 0 1px 0 rgb(255 255 255/.2), 0 1px 1px rgb(0 0 0/.4);
+  --m-primary-z: 6px;
+}
 
-  /* fallback: no backdrop-filter support */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    :where(:root[data-skin="skeuo-3d"]),
-    :where([data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: no backdrop-filter support */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+:where(:root[data-skin="skeuo-3d"]),
+:where([data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
+:where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: reduced transparency */
-  @media (prefers-reduced-transparency: reduce) {
-    :where(:root[data-skin="skeuo-3d"]),
-    :where([data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: reduced transparency */
+@media (prefers-reduced-transparency: reduce) {
+:where(:root[data-skin="skeuo-3d"]),
+:where([data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
+:where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: more contrast → edge forced to contrastEdge */
-  @media (prefers-contrast: more) {
-    :where(:root[data-skin="skeuo-3d"]),
-    :where([data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 244 245 247;
-      --k-tint-b: 237 239 242;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: more contrast → edge forced to contrastEdge */
+@media (prefers-contrast: more) {
+:where(:root[data-skin="skeuo-3d"]),
+:where([data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="skeuo-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="skeuo-3d"]),
+:where(:root[data-theme="dark"] [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: data-fidelity="low" */
-  :where(:root[data-fidelity="low"][data-skin="skeuo-3d"]),
-  :where(:root[data-fidelity="low"] [data-skin="skeuo-3d"]) {
-    --scene: rgb(var(--canvas));
-    --m-ground-sheen: none;
-    --m-ground-backdrop: none;
-    --m-ground-z: 0px;
-    --m-panel-sheen: none;
-    --m-panel-backdrop: none;
-    --m-panel-z: 0px;
-    --m-card-sheen: none;
-    --m-card-backdrop: none;
-    --m-card-z: 0px;
-    --m-raised-sheen: none;
-    --m-raised-backdrop: none;
-    --m-raised-z: 0px;
-    --m-overlay-sheen: none;
-    --m-overlay-backdrop: none;
-    --m-overlay-z: 0px;
-    --m-chrome-sheen: none;
-    --m-chrome-backdrop: none;
-    --m-chrome-z: 0px;
-    --m-well-sheen: none;
-    --m-well-backdrop: none;
-    --m-well-z: 0px;
-    --m-control-sheen: none;
-    --m-control-backdrop: none;
-    --m-control-z: 0px;
-    --m-primary-sheen: none;
-    --m-primary-backdrop: none;
-    --m-primary-z: 0px;
-    --m-card-t1-sheen: none;
-    --m-card-t1-backdrop: none;
-    --m-card-t2-sheen: none;
-    --m-card-t2-backdrop: none;
-    --m-card-t3-sheen: none;
-    --m-card-t3-backdrop: none;
-    --m-card-t4-sheen: none;
-    --m-card-t4-backdrop: none;
-    --k-tint-a: 244 245 247;
-    --k-tint-b: 237 239 242;
-    --k-hi: 255 255 255;
-    --k-lo: 11 13 18;
-    --m-ground-bg: rgb(var(--canvas));
-    --m-panel-bg: rgb(var(--surface-1));
-    --m-card-bg: rgb(var(--surface-2));
-    --m-raised-bg: rgb(var(--surface-3));
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-chrome-bg: rgb(var(--surface-3));
-    --m-well-bg: rgb(var(--surface-1));
-    --m-control-bg: rgb(var(--surface-3));
-    --m-primary-bg: rgb(var(--accent));
-  }
+/* fallback: data-fidelity="low" */
+:where(:root[data-fidelity="low"][data-skin="skeuo-3d"]),
+:where(:root[data-fidelity="low"] [data-skin="skeuo-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 244 245 247;
+  --k-tint-b: 237 239 242;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
 } /* end @layer skins */

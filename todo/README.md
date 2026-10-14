@@ -38,6 +38,7 @@ One file per task. `progress.md` (repo root) is the live tracker: `in_progress` 
 | `08-more-components.md` | Wishlist buildout, batches 9+ (inline data-viz, typography, KPI, pagination, hooks…). **Batches here are first in line** |
 | `09-components-master-backlog.md` | **FULL** component wishlist (categories A–L) as batches 19–136, incl. ✅ rows for kit items already shipped and traced ⛔ deferrals |
 | `10-themes-skins-master-backlog.md` | **FULL** themes/skins wishlist as batches 137–192: skin candidates (fast-path, one per session), token/axis features, traced deferrals |
+| `11-mobile-small-device-optimization.md` | **Small-device (phone) engine/UI crash + perf optimization** (slab-engine mobile crash, 2D fail-safe, small-viewport audit, system perf). **DONE** (gate green, 2026-10-14) |
 
 ## Test stack (packages/ui/test/)
 

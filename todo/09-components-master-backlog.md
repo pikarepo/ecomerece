@@ -47,10 +47,10 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 
 | Batch | Items | Status |
 |---|---|---|
-| 38 | Ripple effect · Magnetic button · Shimmer button · Glow button | ⬜ (effects per-skin: implement as skin-emissive variants, not hard-coded) |
-| 39 | Gradient border button | ⬜ |
-| 40 | Hold-to-confirm button · Swipe-to-confirm slider · Double-click-to-confirm | ⬜ |
-| 41 | Countdown button · Cooldown button · Resend-code button | ⬜ |
+| 38 | Ripple effect · Magnetic button · Shimmer button · Glow button | ✅ batch 38 (skin-emissive variants via `--m-<role>-sheen`/`-glow`) |
+| 39 | Gradient border button | ✅ batch 39 (`--m-<role>-glow`×`-edge` masked ring, token fallbacks) |
+| 40 | Hold-to-confirm button · Swipe-to-confirm slider · Double-click-to-confirm | ✅ batch 40 (`components/controls/Confirm.tsx`) |
+| 41 | Countdown button · Cooldown button · Resend-code button | ✅ batch 41 (`components/controls/Cooldown.tsx`) |
 | 42 | Chip-button family: tab/chip/tag/filter/suggestion/input/choice chip variants | ⬜ (Chip shipped; variants are props/derivatives) |
 | 55 | Stepper buttons (+/-) · Arrow/chevron buttons · Scroll button | ⬜ (NumberInput stepper ✅) |
 | 56 | Expand/Collapse button · Fullscreen toggle · Window controls (minimize/maximize/close) | ⬜ |
@@ -100,13 +100,13 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 
 | Batch | Items | Status |
 |---|---|---|
-| 17 (todo/08) | Table v2: row selection + bulk bar · summary row · grouped headers | ✅ batch 17 (grouped headers ⬜ still open) |
+| 17 (todo/08) | Table v2: row selection + bulk bar · summary row · grouped headers | ✅ batch 17 (all shipped — `columnGroups` landed in the todo/08 completion pass) |
 | 80 | Table variants: striped · bordered · hoverable · compact (✅ density) · borderless · responsive stack (✅ density="responsive"?) · card-rows · nested/tree table · master-detail | ⬜ mostly variants |
 | 81 | Table power: editable cells · frozen columns · resizable columns · reorderable rows · multi-sort · merged cells | ⬜ (multi-session) |
 | **9 (todo/08)** | In-cell data-viz: Sparkline ✅ · DataBar ✅ · MetricCard ✅ | ✅ batch 9 |
 | 82 | In-cell remaining: Bullet · heat cell · icon indicators (traffic-light/arrows) | ⬜ |
-| 12 (todo/08) | KPI family: scorecard · gauge KPI · SLA/health indicator | ✅ batch 12 (gauge KPI ⬜ still open) |
-| 11 (todo/08) | Time & date display: TimeAgo · timezone clock · countdown · duration · stopwatch · business hours | ✅ batch 11 (stopwatch/business hours ⬜ still open) |
+| 12 (todo/08) | KPI family: scorecard · gauge KPI · SLA/health indicator | ✅ batch 12 (all shipped — `GaugeKPI` landed in the todo/08 completion pass) |
+| 11 (todo/08) | Time & date display: TimeAgo · timezone clock · countdown · duration · stopwatch · business hours | ✅ batch 11 (all shipped — stopwatch + business hours landed in the todo/08 completion pass) |
 | 83 | People: Avatar status/badge/initials (✅ initials) · avatar group +N overflow · name+role block · author byline · team stack | ⬜ |
 | 84 | Cards I (content): Article · Blog · News · Video · Music/Album · Podcast · Movie · Recipe | ⬜ |
 | 85 | Cards II (commerce): Product · Property/Listing · Hotel · Flight · Ticket · Coupon · Gift card · Credit-card visual | ⬜ (commerce-core — high priority) |
@@ -130,7 +130,7 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 | 97 | Loading: spinner variants (ring/dots/bars/pulse/orbit — Spinner ✅ baseline) · circular/stepped/indeterminate/buffer progress (Progress ✅ linear) · infinite-scroll loader · route transition bar · splash screen | ⬜ |
 | 98 | State pages: offline state · 400/403/404 (✅ 404 via Next) /500/503 · under construction · expired link · thank-you page · verification pending | ⬜ |
 | 99 | Guidance: inline help · contextual help panel · walkthrough/product tour (step/spotlight) · checklist widget · tips carousel · feature announcement · new badge/beta tag (✅ Badge) · changelog popup · onboarding modal | ⬜ |
-| (todo/08) | 18: status family — sync status · save status · connection quality · battery/signal · order/package tracking · delivery timeline (Timeline ✅) | ⬜ not shipped (batch 18 was commerce quick wins: CartDrawer/PromoCode/StockIndicator) |
+| (todo/08) | 18: status family — sync status · save status · connection quality · battery/signal · order/package tracking · delivery timeline (Timeline ✅) | ✅ shipped in the todo/08 completion pass (`SyncStatus`/`SaveStatus`/`ConnectionQuality`/`BatteryIndicator`; tracking/delivery = `Timeline` ✅; batch 18 itself shipped the commerce quick wins) |
 
 ## H — Additional chart types (engine: ink+accent per §23; SVG-first, happy-dom-testable)
 

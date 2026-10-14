@@ -31,6 +31,9 @@ export interface Material {
   edge?: string;
   shadow?: string;
   backdrop?: string;
+  /** Emissive halo colour (`rgb(var(--k-hue-1))` etc.) read by effect buttons
+   * via `--m-<role>-glow`; never carries text/meaning. Optional/skin-owned. */
+  glow?: string;
   /** Real-3D: slab elevation in px, read by the slab engine (never CSS translate). */
   z?: string;
 }

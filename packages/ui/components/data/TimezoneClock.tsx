@@ -16,23 +16,26 @@ export function TimezoneClock({
   className,
   ...props
 }: TimezoneClockProps) {
-  const [now, setNow] = useState<Date>(() => new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setNow(new Date());
     const id = setInterval(() => setNow(new Date()), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
 
-  const label = now.toLocaleTimeString(undefined, {
-    timeZone: timezone,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    ...formatOptions,
-  });
+  const label = now
+    ? now.toLocaleTimeString(undefined, {
+        timeZone: timezone,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        ...formatOptions,
+      })
+    : '--:--:--';
 
   return (
-    <time dateTime={now.toISOString()} className={cn(className)} {...props}>
+    <time dateTime={now?.toISOString()} className={cn(className)} {...props}>
       {label}
     </time>
   );

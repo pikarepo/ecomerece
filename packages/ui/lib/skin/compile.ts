@@ -435,6 +435,7 @@ const SLOT_SUFFIX: Record<string, string> = {
   edge: 'edge',
   shadow: 'shadow',
   backdrop: 'backdrop',
+  glow: 'glow',
   z: 'z',
 };
 

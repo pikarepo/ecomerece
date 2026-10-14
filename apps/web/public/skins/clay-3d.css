@@ -2,835 +2,809 @@
 /* Source: packages/ui/skins/clay-3d.ts → compiled by packages/ui/scripts/build-skins.ts */
 
 @layer skins {
-  /* light */
-  :where(:root[data-skin="clay-3d"]),
-  :where([data-skin="clay-3d"]) {
-    --r-chip: 14px;
-    --r-control: 20px;
-    --r-card: 28px;
-    --r-sheet: 36px;
-    --stroke: 0px;
-    --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-    --dur: 260ms;
-    --dur-slow: 340ms;
-    --press-scale: 0.94;
-    --scene: rgb(var(--canvas));
-    --k-tint-a: 243 238 255;
-    --k-tint-b: 255 241 234;
-    --k-tint-c: 234 248 241;
-    --k-tint-d: 234 243 255;
-    --k-hi: 255 255 255;
-    --k-lo: 11 13 18;
-    --shadow-sm: 0 1px 2px rgb(15 18 26 / 0.06), 0 1px 3px rgb(15 18 26 / 0.04);
-    --shadow-md: 0 4px 14px rgb(15 18 26 / 0.08), 0 1px 3px rgb(15 18 26 / 0.05);
-    --shadow-lg: 0 16px 40px rgb(15 18 26 / 0.14), 0 2px 8px rgb(15 18 26 / 0.06);
-    --m-ground-bg: rgb(var(--canvas));
-    --m-ground-edge: transparent;
-    --m-ground-shadow: none;
-    --m-ground-z: 0px;
-    --m-panel-bg: rgb(var(--surface-1));
-    --m-panel-edge: rgb(var(--line) / 0.1);
-    --m-panel-shadow: none;
-    --m-panel-z: 4px;
-    --m-card-bg: rgb(var(--surface-2));
-    --m-card-edge: transparent;
-    --m-card-shadow:
-      0 14px 28px rgb(15 18 26 / 0.1), inset 0 -8px 14px rgb(15 18 26 / 0.06),
-      inset 0 8px 12px rgb(255 255 255 / 0.9);
-    --m-card-z: 8px;
-    --m-raised-bg: rgb(var(--surface-3));
-    --m-raised-edge: transparent;
-    --m-raised-shadow:
-      0 8px 16px rgb(15 18 26 / 0.12), inset 0 -4px 8px rgb(15 18 26 / 0.08),
-      inset 0 4px 8px rgb(255 255 255 / 0.95);
-    --m-raised-z: 14px;
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-overlay-edge: transparent;
-    --m-overlay-shadow:
-      0 24px 48px rgb(15 18 26 / 0.16), inset 0 -10px 18px rgb(15 18 26 / 0.06),
-      inset 0 10px 16px rgb(255 255 255 / 0.85);
-    --m-overlay-z: 28px;
-    --m-chrome-bg: rgb(var(--surface-3) / 0.85);
-    --m-chrome-edge: transparent;
-    --m-chrome-shadow: 0 8px 16px rgb(15 18 26 / 0.1);
-    --m-chrome-backdrop: blur(20px) saturate(150%);
-    --m-chrome-z: 20px;
-    --m-well-bg: rgb(var(--surface-1));
-    --m-well-edge: transparent;
-    --m-well-shadow: inset 0 4px 8px rgb(15 18 26 / 0.12);
-    --m-well-z: 0px;
-    --m-control-bg: rgb(var(--surface-3));
-    --m-control-edge: transparent;
-    --m-control-shadow:
-      0 8px 16px rgb(15 18 26 / 0.12), inset 0 -4px 8px rgb(15 18 26 / 0.08),
-      inset 0 4px 8px rgb(255 255 255 / 0.95);
-    --m-control-z: 6px;
-    --m-control-hover-bg: rgb(var(--surface-4));
-    --m-control-hover-shadow:
-      0 8px 16px rgb(15 18 26 / 0.12), inset 0 -4px 8px rgb(15 18 26 / 0.08),
-      inset 0 4px 8px rgb(255 255 255 / 0.95);
-    --m-control-press-bg: rgb(var(--surface-3));
-    --m-control-press-shadow: inset 0 6px 12px rgb(15 18 26 / 0.16);
-    --m-primary-bg: rgb(var(--accent));
-    --m-primary-edge: transparent;
-    --m-primary-shadow: 0 8px 16px rgb(15 18 26 / 0.14), inset 0 4px 8px rgb(255 255 255 / 0.35);
-    --m-primary-z: 6px;
-    --m-card-t1-bg: rgb(var(--k-tint-a));
-    --m-card-t2-bg: rgb(var(--k-tint-b));
-    --m-card-t3-bg: rgb(var(--k-tint-c));
-    --m-card-t4-bg: rgb(var(--k-tint-d));
-  }
+/* light */
+:where(:root[data-skin="clay-3d"]),
+:where([data-skin="clay-3d"]) {
+  --r-chip: 14px;
+  --r-control: 20px;
+  --r-card: 28px;
+  --r-sheet: 36px;
+  --stroke: 0px;
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur: 260ms;
+  --dur-slow: 340ms;
+  --press-scale: 0.94;
+  --scene: rgb(var(--canvas));
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --shadow-sm: 0 1px 2px rgb(15 18 26/.06), 0 1px 3px rgb(15 18 26/.04);
+  --shadow-md: 0 4px 14px rgb(15 18 26/.08), 0 1px 3px rgb(15 18 26/.05);
+  --shadow-lg: 0 16px 40px rgb(15 18 26/.14), 0 2px 8px rgb(15 18 26/.06);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-panel-edge: rgb(var(--line)/.10);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--surface-2));
+  --m-card-edge: transparent;
+  --m-card-shadow: 0 14px 28px rgb(15 18 26/.10), inset 0 -8px 14px rgb(15 18 26/.06), inset 0 8px 12px rgb(255 255 255/.90);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-raised-edge: transparent;
+  --m-raised-shadow: 0 8px 16px rgb(15 18 26/.12), inset 0 -4px 8px rgb(15 18 26/.08), inset 0 4px 8px rgb(255 255 255/.95);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-edge: transparent;
+  --m-overlay-shadow: 0 24px 48px rgb(15 18 26/.16), inset 0 -10px 18px rgb(15 18 26/.06), inset 0 10px 16px rgb(255 255 255/.85);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--surface-3)/.85);
+  --m-chrome-edge: transparent;
+  --m-chrome-shadow: 0 8px 16px rgb(15 18 26/.10);
+  --m-chrome-backdrop: blur(20px) saturate(150%);
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--surface-1));
+  --m-well-edge: transparent;
+  --m-well-shadow: inset 0 4px 8px rgb(15 18 26/.12);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--surface-3));
+  --m-control-edge: transparent;
+  --m-control-shadow: 0 8px 16px rgb(15 18 26/.12), inset 0 -4px 8px rgb(15 18 26/.08), inset 0 4px 8px rgb(255 255 255/.95);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-4));
+  --m-control-hover-shadow: 0 8px 16px rgb(15 18 26/.12), inset 0 -4px 8px rgb(15 18 26/.08), inset 0 4px 8px rgb(255 255 255/.95);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-shadow: inset 0 6px 12px rgb(15 18 26/.16);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-edge: transparent;
+  --m-primary-shadow: 0 8px 16px rgb(15 18 26/.14), inset 0 4px 8px rgb(255 255 255/.35);
+  --m-primary-z: 6px;
+  --m-card-t1-bg: rgb(var(--k-tint-a));
+  --m-card-t2-bg: rgb(var(--k-tint-b));
+  --m-card-t3-bg: rgb(var(--k-tint-c));
+  --m-card-t4-bg: rgb(var(--k-tint-d));
+}
 
-  /* A.4 — blur governor: data-blur="off" → opaque solid paint */
-  [data-skin="clay-3d"] .mat-chrome[data-blur="off"] {
-    --m-chrome-backdrop: none;
-  }
+/* A.4 — blur governor: data-blur="off" → opaque solid paint */
+[data-skin="clay-3d"] .mat-chrome[data-blur="off"] {
+  --m-chrome-backdrop: none;
+}
 
-  /* real-3d §2.3 — slabbed surfaces hand painting to the WebGL canvas */
-  [data-skin="clay-3d"] [data-slab="on"] {
-    background: none;
-    border-color: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
+/* real-3d §2.3 — slabbed surfaces hand painting to the WebGL canvas */
+[data-skin="clay-3d"] [data-slab="on"] {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
 
-  [data-skin="clay-3d"] .mat-control[data-slab="on"]:hover,
-  [data-skin="clay-3d"] .mat-control[data-slab="on"]:active {
-    background: none;
-    box-shadow: none;
-    border-color: transparent;
-  }
+[data-skin="clay-3d"] .mat-control[data-slab="on"]:hover,
+[data-skin="clay-3d"] .mat-control[data-slab="on"]:active {
+  background: none;
+  box-shadow: none;
+  border-color: transparent;
+}
 
-  /* A2 — accentHint: applied only under data-accent="skin" */
-  :where(:root[data-skin="clay-3d"][data-accent="skin"]),
-  :where([data-skin="clay-3d"][data-accent="skin"]) {
-    --accent: 194 65 12;
-    --accent-ink: 255 255 255;
-  }
-  @media (prefers-color-scheme: dark) {
-    :where(:root:not([data-theme="light"])[data-skin="clay-3d"][data-accent="skin"]),
-    :where(:root:not([data-theme="light"]) [data-skin="clay-3d"][data-accent="skin"]) {
-      --accent: 255 107 74;
-      --accent-ink: 43 10 2;
-    }
-  }
-  :where(:root[data-theme="dark"][data-skin="clay-3d"][data-accent="skin"]),
-  :where(:root[data-theme="dark"] [data-skin="clay-3d"][data-accent="skin"]) {
+/* A2 — accentHint: applied only under data-accent="skin" */
+:where(:root[data-skin="clay-3d"][data-accent="skin"]),
+:where([data-skin="clay-3d"][data-accent="skin"]) {
+  --accent: 194 65 12;
+  --accent-ink: 255 255 255;
+}
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])[data-skin="clay-3d"][data-accent="skin"]),
+:where(:root:not([data-theme="light"]) [data-skin="clay-3d"][data-accent="skin"]) {
     --accent: 255 107 74;
     --accent-ink: 43 10 2;
   }
+}
+:where(:root[data-theme="dark"][data-skin="clay-3d"][data-accent="skin"]),
+:where(:root[data-theme="dark"] [data-skin="clay-3d"][data-accent="skin"]) {
+  --accent: 255 107 74;
+  --accent-ink: 43 10 2;
+}
 
-  /* dark: auto (follows the OS) */
-  @media (prefers-color-scheme: dark) {
-    :where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
-      --r-chip: 14px;
-      --r-control: 20px;
-      --r-card: 28px;
-      --r-sheet: 36px;
-      --stroke: 0px;
-      --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
-      --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-      --dur: 260ms;
-      --dur-slow: 340ms;
-      --press-scale: 0.94;
-      --scene: rgb(var(--canvas));
-      --k-tint-a: 21 15 36;
-      --k-tint-b: 28 18 16;
-      --k-tint-c: 12 26 20;
-      --k-tint-d: 14 22 36;
-      --k-hi: 255 255 255;
-      --k-lo: 0 0 0;
-      --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-      --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
-      --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
-      --m-ground-bg: rgb(var(--canvas));
-      --m-ground-edge: transparent;
-      --m-ground-shadow: none;
-      --m-ground-z: 0px;
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-panel-edge: rgb(var(--line) / 0.1);
-      --m-panel-shadow: none;
-      --m-panel-z: 4px;
-      --m-card-bg: rgb(var(--surface-2));
-      --m-card-edge: transparent;
-      --m-card-shadow:
-        0 14px 28px rgb(0 0 0 / 0.45), inset 0 -8px 14px rgb(0 0 0 / 0.35),
-        inset 0 6px 10px rgb(255 255 255 / 0.05);
-      --m-card-z: 8px;
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-raised-edge: transparent;
-      --m-raised-shadow:
-        0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-        inset 0 3px 6px rgb(255 255 255 / 0.07);
-      --m-raised-z: 14px;
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-overlay-edge: transparent;
-      --m-overlay-shadow: 0 24px 48px rgb(0 0 0 / 0.55), inset 0 6px 10px rgb(255 255 255 / 0.04);
-      --m-overlay-z: 28px;
-      --m-chrome-bg: rgb(var(--surface-3) / 0.85);
-      --m-chrome-edge: transparent;
-      --m-chrome-shadow: 0 8px 16px rgb(0 0 0 / 0.4);
-      --m-chrome-backdrop: blur(20px) saturate(140%);
-      --m-chrome-z: 20px;
-      --m-well-bg: rgb(var(--canvas));
-      --m-well-edge: transparent;
-      --m-well-shadow: inset 0 4px 8px rgb(0 0 0 / 0.55);
-      --m-well-z: 0px;
-      --m-control-bg: rgb(var(--surface-3));
-      --m-control-edge: transparent;
-      --m-control-shadow:
-        0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-        inset 0 3px 6px rgb(255 255 255 / 0.07);
-      --m-control-z: 6px;
-      --m-control-hover-bg: rgb(var(--surface-4));
-      --m-control-hover-shadow:
-        0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-        inset 0 3px 6px rgb(255 255 255 / 0.07);
-      --m-control-press-bg: rgb(var(--surface-3));
-      --m-control-press-shadow: inset 0 6px 12px rgb(0 0 0 / 0.55);
-      --m-primary-bg: rgb(var(--accent));
-      --m-primary-edge: transparent;
-      --m-primary-shadow: 0 8px 16px rgb(0 0 0 / 0.4), inset 0 3px 6px rgb(255 255 255 / 0.25);
-      --m-primary-z: 6px;
-      --m-card-t1-bg: rgb(var(--k-tint-a));
-      --m-card-t2-bg: rgb(var(--k-tint-b));
-      --m-card-t3-bg: rgb(var(--k-tint-c));
-      --m-card-t4-bg: rgb(var(--k-tint-d));
-    }
+/* dark: auto (follows the OS) */
+@media (prefers-color-scheme: dark) {
+  :where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
+  --r-chip: 14px;
+  --r-control: 20px;
+  --r-card: 28px;
+  --r-sheet: 36px;
+  --stroke: 0px;
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur: 260ms;
+  --dur-slow: 340ms;
+  --press-scale: 0.94;
+  --scene: rgb(var(--canvas));
+  --k-tint-a: 21 15 36;
+  --k-tint-b: 28 18 16;
+  --k-tint-c: 12 26 20;
+  --k-tint-d: 14 22 36;
+  --k-hi: 255 255 255;
+  --k-lo: 0 0 0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0/.35);
+  --shadow-md: 0 4px 12px rgb(0 0 0/.40);
+  --shadow-lg: 0 8px 28px rgb(0 0 0/.50);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-panel-edge: rgb(var(--line)/.10);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--surface-2));
+  --m-card-edge: transparent;
+  --m-card-shadow: 0 14px 28px rgb(0 0 0/.45), inset 0 -8px 14px rgb(0 0 0/.35), inset 0 6px 10px rgb(255 255 255/.05);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-raised-edge: transparent;
+  --m-raised-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-edge: transparent;
+  --m-overlay-shadow: 0 24px 48px rgb(0 0 0/.55), inset 0 6px 10px rgb(255 255 255/.04);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--surface-3)/.85);
+  --m-chrome-edge: transparent;
+  --m-chrome-shadow: 0 8px 16px rgb(0 0 0/.40);
+  --m-chrome-backdrop: blur(20px) saturate(140%);
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--canvas));
+  --m-well-edge: transparent;
+  --m-well-shadow: inset 0 4px 8px rgb(0 0 0/.55);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--surface-3));
+  --m-control-edge: transparent;
+  --m-control-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-4));
+  --m-control-hover-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-shadow: inset 0 6px 12px rgb(0 0 0/.55);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-edge: transparent;
+  --m-primary-shadow: 0 8px 16px rgb(0 0 0/.40), inset 0 3px 6px rgb(255 255 255/.25);
+  --m-primary-z: 6px;
+  --m-card-t1-bg: rgb(var(--k-tint-a));
+  --m-card-t2-bg: rgb(var(--k-tint-b));
+  --m-card-t3-bg: rgb(var(--k-tint-c));
+  --m-card-t4-bg: rgb(var(--k-tint-d));
   }
+}
 
-  /* dark: explicit override */
-  :where(:root[data-theme="dark"][data-skin="clay-3d"]),
-  :where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
-    --r-chip: 14px;
-    --r-control: 20px;
-    --r-card: 28px;
-    --r-sheet: 36px;
-    --stroke: 0px;
-    --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --ease-exit: cubic-bezier(0.4, 0, 1, 1);
-    --dur: 260ms;
-    --dur-slow: 340ms;
-    --press-scale: 0.94;
-    --scene: rgb(var(--canvas));
-    --k-tint-a: 21 15 36;
-    --k-tint-b: 28 18 16;
-    --k-tint-c: 12 26 20;
-    --k-tint-d: 14 22 36;
-    --k-hi: 255 255 255;
-    --k-lo: 0 0 0;
-    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
-    --shadow-md: 0 4px 12px rgb(0 0 0 / 0.4);
-    --shadow-lg: 0 8px 28px rgb(0 0 0 / 0.5);
-    --m-ground-bg: rgb(var(--canvas));
-    --m-ground-edge: transparent;
-    --m-ground-shadow: none;
-    --m-ground-z: 0px;
-    --m-panel-bg: rgb(var(--surface-1));
-    --m-panel-edge: rgb(var(--line) / 0.1);
-    --m-panel-shadow: none;
-    --m-panel-z: 4px;
-    --m-card-bg: rgb(var(--surface-2));
-    --m-card-edge: transparent;
-    --m-card-shadow:
-      0 14px 28px rgb(0 0 0 / 0.45), inset 0 -8px 14px rgb(0 0 0 / 0.35),
-      inset 0 6px 10px rgb(255 255 255 / 0.05);
-    --m-card-z: 8px;
-    --m-raised-bg: rgb(var(--surface-3));
-    --m-raised-edge: transparent;
-    --m-raised-shadow:
-      0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-      inset 0 3px 6px rgb(255 255 255 / 0.07);
-    --m-raised-z: 14px;
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-overlay-edge: transparent;
-    --m-overlay-shadow: 0 24px 48px rgb(0 0 0 / 0.55), inset 0 6px 10px rgb(255 255 255 / 0.04);
-    --m-overlay-z: 28px;
-    --m-chrome-bg: rgb(var(--surface-3) / 0.85);
-    --m-chrome-edge: transparent;
-    --m-chrome-shadow: 0 8px 16px rgb(0 0 0 / 0.4);
-    --m-chrome-backdrop: blur(20px) saturate(140%);
-    --m-chrome-z: 20px;
-    --m-well-bg: rgb(var(--canvas));
-    --m-well-edge: transparent;
-    --m-well-shadow: inset 0 4px 8px rgb(0 0 0 / 0.55);
-    --m-well-z: 0px;
-    --m-control-bg: rgb(var(--surface-3));
-    --m-control-edge: transparent;
-    --m-control-shadow:
-      0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-      inset 0 3px 6px rgb(255 255 255 / 0.07);
-    --m-control-z: 6px;
-    --m-control-hover-bg: rgb(var(--surface-4));
-    --m-control-hover-shadow:
-      0 8px 16px rgb(0 0 0 / 0.45), inset 0 -4px 8px rgb(0 0 0 / 0.35),
-      inset 0 3px 6px rgb(255 255 255 / 0.07);
-    --m-control-press-bg: rgb(var(--surface-3));
-    --m-control-press-shadow: inset 0 6px 12px rgb(0 0 0 / 0.55);
-    --m-primary-bg: rgb(var(--accent));
-    --m-primary-edge: transparent;
-    --m-primary-shadow: 0 8px 16px rgb(0 0 0 / 0.4), inset 0 3px 6px rgb(255 255 255 / 0.25);
-    --m-primary-z: 6px;
-    --m-card-t1-bg: rgb(var(--k-tint-a));
-    --m-card-t2-bg: rgb(var(--k-tint-b));
-    --m-card-t3-bg: rgb(var(--k-tint-c));
-    --m-card-t4-bg: rgb(var(--k-tint-d));
-  }
+/* dark: explicit override */
+:where(:root[data-theme="dark"][data-skin="clay-3d"]),
+:where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
+  --r-chip: 14px;
+  --r-control: 20px;
+  --r-card: 28px;
+  --r-sheet: 36px;
+  --stroke: 0px;
+  --ease: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur: 260ms;
+  --dur-slow: 340ms;
+  --press-scale: 0.94;
+  --scene: rgb(var(--canvas));
+  --k-tint-a: 21 15 36;
+  --k-tint-b: 28 18 16;
+  --k-tint-c: 12 26 20;
+  --k-tint-d: 14 22 36;
+  --k-hi: 255 255 255;
+  --k-lo: 0 0 0;
+  --shadow-sm: 0 1px 2px rgb(0 0 0/.35);
+  --shadow-md: 0 4px 12px rgb(0 0 0/.40);
+  --shadow-lg: 0 8px 28px rgb(0 0 0/.50);
+  --m-ground-bg: rgb(var(--canvas));
+  --m-ground-edge: transparent;
+  --m-ground-shadow: none;
+  --m-ground-z: 0px;
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-panel-edge: rgb(var(--line)/.10);
+  --m-panel-shadow: none;
+  --m-panel-z: 4px;
+  --m-card-bg: rgb(var(--surface-2));
+  --m-card-edge: transparent;
+  --m-card-shadow: 0 14px 28px rgb(0 0 0/.45), inset 0 -8px 14px rgb(0 0 0/.35), inset 0 6px 10px rgb(255 255 255/.05);
+  --m-card-z: 8px;
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-raised-edge: transparent;
+  --m-raised-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-raised-z: 14px;
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-overlay-edge: transparent;
+  --m-overlay-shadow: 0 24px 48px rgb(0 0 0/.55), inset 0 6px 10px rgb(255 255 255/.04);
+  --m-overlay-z: 28px;
+  --m-chrome-bg: rgb(var(--surface-3)/.85);
+  --m-chrome-edge: transparent;
+  --m-chrome-shadow: 0 8px 16px rgb(0 0 0/.40);
+  --m-chrome-backdrop: blur(20px) saturate(140%);
+  --m-chrome-z: 20px;
+  --m-well-bg: rgb(var(--canvas));
+  --m-well-edge: transparent;
+  --m-well-shadow: inset 0 4px 8px rgb(0 0 0/.55);
+  --m-well-z: 0px;
+  --m-control-bg: rgb(var(--surface-3));
+  --m-control-edge: transparent;
+  --m-control-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-control-z: 6px;
+  --m-control-hover-bg: rgb(var(--surface-4));
+  --m-control-hover-shadow: 0 8px 16px rgb(0 0 0/.45), inset 0 -4px 8px rgb(0 0 0/.35), inset 0 3px 6px rgb(255 255 255/.07);
+  --m-control-press-bg: rgb(var(--surface-3));
+  --m-control-press-shadow: inset 0 6px 12px rgb(0 0 0/.55);
+  --m-primary-bg: rgb(var(--accent));
+  --m-primary-edge: transparent;
+  --m-primary-shadow: 0 8px 16px rgb(0 0 0/.40), inset 0 3px 6px rgb(255 255 255/.25);
+  --m-primary-z: 6px;
+  --m-card-t1-bg: rgb(var(--k-tint-a));
+  --m-card-t2-bg: rgb(var(--k-tint-b));
+  --m-card-t3-bg: rgb(var(--k-tint-c));
+  --m-card-t4-bg: rgb(var(--k-tint-d));
+}
 
-  /* fallback: no backdrop-filter support */
-  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-    :where(:root[data-skin="clay-3d"]),
-    :where([data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="clay-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: no backdrop-filter support */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+:where(:root[data-skin="clay-3d"]),
+:where([data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="clay-3d"]),
+:where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: reduced transparency */
-  @media (prefers-reduced-transparency: reduce) {
-    :where(:root[data-skin="clay-3d"]),
-    :where([data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="clay-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: reduced transparency */
+@media (prefers-reduced-transparency: reduce) {
+:where(:root[data-skin="clay-3d"]),
+:where([data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="clay-3d"]),
+:where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: more contrast → edge forced to contrastEdge */
-  @media (prefers-contrast: more) {
-    :where(:root[data-skin="clay-3d"]),
-    :where([data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
-    :where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-    :where(:root[data-theme="dark"][data-skin="clay-3d"]),
-    :where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
-      --scene: rgb(var(--canvas));
-      --m-ground-sheen: none;
-      --m-ground-backdrop: none;
-      --m-ground-z: 0px;
-      --m-panel-sheen: none;
-      --m-panel-backdrop: none;
-      --m-panel-z: 0px;
-      --m-card-sheen: none;
-      --m-card-backdrop: none;
-      --m-card-z: 0px;
-      --m-raised-sheen: none;
-      --m-raised-backdrop: none;
-      --m-raised-z: 0px;
-      --m-overlay-sheen: none;
-      --m-overlay-backdrop: none;
-      --m-overlay-z: 0px;
-      --m-chrome-sheen: none;
-      --m-chrome-backdrop: none;
-      --m-chrome-z: 0px;
-      --m-well-sheen: none;
-      --m-well-backdrop: none;
-      --m-well-z: 0px;
-      --m-control-sheen: none;
-      --m-control-backdrop: none;
-      --m-control-z: 0px;
-      --m-primary-sheen: none;
-      --m-primary-backdrop: none;
-      --m-primary-z: 0px;
-      --m-card-t1-sheen: none;
-      --m-card-t1-backdrop: none;
-      --m-card-t2-sheen: none;
-      --m-card-t2-backdrop: none;
-      --m-card-t3-sheen: none;
-      --m-card-t3-backdrop: none;
-      --m-card-t4-sheen: none;
-      --m-card-t4-backdrop: none;
-      --k-tint-a: 243 238 255;
-      --k-tint-b: 255 241 234;
-      --k-tint-c: 234 248 241;
-      --k-tint-d: 234 243 255;
-      --k-hi: 255 255 255;
-      --k-lo: 11 13 18;
-      --m-ground-bg: rgb(var(--canvas));
-      --m-panel-bg: rgb(var(--surface-1));
-      --m-card-bg: rgb(var(--surface-2));
-      --m-raised-bg: rgb(var(--surface-3));
-      --m-overlay-bg: rgb(var(--surface-4));
-      --m-chrome-bg: rgb(var(--surface-3));
-      --m-well-bg: rgb(var(--surface-1));
-      --m-control-bg: rgb(var(--surface-3));
-      --m-primary-bg: rgb(var(--accent));
-    }
-  }
+/* fallback: more contrast → edge forced to contrastEdge */
+@media (prefers-contrast: more) {
+:where(:root[data-skin="clay-3d"]),
+:where([data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root:not([data-theme="light"])[data-skin="clay-3d"]),
+:where(:root:not([data-theme="light"]) [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+:where(:root[data-theme="dark"][data-skin="clay-3d"]),
+:where(:root[data-theme="dark"] [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
+}
 
-  /* fallback: data-fidelity="low" */
-  :where(:root[data-fidelity="low"][data-skin="clay-3d"]),
-  :where(:root[data-fidelity="low"] [data-skin="clay-3d"]) {
-    --scene: rgb(var(--canvas));
-    --m-ground-sheen: none;
-    --m-ground-backdrop: none;
-    --m-ground-z: 0px;
-    --m-panel-sheen: none;
-    --m-panel-backdrop: none;
-    --m-panel-z: 0px;
-    --m-card-sheen: none;
-    --m-card-backdrop: none;
-    --m-card-z: 0px;
-    --m-raised-sheen: none;
-    --m-raised-backdrop: none;
-    --m-raised-z: 0px;
-    --m-overlay-sheen: none;
-    --m-overlay-backdrop: none;
-    --m-overlay-z: 0px;
-    --m-chrome-sheen: none;
-    --m-chrome-backdrop: none;
-    --m-chrome-z: 0px;
-    --m-well-sheen: none;
-    --m-well-backdrop: none;
-    --m-well-z: 0px;
-    --m-control-sheen: none;
-    --m-control-backdrop: none;
-    --m-control-z: 0px;
-    --m-primary-sheen: none;
-    --m-primary-backdrop: none;
-    --m-primary-z: 0px;
-    --m-card-t1-sheen: none;
-    --m-card-t1-backdrop: none;
-    --m-card-t2-sheen: none;
-    --m-card-t2-backdrop: none;
-    --m-card-t3-sheen: none;
-    --m-card-t3-backdrop: none;
-    --m-card-t4-sheen: none;
-    --m-card-t4-backdrop: none;
-    --k-tint-a: 243 238 255;
-    --k-tint-b: 255 241 234;
-    --k-tint-c: 234 248 241;
-    --k-tint-d: 234 243 255;
-    --k-hi: 255 255 255;
-    --k-lo: 11 13 18;
-    --m-ground-bg: rgb(var(--canvas));
-    --m-panel-bg: rgb(var(--surface-1));
-    --m-card-bg: rgb(var(--surface-2));
-    --m-raised-bg: rgb(var(--surface-3));
-    --m-overlay-bg: rgb(var(--surface-4));
-    --m-chrome-bg: rgb(var(--surface-3));
-    --m-well-bg: rgb(var(--surface-1));
-    --m-control-bg: rgb(var(--surface-3));
-    --m-primary-bg: rgb(var(--accent));
-  }
+/* fallback: data-fidelity="low" */
+:where(:root[data-fidelity="low"][data-skin="clay-3d"]),
+:where(:root[data-fidelity="low"] [data-skin="clay-3d"]) {
+  --scene: rgb(var(--canvas));
+  --m-ground-sheen: none;
+  --m-ground-backdrop: none;
+  --m-ground-z: 0px;
+  --m-panel-sheen: none;
+  --m-panel-backdrop: none;
+  --m-panel-z: 0px;
+  --m-card-sheen: none;
+  --m-card-backdrop: none;
+  --m-card-z: 0px;
+  --m-raised-sheen: none;
+  --m-raised-backdrop: none;
+  --m-raised-z: 0px;
+  --m-overlay-sheen: none;
+  --m-overlay-backdrop: none;
+  --m-overlay-z: 0px;
+  --m-chrome-sheen: none;
+  --m-chrome-backdrop: none;
+  --m-chrome-z: 0px;
+  --m-well-sheen: none;
+  --m-well-backdrop: none;
+  --m-well-z: 0px;
+  --m-control-sheen: none;
+  --m-control-backdrop: none;
+  --m-control-z: 0px;
+  --m-primary-sheen: none;
+  --m-primary-backdrop: none;
+  --m-primary-z: 0px;
+  --m-card-t1-sheen: none;
+  --m-card-t1-backdrop: none;
+  --m-card-t2-sheen: none;
+  --m-card-t2-backdrop: none;
+  --m-card-t3-sheen: none;
+  --m-card-t3-backdrop: none;
+  --m-card-t4-sheen: none;
+  --m-card-t4-backdrop: none;
+  --k-tint-a: 243 238 255;
+  --k-tint-b: 255 241 234;
+  --k-tint-c: 234 248 241;
+  --k-tint-d: 234 243 255;
+  --k-hi: 255 255 255;
+  --k-lo: 11 13 18;
+  --m-ground-bg: rgb(var(--canvas));
+  --m-panel-bg: rgb(var(--surface-1));
+  --m-card-bg: rgb(var(--surface-2));
+  --m-raised-bg: rgb(var(--surface-3));
+  --m-overlay-bg: rgb(var(--surface-4));
+  --m-chrome-bg: rgb(var(--surface-3));
+  --m-well-bg: rgb(var(--surface-1));
+  --m-control-bg: rgb(var(--surface-3));
+  --m-primary-bg: rgb(var(--accent));
+}
 } /* end @layer skins */

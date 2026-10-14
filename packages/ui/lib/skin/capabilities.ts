@@ -17,7 +17,18 @@ export function supportsWebgl2(): boolean {
   if (typeof window === 'undefined') return false;
   if (webgl2Supported !== null) return webgl2Supported;
   try {
-    webgl2Supported = !!document.createElement('canvas').getContext('webgl2');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+    webgl2Supported = !!ctx;
+    // todo/11: free the probe context immediately. The answer is cached as a
+    // boolean, and browsers (iOS Safari especially, ~8 live contexts) cap how
+    // many contexts may exist — keeping the probe alive eats a slot the slab
+    // engine or other canvases need on small devices.
+    try {
+      ctx?.getExtension('WEBGL_lose_context')?.loseContext();
+    } catch {
+      /* context already gone / extension missing — answer stands */
+    }
   } catch {
     webgl2Supported = false;
   }

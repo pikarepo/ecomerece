@@ -1,3 +1,5 @@
+export type { BusinessHoursOptions, BusinessHoursProps, BusinessStatus } from './BusinessHours';
+export { BusinessHours, businessStatus, formatClock12, parseHm } from './BusinessHours';
 export type { CarouselProps } from './Carousel';
 export { Carousel } from './Carousel';
 export type { CountdownProps } from './Countdown';
@@ -6,6 +8,8 @@ export type { DataBarProps } from './DataBar';
 export { DataBar } from './DataBar';
 export type { DurationProps } from './Duration';
 export { Duration } from './Duration';
+export type { GaugeKPIProps } from './GaugeKPI';
+export { GaugeKPI } from './GaugeKPI';
 export type { MetricCardProps } from './MetricCard';
 export { MetricCard } from './MetricCard';
 export type { PaginationProps } from './Pagination';
@@ -37,9 +41,21 @@ export type { SpinnerProps } from './Spinner';
 export { Spinner } from './Spinner';
 export type { StatTileProps } from './StatTile';
 export { StatTile } from './StatTile';
+export type {
+  BatteryIndicatorProps,
+  ConnectionLevel,
+  ConnectionQualityProps,
+  SaveState,
+  SaveStatusProps,
+  SyncState,
+  SyncStatusProps,
+} from './Status';
+export { BatteryIndicator, ConnectionQuality, SaveStatus, SyncStatus } from './Status';
 export type { StockIndicatorProps, StockLevel } from './StockIndicator';
 export { StockIndicator } from './StockIndicator';
-export type { SortDirection, TableColumn, TableProps } from './Table';
+export type { StopwatchProps } from './Stopwatch';
+export { formatStopwatch, Stopwatch } from './Stopwatch';
+export type { SortDirection, TableColumn, TableColumnGroup, TableProps } from './Table';
 export { Table } from './Table';
 export type { TimeAgoProps } from './TimeAgo';
 export { TimeAgo } from './TimeAgo';

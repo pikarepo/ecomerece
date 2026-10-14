@@ -20,6 +20,12 @@ export interface TableColumn<T> {
   cellClassName?: string;
 }
 
+export interface TableColumnGroup {
+  label: ReactNode;
+  span: number;
+  align?: 'left' | 'right' | 'center';
+}
+
 export interface TableProps<T> {
   columns: Array<TableColumn<T>>;
   rows: T[];
@@ -38,6 +44,12 @@ export interface TableProps<T> {
   bulkBar?: (selected: Array<string | number>, clear: () => void) => ReactNode;
   /** Summary cells (aligned to `columns`) rendered in a `<tfoot>`. */
   summary?: ReactNode[];
+  /**
+   * Group header row rendered above the column headers (batch 17 completion).
+   * Spans follow column order and should sum to `columns.length`; hidden
+   * (`show`) columns are not hidden inside the group row.
+   */
+  columnGroups?: TableColumnGroup[];
 }
 
 const showClasses = {
@@ -138,6 +150,7 @@ export function Table<T>({
   onSelectedKeysChange,
   bulkBar,
   summary,
+  columnGroups,
 }: TableProps<T>) {
   const selectable = Boolean(onSelectedKeysChange);
   const selected = selectedKeys ?? [];
@@ -178,6 +191,29 @@ export function Table<T>({
       <div className="overflow-auto" style={maxHeight ? { maxHeight } : undefined}>
         <table className="w-full min-w-[640px] text-left">
           <thead className="sticky top-0 z-raised bg-surface-2">
+            {columnGroups && columnGroups.length > 0 && (
+              <tr className="border-b border-line/10">
+                {selectable && <th className={cn('w-10', densityClasses[density])} aria-hidden />}
+                {columnGroups.map((group, i) => (
+                  <th
+                    key={`group-${i}`}
+                    scope="colgroup"
+                    colSpan={Math.max(1, group.span)}
+                    className={cn(
+                      'whitespace-nowrap text-xs font-semibold uppercase tracking-wide text-ink-3',
+                      densityClasses[density],
+                      group.align === 'right'
+                        ? 'text-right'
+                        : group.align === 'center'
+                          ? 'text-center'
+                          : 'text-left',
+                    )}
+                  >
+                    {group.label}
+                  </th>
+                ))}
+              </tr>
+            )}
             <tr className="border-b border-line/10">
               {selectable && (
                 <th className={cn('w-10', densityClasses[density])}>

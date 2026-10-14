@@ -235,4 +235,90 @@
   }
 }
 
+/* ─── Effect-button primitives (todo/09 batch 38–39) ─────────────────────
+   Ripple / magnetic / shimmer / glow / gradient-border. Shimmer reads
+   `--m-fx-sheen` (= `var(--m-role-sheen, var(--m-fx-sheen-fallback))`) and
+   glow reads `--m-fx-glow-color` (= `var(--m-role-glow, var(--m-fx-glow-fallback))`),
+   both set inline by EffectButton; ripple paints with currentColor. The
+   gradient border reads `--m-role-glow` + `--m-role-edge`. Never a literal
+   colour in markup — fallbacks live here. */
+@layer utilities {
+  .fx-btn {
+    /* Token-based fallbacks when a skin omits the optional effect slots. */
+    --m-fx-sheen-fallback: linear-gradient(
+      105deg,
+      transparent 30%,
+      rgb(var(--accent) / 0.35) 50%,
+      transparent 70%
+    );
+    --m-fx-glow-fallback: rgb(var(--accent));
+  }
+  .fx-shimmer {
+    background-image: var(--m-fx-sheen, none);
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    background-position: 150% 0;
+    transition: background-position var(--dur-slow, 300ms) var(--ease, ease);
+    pointer-events: none;
+  }
+  .fx-btn:hover .fx-shimmer,
+  .fx-btn:focus-visible .fx-shimmer {
+    background-position: -50% 0;
+  }
+  .fx-glow {
+    transition: filter var(--dur, 200ms) var(--ease, ease);
+  }
+  .fx-glow:hover,
+  .fx-glow:focus-visible {
+    filter: drop-shadow(0 0 6px var(--m-fx-glow-color, currentcolor))
+      drop-shadow(0 0 14px var(--m-fx-glow-color, currentcolor));
+  }
+  .fx-ripple {
+    position: absolute;
+    border-radius: 9999px;
+    background: currentcolor;
+    opacity: 0.28;
+    transform: scale(0);
+    pointer-events: none;
+    animation: fx-ripple 600ms var(--ease, ease) forwards;
+  }
+  @keyframes fx-ripple {
+    to {
+      transform: scale(1);
+      opacity: 0;
+    }
+  }
+
+  /* Gradient border button (batch 39): a masked 1px ring painted from the
+     role's `edge`/`glow` tokens (set inline as `--m-fx-grad-a/-b`, with token
+     fallbacks below). The ring is a `::before` so the `mat-*` fill underneath
+     stays intact and the label stays interactive. */
+  .fx-gradbtn {
+    --m-fx-grad-a-fallback: rgb(var(--accent));
+    --m-fx-grad-b-fallback: rgb(var(--accent) / 0.3);
+    position: relative;
+  }
+  .fx-gradbtn::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: var(--stroke, 1px);
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      var(--m-fx-grad-a, currentcolor),
+      var(--m-fx-grad-b, currentcolor)
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+}
+
 /* ─── Reduced-motion guard already lives in tokens.css (§8) ────────────── */

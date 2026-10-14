@@ -1,6 +1,14 @@
 # TASK 08 — Even more components (wishlist buildout, batches 9+)
 
-**Status: batches 9–18 DONE (gate green) — todo/08 list complete; continue in `todo/09` master backlog (batch 19+).** Split from the pasted "Even More Components,
+**Status: COMPLETE (2026-10-14). Batches 9–18 landed, then the leftover wishlist rows
+traced back to this file were shipped in a "todo/08 completion pass": `Stopwatch` +
+`BusinessHours` (batch 11 leftovers), `GaugeKPI` (batch 12), `Table.columnGroups`
+(batch 17), status family `SyncStatus`/`SaveStatus`/`ConnectionQuality`/
+`BatteryIndicator` (batch 18 wishlist) — tests in `test/batch08-completion.test.tsx`,
+DESIGN.md E.5.29. A follow-up hydration fix removed all render-time wall-clock reads
+from the design page + batch-11 time components (`TimezoneClock`/`Countdown` mount-empty).
+Everything else lives in `todo/09` master backlog (batch 19+).**
+Split from the pasted "Even More Components,
 Sub-components, Themes & Skins" wishlist (categories A–L + themes/skins backlog).
 Each batch stays small (3–5 items) so one batch ≈ one focused session: build →
 tests → design-page row → DESIGN.md E.5 row → gate green → status update here +

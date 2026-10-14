@@ -9,12 +9,14 @@ import {
   Avatar,
   Badge,
   Banner,
+  BatteryIndicator,
   Bento,
   BentoCell,
   Bleed,
   BottomSheet,
   BottomTabBar,
   Breadcrumb,
+  BusinessHours,
   Button,
   Card,
   Carousel,
@@ -28,8 +30,11 @@ import {
   Columns,
   Combobox,
   ConfirmDialog,
+  ConnectionQuality,
   Container,
+  CooldownButton,
   Countdown,
+  CountdownButton,
   Cover,
   cn,
   DataBar,
@@ -38,9 +43,11 @@ import {
   Definition,
   Display,
   Div,
+  DoubleClickToConfirm,
   DropCap,
   Dropdown,
   Duration,
+  EffectButton,
   Emoji,
   EmptyState,
   ErrorState,
@@ -53,12 +60,16 @@ import {
   FootnoteRef,
   Frame,
   focusRing,
+  GaugeKPI,
+  GlowButton,
+  GradientBorderButton,
   GradientText,
   GroupedList,
   Gutter,
   Hashtag,
   Heading,
   Hide,
+  HoldToConfirmButton,
   HoverCard,
   HStack,
   IconButton,
@@ -74,6 +85,7 @@ import {
   Link,
   ListHeader,
   ListRow,
+  MagneticButton,
   MasonryBoard,
   Mention,
   MetricCard,
@@ -98,12 +110,15 @@ import {
   PullToRefresh,
   Push,
   Radio,
-  ReadMore,
   Raised,
   Range,
   Rating,
+  ReadMore,
   Reel,
+  ResendCodeButton,
+  RippleButton,
   SafeArea,
+  SaveStatus,
   ScrambleText,
   ScrollArea,
   ScrollProgress,
@@ -115,6 +130,7 @@ import {
   SegmentedMeter,
   Select,
   Separator,
+  ShimmerButton,
   Show,
   Sidebar,
   SidebarLayout,
@@ -134,12 +150,15 @@ import {
   StickySidebar,
   StickyToc,
   StockIndicator,
+  Stopwatch,
   Subtitle,
   Surface,
   SwipeActions,
   Swipeable,
+  SwipeToConfirm,
   Switch,
   Switcher,
+  SyncStatus,
   skinRegistry,
   supportsBackdropFilter,
   supportsWebgl2,
@@ -384,6 +403,9 @@ const skinEntries = Object.entries(skinRegistry).map(([id, e]) => ({
   note: 'note' in e ? e.note : undefined,
   swatch: e.swatch as [string, string],
 }));
+
+/* Stable timestamp so SSR and client hydration agree (no `new Date()` in render). */
+const DEMO_SYNCED_AT = '2026-10-14T09:41:07.000Z';
 
 /* ─────────────────────────── grid demo data ─────────────────────────── */
 
@@ -1409,9 +1431,13 @@ export default function DesignQaPage() {
         {show('data') && (
           <Section
             title="Table add-ons (batch 17)"
-            subtitle="Row selection + bulk bar · sortable chevrons · summary row"
+            subtitle="Row selection + bulk bar · sortable chevrons · summary row · grouped headers"
           >
             <Table
+              columnGroups={[
+                { label: 'Identity', span: 2 },
+                { label: 'Storage', span: 1, align: 'right' },
+              ]}
               columns={[
                 { key: 'device', header: 'Device', cell: (r) => r.device, sortKey: 'device' },
                 { key: 'status', header: 'Status', cell: (r) => r.status, sortKey: 'status' },
@@ -1464,6 +1490,70 @@ export default function DesignQaPage() {
               <StockIndicator level="out-of-stock" />
               <StockIndicator level="preorder" />
             </HStack>
+          </Section>
+        )}
+
+        {/* ═══════════════ TODO/08 COMPLETION (batches 11/12/17/18 leftovers) ═══════════════ */}
+        {show('data') && (
+          <Section
+            title="todo/08 completion — stopwatch · business hours · gauge · status"
+            subtitle="Stopwatch / BusinessHours / GaugeKPI / SyncStatus / SaveStatus / ConnectionQuality / BatteryIndicator"
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Card padding="md">
+                <Stack gap={3}>
+                  <Text size="sm" tone="ink-2">
+                    Stopwatch & business hours
+                  </Text>
+                  <Stopwatch controls />
+                  <BusinessHours open="09:00" close="17:00" />
+                  <BusinessHours
+                    open="10:00"
+                    close="16:00"
+                    days={[6, 0]}
+                    openLabel="Open (weekend hours)"
+                  />
+                </Stack>
+              </Card>
+              <Card padding="md">
+                <Stack gap={3}>
+                  <Text size="sm" tone="ink-2">
+                    Gauge KPI
+                  </Text>
+                  <HStack gap={6} className="flex-wrap">
+                    <GaugeKPI label="Performance" value={72} hint="+6 this week" />
+                    <GaugeKPI label="Error budget" value={9} hint="of 100 used" />
+                  </HStack>
+                </Stack>
+              </Card>
+            </div>
+            <Card padding="md" className="mt-4">
+              <Stack gap={3}>
+                <Text size="sm" tone="ink-2">
+                  Status family
+                </Text>
+                <HStack gap={4} className="flex-wrap">
+                  <SyncStatus state="synced" lastSyncedAt={DEMO_SYNCED_AT} />
+                  <SyncStatus state="syncing" />
+                  <SyncStatus state="offline" />
+                  <SyncStatus state="error" />
+                </HStack>
+                <HStack gap={4} className="flex-wrap">
+                  <SaveStatus state="saved" />
+                  <SaveStatus state="saving" />
+                  <SaveStatus state="error" />
+                </HStack>
+                <HStack gap={4} className="flex-wrap">
+                  <ConnectionQuality level="good" />
+                  <ConnectionQuality level="fair" />
+                  <ConnectionQuality level="poor" />
+                  <ConnectionQuality level="offline" />
+                  <BatteryIndicator level={78} />
+                  <BatteryIndicator level={15} />
+                  <BatteryIndicator level={40} charging />
+                </HStack>
+              </Stack>
+            </Card>
           </Section>
         )}
 
@@ -2514,9 +2604,128 @@ export default function DesignQaPage() {
           </Section>
         )}
 
+        {/* ═══════════════ EFFECT BUTTONS (batch 38) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Effect buttons (batch 38)"
+            subtitle="Ripple / Magnetic / Shimmer / Glow — the effect is a skin decision"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap">
+                  <RippleButton>Save</RippleButton>
+                  <ShimmerButton variant="secondary">Add to cart</ShimmerButton>
+                  <GlowButton>Get started</GlowButton>
+                  <MagneticButton variant="secondary">Pull</MagneticButton>
+                </HStack>
+                <HStack gap={4} className="flex-wrap">
+                  <EffectButton effect="shimmer" material="raised">
+                    Shimmer · raised
+                  </EffectButton>
+                  <EffectButton effect="glow" material="control" variant="secondary">
+                    Glow · control
+                  </EffectButton>
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  Sheen reads `--m-&lt;role&gt;-sheen`, glow reads `--m-&lt;role&gt;-glow` (cyber
+                  overrides it in dark); ripple paints with currentColor. Pick another skin to see
+                  the effect follow.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ GRADIENT BORDER BUTTON (batch 39) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Gradient border button (batch 39)"
+            subtitle="Ring painted from role tokens — glow × edge, per skin"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <GradientBorderButton>Get started</GradientBorderButton>
+                  <GradientBorderButton variant="secondary">Learn more</GradientBorderButton>
+                  <GradientBorderButton size="sm" variant="secondary">
+                    Small
+                  </GradientBorderButton>
+                  <GradientBorderButton size="lg">Large</GradientBorderButton>
+                  <GradientBorderButton material="raised" variant="secondary">
+                    Raised role
+                  </GradientBorderButton>
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  The 1px ring reads `--m-&lt;role&gt;-glow` → `--m-&lt;role&gt;-edge` (token
+                  fallbacks in engine.css) over the variant fill, so the gradient follows the active
+                  skin.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ CONFIRM CONTROLS (batch 40) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Confirmation controls (batch 40)"
+            subtitle="Hold · swipe · double-click — deliberate gestures before a destructive action"
+          >
+            <Card padding="md">
+              <Stack gap={5}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <HoldToConfirmButton onConfirm={() => {}}>Hold to delete</HoldToConfirmButton>
+                  <HoldToConfirmButton variant="secondary" duration={2200}>
+                    Hold (2.2s)
+                  </HoldToConfirmButton>
+                  <DoubleClickToConfirm armedLabel="Click again" onConfirm={() => {}}>
+                    Double-click to delete
+                  </DoubleClickToConfirm>
+                </HStack>
+                <div className="max-w-sm">
+                  <SwipeToConfirm onConfirm={() => {}}>Slide to pay</SwipeToConfirm>
+                </div>
+                <Text size="sm" tone="ink-2">
+                  Hold fills a progress bar from `bg-accent/25`; swipe latches the thumb past 90% of
+                  the track; double-click arms for 400ms. All three also confirm from the keyboard
+                  (Enter / Space).
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ TIMED BUTTONS (batch 41) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Timed buttons (batch 41)"
+            subtitle="Cooldown · resend-code · countdown — one interval loop, token-driven"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <CooldownButton seconds={5} onActivate={() => {}}>
+                    Cooldown 5s
+                  </CooldownButton>
+                  <ResendCodeButton seconds={10} onResend={() => {}} />
+                  <CountdownButton seconds={4}>Ready to continue</CountdownButton>
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  `CooldownButton` disables while cooling and renders `cooldownLabel(left)`;
+                  `ResendCodeButton` builds on it; `CountdownButton` counts down on mount then
+                  re-enables and fires `onComplete`.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
         {/* ═══════════════ READ MORE (batch 37) ═══════════════ */}
         {show('layout') && (
-          <Section title="Read more (batch 37)" subtitle="ReadMore — clamped disclosure with toggle">
+          <Section
+            title="Read more (batch 37)"
+            subtitle="ReadMore — clamped disclosure with toggle"
+          >
             <Grid2>
               <SubSection title="Default (3 lines)">
                 <ReadMore>
@@ -2532,8 +2741,8 @@ export default function DesignQaPage() {
                 <ReadMore lines={2} moreLabel="Expand" lessLabel="Collapse">
                   <p className="text-sm text-ink-2">
                     Disclosure text is clamped with the CSS line-clamp utility; the toggle is a real
-                    button with aria-expanded and aria-controls, so screen readers announce the state
-                    change correctly.
+                    button with aria-expanded and aria-controls, so screen readers announce the
+                    state change correctly.
                   </p>
                 </ReadMore>
               </SubSection>
