@@ -51,7 +51,7 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 | 39 | Gradient border button | ✅ batch 39 (`--m-<role>-glow`×`-edge` masked ring, token fallbacks) |
 | 40 | Hold-to-confirm button · Swipe-to-confirm slider · Double-click-to-confirm | ✅ batch 40 (`components/controls/Confirm.tsx`) |
 | 41 | Countdown button · Cooldown button · Resend-code button | ✅ batch 41 (`components/controls/Cooldown.tsx`) |
-| 42 | Chip-button family: tab/chip/tag/filter/suggestion/input/choice chip variants | ⬜ (Chip shipped; variants are props/derivatives) |
+| 42 | Chip-button family: tab/chip/tag/filter/suggestion/input/choice chip variants | ✅ batch 42 (`components/controls/ChipButton.tsx`) |
 | 55 | Stepper buttons (+/-) · Arrow/chevron buttons · Scroll button | ⬜ (NumberInput stepper ✅) |
 | 56 | Expand/Collapse button · Fullscreen toggle · Window controls (minimize/maximize/close) | ⬜ |
 | 57 | Zoom in/out/reset · Pan · Rotate controls · Media controls (play/pause/stop/next/prev/shuffle/repeat) | ⬜ |

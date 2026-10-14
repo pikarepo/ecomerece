@@ -3,6 +3,20 @@ export { Button, IconButton } from './Button';
 export type { CheckboxProps } from './Checkbox';
 export { Checkbox } from './Checkbox';
 export type {
+  ChipButtonProps,
+  ChipDerivativeProps,
+  ChipVariant,
+  InputChipProps,
+} from './ChipButton';
+export {
+  ChipButton,
+  ChoiceChip,
+  FilterChip,
+  InputChip,
+  SuggestionChip,
+  TabChip,
+} from './ChipButton';
+export type {
   DoubleClickToConfirmProps,
   HoldToConfirmButtonProps,
   SwipeToConfirmProps,

@@ -3191,3 +3191,24 @@ consistent. Labels accept render functions for localisation; `aria-live="polite"
 
 Tests: `test/batch41-timed-buttons.test.tsx` (3 cases). Design page: "Timed buttons
 (batch 41)" section (controls tab).
+
+### E.5.34 Chip-button family — as-built (batch 42, todo/09 §C)
+
+New file `components/controls/ChipButton.tsx` (exported from the controls barrel) —
+interactive variants of the static `Chip`/`Tag`. Selection swaps the `mat-control`
+role for `mat-primary`; the semantics match the flavour (`radio` for choice, `tab` for
+tabs, `aria-pressed` for toggles, none for input). Removal uses a **two-sibling-button
+composition** (`<span>` container with a label `<button>` + a remove `<button>`) so a
+button is never nested in a button. `mat-*` + theme token utilities only.
+
+| Export | Signature | Notes |
+|---|---|---|
+| `ChipButton` | `variant?: 'chip'\|'filter'\|'choice'\|'suggestion'\|'tab'\|'input'`, `selected?`, `onSelectedChange?`, `leading?`, `removable?`, `onRemove?`, `removeLabel?` + native props | one component, all variants |
+| `FilterChip` | `ChipButtonProps` minus `variant` | toggle, `aria-pressed` |
+| `ChoiceChip` | ″ | `role="radio"` + `aria-checked` |
+| `SuggestionChip` | ″ | toggle, `aria-pressed` |
+| `TabChip` | ″ | `role="tab"` + `aria-selected` |
+| `InputChip` | `ChipButtonProps` minus `variant`/`onSelectedChange` | `removable` defaults true; token/avatar + remove |
+
+Tests: `test/batch42-chip-buttons.test.tsx` (6 cases). Design page: "Chip-button family
+(batch 42)" section (controls tab).

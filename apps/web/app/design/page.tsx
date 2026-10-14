@@ -24,6 +24,8 @@ import {
   type CartLine,
   Checkbox,
   Chip,
+  ChipButton,
+  ChoiceChip,
   Citation,
   Cluster,
   Code,
@@ -54,6 +56,7 @@ import {
   FadeInText,
   Field,
   FileUpload,
+  FilterChip,
   FloatingPanel,
   Footnote,
   FootnoteList,
@@ -78,6 +81,7 @@ import {
   Imposter,
   InlineBadge,
   Input,
+  InputChip,
   JustifiedGallery,
   Kbd,
   KeyboardAvoidingView,
@@ -152,6 +156,7 @@ import {
   StockIndicator,
   Stopwatch,
   Subtitle,
+  SuggestionChip,
   Surface,
   SwipeActions,
   Swipeable,
@@ -159,6 +164,7 @@ import {
   Switch,
   Switcher,
   SyncStatus,
+  TabChip,
   skinRegistry,
   supportsBackdropFilter,
   supportsWebgl2,
@@ -2715,6 +2721,43 @@ export default function DesignQaPage() {
                   `ResendCodeButton` builds on it; `CountdownButton` counts down on mount then
                   re-enables and fires `onComplete`.
                 </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ CHIP-BUTTON FAMILY (batch 42) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Chip-button family (batch 42)"
+            subtitle="Filter · choice · suggestion · tab · input — selection swaps mat-control → mat-primary"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <FilterChip selected onSelectedChange={() => {}}>
+                    In stock
+                  </FilterChip>
+                  <FilterChip onSelectedChange={() => {}}>On sale</FilterChip>
+                  <SuggestionChip onSelectedChange={() => {}}>Trending</SuggestionChip>
+                </HStack>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <ChoiceChip selected onSelectedChange={() => {}}>
+                    Small
+                  </ChoiceChip>
+                  <ChoiceChip onSelectedChange={() => {}}>Medium</ChoiceChip>
+                  <ChoiceChip onSelectedChange={() => {}}>Large</ChoiceChip>
+                  <TabChip selected onSelectedChange={() => {}}>
+                    Overview
+                  </TabChip>
+                  <TabChip onSelectedChange={() => {}}>Activity</TabChip>
+                </HStack>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <InputChip leading={<StatusDot tone="success" />} onRemove={() => {}}>
+                    alice@example.com
+                  </InputChip>
+                  <InputChip onRemove={() => {}}>design</InputChip>
+                </HStack>
               </Stack>
             </Card>
           </Section>
