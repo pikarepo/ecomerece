@@ -52,24 +52,24 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 | 40 | Hold-to-confirm button · Swipe-to-confirm slider · Double-click-to-confirm | ✅ batch 40 (`components/controls/Confirm.tsx`) |
 | 41 | Countdown button · Cooldown button · Resend-code button | ✅ batch 41 (`components/controls/Cooldown.tsx`) |
 | 42 | Chip-button family: tab/chip/tag/filter/suggestion/input/choice chip variants | ✅ batch 42 (`components/controls/ChipButton.tsx`) |
-| 55 | Stepper buttons (+/-) · Arrow/chevron buttons · Scroll button | ⬜ (NumberInput stepper ✅) |
-| 56 | Expand/Collapse button · Fullscreen toggle · Window controls (minimize/maximize/close) | ⬜ |
-| 57 | Zoom in/out/reset · Pan · Rotate controls · Media controls (play/pause/stop/next/prev/shuffle/repeat) | ⬜ |
-| 58 | Call controls (mic mute, camera toggle, screen share) | ⬜ |
-| 59 | Floating toolbar · Bubble menu (text-selection) · Inline toolbar | ⬜ (Toolbar ✅) |
-| 60 | Pull handle · Drag handle · Resize handle · Grip | ⬜ |
-| 61 | Sign-in with (Apple/Google/GitHub/Microsoft/Facebook) · Wallet buttons (Apple Pay/Google Pay/PayPal) · App-store badges · QR download | ⬜ (commerce value high — candidate to promote into todo/08) |
+| 55 | Stepper buttons (+/-) · Arrow/chevron buttons · Scroll button | ✅ batch 55 (`components/controls/NavButtons.tsx`) |
+| 56 | Expand/Collapse button · Fullscreen toggle · Window controls (minimize/maximize/close) | ✅ batch 56 (`components/controls/WindowButtons.tsx`) |
+| 57 | Zoom in/out/reset · Pan · Rotate controls · Media controls (play/pause/stop/next/prev/shuffle/repeat) | ✅ batch 57 (`ViewportControls.tsx` + `MediaControls.tsx`) |
+| 58 | Call controls (mic mute, camera toggle, screen share) | ✅ batch 58 (`components/controls/CallControls.tsx`) |
+| 59 | Floating toolbar · Bubble menu (text-selection) · Inline toolbar | ✅ batch 59 (`components/navigation/FloatingToolbar.tsx`) |
+| 60 | Pull handle · Drag handle · Resize handle · Grip | ✅ batch 60 (`components/controls/Handles.tsx`) |
+| 61 | Sign-in with (Apple/Google/GitHub/Microsoft/Facebook) · Wallet buttons (Apple Pay/Google Pay/PayPal) · App-store badges · QR download | ✅ batch 61 (`components/controls/ProviderButtons.tsx`) |
 
 ## D — Additional forms & validation
 
 | Batch | Items | Status |
 |---|---|---|
-| 43 | Input variants: filled/outlined/underlined/borderless/floating/inset/with-icon/with-badge/with-counter/with-tooltip | ⬜ (Input shipped — these are variant props/modes) |
-| 44 | Smart inputs: email+domain suggestions · URL input · username checker · password strength meter (bar + rules) | ⬜ |
-| 45 | Card input (number, expiry, CVC, brand icon) · IBAN · SSN/tax ID · postal code · coordinates | ⬜ (commerce: card input is high value — todo/08 candidate) |
-| 46 | Pickers I (light): unit picker · currency picker · timezone picker · avatar picker | ⬜ |
-| 47 | Pickers II (medium): emoji picker · font picker · icon picker · gradient/shadow picker | ⬜ |
-| 48 | Pickers III (heavy): cron · recurrence · template/layout/theme pickers | ⬜/⛔ cron+recurrence own-task |
+| 43 | Input variants: filled/outlined/underlined/borderless/floating/inset/with-icon/with-badge/with-counter/with-tooltip | ✅ batch 43 (`components/form/TextField.tsx`) |
+| 44 | Smart inputs: email+domain suggestions · URL input · username checker · password strength meter (bar + rules) | ✅ batch 44 (`components/form/SmartInputs.tsx`) |
+| 45 | Card input (number, expiry, CVC, brand icon) · IBAN · SSN/tax ID · postal code · coordinates | ✅ batch 45 (`components/form/PatternInputs.tsx`) |
+| 46 | Pickers I (light): unit picker · currency picker · timezone picker · avatar picker | ✅ batch 46 (`components/form/Pickers.tsx`) |
+| 47 | Pickers II (medium): emoji picker · font picker · icon picker · gradient/shadow picker | ✅ batch 47 (`components/form/AdvancedPickers.tsx`) |
+| 48 | Pickers III (heavy): cron · recurrence · template/layout/theme pickers | ✅ template/layout/theme (batch 48, `components/form/TemplatePickers.tsx`); ⛔ cron+recurrence own-task |
 | 62 | Selection extras: tile select · image select grid · swatch select · toggle chips · NPS scale · Likert · thumbs (Rating ✅, tri-state checkbox ✅ via `indeterminate`) | ⬜ |
 | 63 | Slider extras: marks · tooltip · vertical · range histogram · stepper slider (Slider ✅, Range dual-thumb ✅) | ⬜ |
 | 64 | Text editing: tag input · token input · email-chips input | ⬜ |

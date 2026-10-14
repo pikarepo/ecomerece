@@ -4,6 +4,13 @@ export type { BottomTabBarProps, BottomTabItem } from './BottomTabBar';
 export { BottomTabBar } from './BottomTabBar';
 export type { BreadcrumbItem, BreadcrumbProps } from './Breadcrumb';
 export { Breadcrumb } from './Breadcrumb';
+export type {
+  BubbleMenuProps,
+  FloatingToolbarProps,
+  InlineToolbarProps,
+  ToolbarPlacement,
+} from './FloatingToolbar';
+export { BubbleMenu, FloatingToolbar, InlineToolbar } from './FloatingToolbar';
 export type { IconRailProps, RailItem } from './IconRail';
 export { IconRail } from './IconRail';
 export type { LinkProps, LinkVariant } from './Link';

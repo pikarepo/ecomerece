@@ -5,6 +5,8 @@ import {
   Accordion,
   AccordionItem,
   ActionSheet,
+  AppStoreBadge,
+  ArrowButton,
   AspectRatio,
   Avatar,
   Badge,
@@ -16,8 +18,11 @@ import {
   BottomSheet,
   BottomTabBar,
   Breadcrumb,
+  BubbleMenu,
   BusinessHours,
   Button,
+  CallControls,
+  CameraButton,
   Card,
   Carousel,
   CartDrawer,
@@ -46,27 +51,33 @@ import {
   Display,
   Div,
   DoubleClickToConfirm,
+  DragHandle,
   DropCap,
   Dropdown,
   Duration,
   EffectButton,
   Emoji,
   EmptyState,
+  EndCallButton,
   ErrorState,
+  ExpandCollapseButton,
   FadeInText,
   Field,
   FileUpload,
   FilterChip,
   FloatingPanel,
+  FloatingToolbar,
   Footnote,
   FootnoteList,
   FootnoteRef,
   Frame,
+  FullscreenButton,
   focusRing,
   GaugeKPI,
   GlowButton,
   GradientBorderButton,
   GradientText,
+  GripButton,
   GroupedList,
   Gutter,
   Hashtag,
@@ -80,6 +91,7 @@ import {
   IconTile,
   Imposter,
   InlineBadge,
+  InlineToolbar,
   Input,
   InputChip,
   JustifiedGallery,
@@ -91,8 +103,10 @@ import {
   ListRow,
   MagneticButton,
   MasonryBoard,
+  MediaControls,
   Mention,
   MetricCard,
+  MicButton,
   Modal,
   MosaicGrid,
   MosaicItem,
@@ -103,6 +117,7 @@ import {
   OTP,
   OutlineText,
   Pagination,
+  PanPad,
   PinnedPanel,
   PipContainer,
   PopoutPanel,
@@ -110,9 +125,11 @@ import {
   Progress,
   PromoCode,
   Pull,
+  PullHandle,
   PullQuote,
   PullToRefresh,
   Push,
+  QrDownload,
   Radio,
   Raised,
   Range,
@@ -120,11 +137,15 @@ import {
   ReadMore,
   Reel,
   ResendCodeButton,
+  ResizeHandle,
   RippleButton,
+  RotateControl,
   SafeArea,
   SaveStatus,
   ScrambleText,
+  ScreenShareButton,
   ScrollArea,
+  ScrollButton,
   ScrollProgress,
   ScrollReveal,
   ScrollSpy,
@@ -139,6 +160,7 @@ import {
   Sidebar,
   SidebarLayout,
   SidePanel,
+  SignInButton,
   Skeleton,
   SkeletonTable,
   SkeletonText,
@@ -150,6 +172,7 @@ import {
   Stage3D,
   StatTile,
   StatusDot,
+  StepperButtons,
   StickyCtaBar,
   StickySidebar,
   StickyToc,
@@ -190,8 +213,36 @@ import {
   useToast,
   useToggle,
   VisuallyHidden,
+  WalletButton,
   Well,
+  WindowControls,
   WordRotator,
+  ZoomControls,
+  AvatarPicker,
+  CardCvcInput,
+  CardExpiryInput,
+  CardInput,
+  CardNumberInput,
+  CoordinatesInput,
+  CurrencyPicker,
+  EmailInput,
+  EmojiPicker,
+  FontPicker,
+  GradientPicker,
+  IbanInput,
+  IconPicker,
+  LayoutPicker,
+  PasswordInput,
+  PostalCodeInput,
+  ShadowPicker,
+  SsnInput,
+  TemplatePicker,
+  TextField,
+  ThemePicker,
+  TimezonePicker,
+  UnitPicker,
+  UrlInput,
+  UsernameInput,
 } from '@ecomerece/ui';
 import {
   AlignCenter,
@@ -2760,6 +2811,307 @@ export default function DesignQaPage() {
                 </HStack>
               </Stack>
             </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ NAV BUTTONS (batch 55) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Stepper, arrow & scroll buttons (batch 55)"
+            subtitle="± stepper pair · chevron arrows · scroll nudge"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <StepperButtons value={3} onValueChange={() => {}}>
+                    3
+                  </StepperButtons>
+                  <StepperButtons value={1} min={0} max={5} size="sm" variant="ghost" onValueChange={() => {}}>
+                    1
+                  </StepperButtons>
+                  <ArrowButton direction="left" />
+                  <ArrowButton direction="right" />
+                  <ArrowButton direction="up" />
+                  <ArrowButton direction="down" />
+                  <ScrollButton direction="down" />
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  `StepperButtons` clamps to `min`/`max`; `ScrollButton` scrolls its `target` (or the
+                  window) by `amount` px.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ WINDOW BUTTONS (batch 56) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Expand, fullscreen & window controls (batch 56)"
+            subtitle="Panel chrome — chevron toggle · fullscreen API · minimize/maximize/close"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <ExpandCollapseButton expanded={false} />
+                  <ExpandCollapseButton expanded />
+                  <FullscreenButton />
+                  <WindowControls />
+                  <WindowControls traffic />
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  `FullscreenButton` tracks `fullscreenchange`; `WindowControls` has a glyph mode and a
+                  macOS-style `traffic` mode.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ VIEWPORT & MEDIA CONTROLS (batch 57) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Zoom, pan, rotate & media controls (batch 57)"
+            subtitle="Viewport transform + media transport"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={5} className="flex-wrap items-center">
+                  <ZoomControls value={1} onValueChange={() => {}} />
+                  <PanPad onPan={() => {}} />
+                  <RotateControl value={0} onValueChange={() => {}} />
+                </HStack>
+                <MediaControls
+                  playing
+                  onPlayPause={() => {}}
+                  onStop={() => {}}
+                  onNext={() => {}}
+                  onPrevious={() => {}}
+                  onShuffle={() => {}}
+                  onRepeatToggle={() => {}}
+                />
+                <Text size="sm" tone="ink-2">
+                  Zoom clamps to `min`/`max`; `PanPad` emits direction vectors; repeat cycles
+                  off → all → one.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ CALL CONTROLS (batch 58) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Call controls (batch 58)"
+            subtitle="Mic · camera · screen share · end call"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <MicButton muted={false} />
+                  <MicButton muted />
+                  <CameraButton enabled />
+                  <CameraButton enabled={false} />
+                  <ScreenShareButton sharing={false} />
+                  <ScreenShareButton sharing />
+                  <EndCallButton />
+                </HStack>
+                <CallControls
+                  muted={false}
+                  cameraOn
+                  sharing={false}
+                  onToggleMute={() => {}}
+                  onToggleCamera={() => {}}
+                  onToggleShare={() => {}}
+                  onEndCall={() => {}}
+                />
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ CONTEXTUAL TOOLBARS (batch 59) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Floating, bubble & inline toolbars (batch 59)"
+            subtitle="Positioned toolbars for editors and text-selection menus"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <FloatingToolbar>
+                    <ToolbarButton aria-label="Bold">
+                      <Bold className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton aria-label="Italic">
+                      <Italic className="size-4" />
+                    </ToolbarButton>
+                  </FloatingToolbar>
+                  <BubbleMenu>
+                    <ToolbarButton aria-label="Copy">
+                      <Copy className="size-4" />
+                    </ToolbarButton>
+                  </BubbleMenu>
+                  <InlineToolbar>
+                    <ToolbarButton aria-label="Bold">
+                      <Bold className="size-4" />
+                    </ToolbarButton>
+                    <ToolbarButton aria-label="Italic">
+                      <Italic className="size-4" />
+                    </ToolbarButton>
+                  </InlineToolbar>
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  `FloatingToolbar` positions itself from `x`/`y`; `BubbleMenu` `preventDefault`s
+                  mousedown so a text selection survives; `InlineToolbar` is a compact inline strip.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ HANDLES (batch 60) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Drag, resize & pull handles (batch 60)"
+            subtitle="Grip dots · resize affordances · bottom-sheet pull pill"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={4} className="flex-wrap items-center">
+                  <DragHandle />
+                  <GripButton />
+                  <ResizeHandle edge="horizontal" />
+                  <ResizeHandle edge="vertical" />
+                  <ResizeHandle />
+                  <div className="w-48">
+                    <PullHandle />
+                  </div>
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  `ResizeHandle` exposes `onResize` (pointer down) and a `data-resize-edge`; the
+                  `PullHandle` is the familiar bottom-sheet pill.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ PROVIDER BUTTONS (batch 61) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Sign-in, wallet & store buttons (batch 61)"
+            subtitle="Identity providers · wallet checkout · app-store badges · QR download"
+          >
+            <Card padding="md">
+              <Stack gap={4}>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <SignInButton provider="apple" />
+                  <SignInButton provider="google" />
+                  <SignInButton provider="github" />
+                  <SignInButton provider="microsoft" />
+                </HStack>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <WalletButton provider="apple-pay" />
+                  <WalletButton provider="google-pay" />
+                  <WalletButton provider="paypal" />
+                </HStack>
+                <HStack gap={3} className="flex-wrap items-center">
+                  <AppStoreBadge store="app-store" href="#" />
+                  <AppStoreBadge store="google-play" href="#" />
+                  <QrDownload
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'></svg>"
+                    label="Scan to download"
+                    size="sm"
+                  />
+                </HStack>
+                <Text size="sm" tone="ink-2">
+                  Identity buttons label themselves `Sign in with {'{provider}'}`; wallet buttons use
+                  the `mat-primary` fill; `QrDownload` frames a QR `src` (or children) with a caption.
+                </Text>
+              </Stack>
+            </Card>
+          </Section>
+        )}
+
+        {/* ═══════════════ FORM INPUTS II (batches 43–48) ═══════════════ */}
+        {show('controls') && (
+          <Section
+            title="Form inputs II (batches 43–48)"
+            subtitle="Text variants · smart & pattern inputs · pickers"
+          >
+            <Stack gap={5}>
+              <SubSection title="Text field variants (batch 43)">
+                <Grid2>
+                  <TextField variant="outlined" label="Outlined" placeholder="you@example.com" />
+                  <TextField variant="filled" label="Filled" placeholder="Search…" />
+                  <TextField variant="underlined" label="Underlined" placeholder="Underlined" />
+                  <TextField variant="borderless" label="Borderless" placeholder="Borderless" />
+                  <TextField variant="inset" label="Inset" placeholder="Inset" />
+                  <TextField floating label="Floating label" />
+                  <TextField
+                    label="With counter"
+                    defaultValue="Count me"
+                    maxLength={20}
+                    showCount
+                  />
+                  <TextField label="With hint" hint="We never share your email" />
+                </Grid2>
+              </SubSection>
+
+              <SubSection title="Smart inputs (batch 44)">
+                <Grid2>
+                  <EmailInput aria-label="Email" placeholder="ada@gm" defaultValue="ada@gm" />
+                  <UrlInput aria-label="Website" placeholder="example" defaultValue="example" />
+                  <UsernameInput
+                    aria-label="Username"
+                    placeholder="Choose a username"
+                    defaultValue="ada"
+                  />
+                  <PasswordInput aria-label="Password" placeholder="Password" defaultValue="secret" />
+                </Grid2>
+              </SubSection>
+
+              <SubSection title="Pattern inputs (batch 45)">
+                <Grid2>
+                  <CardNumberInput aria-label="Card" defaultValue="4242424242424242" />
+                  <CardExpiryInput aria-label="Expiry" defaultValue="1229" />
+                  <CardCvcInput aria-label="CVC" defaultValue="123" />
+                  <IbanInput aria-label="IBAN" defaultValue="GB82WEST12345698765432" />
+                  <SsnInput aria-label="SSN" defaultValue="123456789" mask />
+                  <PostalCodeInput aria-label="Postal" defaultValue="sw1a1aa" />
+                  <CoordinatesInput latitude={51.5} longitude={-0.12} />
+                  <CardInput number="4242 4242 4242 4242" />
+                </Grid2>
+              </SubSection>
+
+              <SubSection title="Pickers I (batch 46)">
+                <Grid2>
+                  <UnitPicker value="px" />
+                  <CurrencyPicker value="USD" />
+                  <TimezonePicker value="UTC" />
+                  <AvatarPicker name="Ada Lovelace" />
+                </Grid2>
+              </SubSection>
+
+              <SubSection title="Pickers II (batch 47)">
+                <div className="flex flex-wrap items-start gap-4">
+                  <EmojiPicker />
+                  <FontPicker value="georgia" />
+                  <IconPicker value="heart" />
+                  <GradientPicker />
+                  <ShadowPicker />
+                </div>
+              </SubSection>
+
+              <SubSection title="Pickers III — template / layout / theme (batch 48)">
+                <Stack gap={4}>
+                  <TemplatePicker value="blank" />
+                  <LayoutPicker value="single" />
+                  <ThemePicker value="light" />
+                </Stack>
+              </SubSection>
+            </Stack>
           </Section>
         )}
 

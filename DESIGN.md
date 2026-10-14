@@ -3212,3 +3212,139 @@ button is never nested in a button. `mat-*` + theme token utilities only.
 
 Tests: `test/batch42-chip-buttons.test.tsx` (6 cases). Design page: "Chip-button family
 (batch 42)" section (controls tab).
+
+### E.5.35 Nav buttons — as-built (batch 55, todo/09 §C)
+
+`components/controls/NavButtons.tsx`: `ArrowButton` (four-direction chevron), `StepperButtons`
+(`±` pair with `min`/`max` clamping and an optional value slot), `ScrollButton` (nudges a
+`target` ref or the window by `amount` px). `mat-*` + tokens only.
+Tests: `test/batch55-nav-buttons.test.tsx` (3 cases).
+
+### E.5.36 Window & panel chrome — as-built (batch 56, todo/09 §C)
+
+`components/controls/WindowButtons.tsx` — `ExpandCollapseButton` (rotating chevron +
+`aria-expanded`), `FullscreenButton` (Fullscreen API, tracks `fullscreenchange`),
+`WindowControls` (glyph mode + macOS `traffic` dots). `mat-*` + theme tokens only.
+
+Tests: `test/batch56-window-buttons.test.tsx` (4 cases).
+
+### E.5.37 Viewport transform controls — as-built (batch 57, todo/09 §C)
+
+`components/controls/ViewportControls.tsx` — `ZoomControls` (clamped, % readout),
+`PanPad` (d-pad emitting `(dx,dy)` vectors), `RotateControl` (wraps 0–359°).
+`mat-*` + theme token utilities only.
+
+### E.5.38 Media controls — as-built (batch 57, todo/09 §C)
+
+`components/controls/MediaControls.tsx` — `MediaControls` transport bar (shuffle · prev ·
+play/pause · stop · next · repeat) and standalone `PlayPauseButton`. Repeat cycles
+`'off' | 'all' | 'one'`. Play/pause uses the `mat-primary` fill + `active:scale-[var(--press-scale)]`.
+
+Tests: `test/batch57-media-controls.test.tsx` (5 cases). Design page: "Zoom, pan, rotate &
+media controls (batch 57)" section (controls tab).
+
+### E.5.39 Call-controls family — as-built (batch 58, todo/09 §C)
+
+New file `components/controls/CallControls.tsx` — `MicButton`, `CameraButton`,
+`ScreenShareButton`, `EndCallButton` and the `CallControls` cluster. Active device =
+`mat-primary`; muted/camera-off/end = `bg-danger`; `aria-pressed` reflects the on/off state.
+
+Tests: `test/batch58-call-controls.test.tsx` (3 cases). Design page: "Call controls (batch
+58)" section (controls tab).
+
+### E.5.40 Contextual toolbars — as-built (batch 59, todo/09 §C)
+
+New file `components/navigation/FloatingToolbar.tsx` — `FloatingToolbar` (fixed-position
+`mat-overlay` panel, `x`/`y` + `placement`), `BubbleMenu` (text-selection menu; `mousedown`
+`preventDefault` so the selection survives), `InlineToolbar` (compact inline strip). All expose
+`role="toolbar"`.
+
+Tests: `test/batch59-toolbars.test.tsx` (3 cases). Design page: "Floating, bubble & inline
+toolbars (batch 59)" section (controls tab).
+
+### E.5.41 Handles — as-built (batch 60, todo/09 §C)
+
+New file `components/controls/Handles.tsx` — `DragHandle`, `GripDots`, `GripButton`,
+`ResizeHandle` (`edge: horizontal|vertical|corner`, `onResize` on pointer-down,
+`data-resize-edge`), `PullHandle` (bottom-sheet pill). Interactive handles are real buttons.
+
+Tests: `test/batch60-handles.test.tsx` (3 cases). Design page: "Drag, resize & pull handles
+(batch 60)" section (controls tab).
+
+### E.5.42 Provider / wallet / store buttons — as-built (batch 61, todo/09 §C)
+
+New file `components/controls/ProviderButtons.tsx`. Social providers (apple/google/github/
+microsoft/facebook/x) → `SignInButton`; wallets (apple-pay/google-pay/paypal) → `WalletButton`;
+`AppStoreBadge` (`store` + optional `href`); `QrDownload` (QR image or children + caption).
+Brand marks come from lucide icons; `mat-*` + token utilities only.
+
+Tests: `test/batch61-provider-buttons.test.tsx` (4 cases). Design page: "Sign-in, wallet &
+store buttons (batch 61)" section (controls tab).
+
+### E.5.43 TextField variants — as-built (batch 43, todo/09 §D)
+
+New file `components/form/TextField.tsx`. `TextField` extends native input props with
+`variant` (`outlined | filled | underlined | borderless | inset`), `size` (`sm | md | lg`),
+optional `floating` label (needs `label`), `leading` / `trailing` / `badge` slots, `showCount`
+(`used/max`, requires `maxLength`), plus `hint` / `error` / `tooltip`. Error sets
+`role="alert"` and is wired through `aria-describedby`; the counter is `aria-describedby`-linked
+too. All styling via `mat-*` + token utilities.
+
+Tests: `test/batch43-text-field.test.tsx` (4 cases). Design page: "Form inputs II (batches 43–48)"
+→ "Text field variants (batch 43)".
+
+### E.5.44 Smart inputs — as-built (batch 44, todo/09 §D)
+
+New file `components/form/SmartInputs.tsx`. `EmailInput` (domain-suggestion button, e.g. `@gm` →
+`@gmail.com`); `UrlInput` (prepends `https://` on blur when missing, warns while no scheme);
+`UsernameInput` (debounced async `check`, status `idle/checking/available/taken`, `role="status"`);
+`PasswordStrength` (segmented `role="meter"` + rule checklist); `PasswordInput` (eye toggle that
+composes `PasswordStrength`).
+
+Tests: `test/batch44-smart-inputs.test.tsx` (5 cases). Design page: "Form inputs II (batches 43–48)"
+→ "Smart inputs (batch 44)".
+
+### E.5.45 Pattern / format inputs — as-built (batch 45, todo/09 §D)
+
+New file `components/form/PatternInputs.tsx`. Pure helpers `detectCardBrand` / `formatCardNumber`,
+`formatExpiry` / `isExpiryValid`, `normalizeIban` / `formatIban` / `isValidIban` (mod-97),
+`formatSsn`, `formatPostalCode`. Components: `CardNumberInput` (brand badge, `data-brand`),
+`CardExpiryInput`, `CardCvcInput` (`length 3|4`), `CardInput` (composes number/expiry/CVC),
+`IbanInput`, `SsnInput` (optional `mask` — all but last 4), `PostalCodeInput`, `CoordinatesInput`
+(lat/lng range-validated). Every field binds `onChange` **and** `onInput` because React 19's
+`onChange` does not fire under happy-dom synthetic events.
+
+Tests: `test/batch45-pattern-inputs.test.tsx` (6 cases). Design page: "Form inputs II (batches
+43–48)" → "Pattern inputs (batch 45)".
+
+### E.5.46 Pickers I — unit / currency / timezone / avatar (batch 46, todo/09 §D)
+
+New file `components/form/Pickers.tsx`. A single `Picker` (combobox trigger + listbox popover,
+optional search field) backs `UnitPicker` (`DEFAULT_UNITS`), `CurrencyPicker`
+(`DEFAULT_CURRENCIES`, searchable) and `TimezonePicker` (searchable; `Intl.supportedValuesOf
+('timeZone')` with a fallback list). `AvatarPicker` wraps a hidden file input: image / initial /
+`UserRound` fallback, pick + remove actions. Search field binds `onInput` (happy-dom).
+
+Tests: `test/batch46-pickers.test.tsx` (5 cases). Design page: "Form inputs II (batches 43–48)"
+→ "Pickers I (batch 46)".
+
+### E.5.47 Pickers II — emoji / font / icon / gradient / shadow (batch 47, todo/09 §D)
+
+New file `components/form/AdvancedPickers.tsx`. `EmojiPicker` (data-driven `EMOJI_GROUPS`, category
+toolbar + grid); `FontPicker` (`DEFAULT_FONTS`, live preview via inline `fontFamily`); `IconPicker`
+(`DEFAULT_ICONS` lucide map, name search); `GradientPicker` (`DEFAULT_GRADIENTS`) and `ShadowPicker`
+(`DEFAULT_SHADOWS`) with inline-style swatches. Presets are data, not tokens; markup stays
+`mat-*` + token utilities. Icon search binds `onInput` (happy-dom).
+
+Tests: `test/batch47-advanced-pickers.test.tsx` (5 cases). Design page: "Form inputs II (batches
+43–48)" → "Pickers II (batch 47)".
+
+### E.5.48 Template / layout / theme pickers — as-built (batch 48, todo/09 §D)
+
+New file `components/form/TemplatePickers.tsx`. `TemplatePicker` (`DEFAULT_TEMPLATES` cards),
+`LayoutPicker` (`DEFAULT_LAYOUTS` icon toggles, `role="toolbar"` + `aria-pressed`) and
+`ThemePicker` (`DEFAULT_THEMES` swatch rows). Cron + recurrence are flagged **⛔ own-task** in the
+backlog and intentionally not built here.
+
+Tests: `test/batch48-template-pickers.test.tsx` (3 cases). Design page: "Form inputs II (batches
+43–48)" → "Pickers III — template / layout / theme (batch 48)".
