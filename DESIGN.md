@@ -2230,7 +2230,7 @@ Skin switches are instant (no tween, §9.6) and **must not** remount the tree: t
 | `clay` | layered | medium | 14 · 20 · 28 · 36, stroke 0 | Stacked inset + drop shadows | 260ms overshoot, .94 | AA | Playful consumer, kids, onboarding |
 | `neumorph` | layered | medium | 12 · 16 · 24 · 32 | Paired opposed shadows, inverted wells | 220ms | AA-with-fallback | Smart-home, controls panels (opt-in) |
 | `depth` | 3d | high | 10 · 16 · 22 · 30 | Real Z-space + pointer tilt | 240ms | AA | Showcase, product configurators |
-| `doraemon` | layered | low | Pill controls, 24/36, stroke 2 | Blue-tinted gadget shadows + chrome blue/yellow rule, bell-yellow tints | 220ms back-out, .96 | AA | Playful consumer, kids, fan-brand showcases |
+| `blue` | layered | low | Pill controls, 24/36, stroke 2 | Blue-tinted gadget shadows + chrome blue/yellow rule, yellow/red tints | 220ms back-out, .96 | AA | Playful consumer, kids, branded showcases |
 
 **Authoring principle.** A skin must change **material, geometry and motion together**. Changing only colour is a theme; changing only radius is a tweak. If two skins differ in just one of the three, merge them.
 

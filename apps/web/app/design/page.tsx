@@ -4410,7 +4410,7 @@ function Batch73StepperDemos() {
               steps={[
                 { title: 'Depart Tokyo', timestamp: '09:00', description: 'Desk drawer portal' },
                 { title: 'Edo period', timestamp: '1603', description: 'Samurai encounter' },
-                { title: 'Future Tokyo', timestamp: '2112', description: "Doraemon's birthday" },
+                { title: 'Future Tokyo', timestamp: '2112', description: 'Future Expo opening' },
                 { title: 'Return', timestamp: '—' },
               ]}
             />

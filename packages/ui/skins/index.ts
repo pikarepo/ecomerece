@@ -1,11 +1,11 @@
 import type { Pbr, Skin } from '../lib/skin/types';
 import { keyLight, with3d } from './_with3d';
 import { bento } from './bento';
+import { blue } from './blue';
 import { brutal } from './brutal';
 import { clay } from './clay';
 import { cyber } from './cyber';
 import { depth } from './depth';
-import { doraemon } from './doraemon';
 import { editorial } from './editorial';
 import { flat } from './flat';
 import { glass } from './glass';
@@ -75,11 +75,11 @@ export const registry = {
     note: 'Blur + glow — avoid dense tables',
   },
   bento: { skin: bento, swatch: ['#F3F6FF', '#FFF4EC'], group: 'expressive' as const },
-  doraemon: {
-    skin: doraemon,
+  blue: {
+    skin: blue,
     swatch: ['#F0F7FD', '#00A0E9'],
     group: 'expressive' as const,
-    note: 'Bright & playful — pill controls, bell-yellow accents',
+    note: 'Bright & playful — pill controls, yellow/red accents',
   },
 
   // Dimensional

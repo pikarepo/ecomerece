@@ -2,18 +2,17 @@ import type { Skin } from '../lib/skin/types';
 import { SYSTEM_STACK } from './_kit';
 
 /**
- * `doraemon` — the 22nd-century robot-cat skin (reference: Doraemon Gadget Hub
- * palette). Bright `#00A0E9` brand blue is the DECOR hue (chrome top rule,
- * sheens, glows, edges); interactive fills/links use the AA-safe deeper blue
- * `#0077C8` (white ink 4.7:1, focus 4.3:1 on light canvas). Bell yellow
- * `#FFD100` + nose red `#E60012` ride tints, tones and glows with dark ink
- * (10.6:1 on yellow — the badge look). Pill controls (999) on 24/36 gadget
- * radii, 2px toy-box strokes, bouncy back-out ease, Nunito UI + Fredoka
- * display, blue-tinted "gadget" shadows and the 4D-pocket inset well.
+ * `blue` — a bright gadget-blue skin. `#00A0E9` is the DECOR hue (chrome top
+ * rule, sheens, glows, edges); interactive fills/links use the AA-safe deeper
+ * blue `#0077C8` (white ink 4.7:1, focus 4.3:1 on light canvas). Bell yellow
+ * `#FFD100` + alert red `#E60012` ride tints, tones and glows with dark ink
+ * (10.6:1 on yellow — the badge look). Pill controls (999) on 24/36 toy-box
+ * radii, 2px strokes, bouncy back-out ease, Nunito UI + Fredoka display,
+ * blue-tinted "gadget" shadows and the inset-pocket well.
  */
-export const doraemon: Skin = {
-  id: 'doraemon',
-  label: 'Doraemon',
+export const blue: Skin = {
+  id: 'blue',
+  label: 'Blue',
   extends: 'system',
   dimension: 'layered',
   needs: [],

@@ -1,12 +1,12 @@
-/* ═══ GENERATED FILE — doraemon skin (DESIGN.md §37). Do not edit. ═══ */
-/* Source: packages/ui/skins/doraemon.ts → compiled by packages/ui/scripts/build-skins.ts */
+/* ═══ GENERATED FILE — blue skin (DESIGN.md §37). Do not edit. ═══ */
+/* Source: packages/ui/skins/blue.ts → compiled by packages/ui/scripts/build-skins.ts */
 
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap');
 
 @layer skins {
 /* light */
-:where(:root[data-skin="doraemon"]),
-:where([data-skin="doraemon"]) {
+:where(:root[data-skin="blue"]),
+:where([data-skin="blue"]) {
   --r-chip: 999px;
   --r-control: 999px;
   --r-card: 24px;
@@ -84,28 +84,28 @@
 }
 
 /* A2 — accentHint: applied only under data-accent="skin" */
-:where(:root[data-skin="doraemon"][data-accent="skin"]),
-:where([data-skin="doraemon"][data-accent="skin"]) {
+:where(:root[data-skin="blue"][data-accent="skin"]),
+:where([data-skin="blue"][data-accent="skin"]) {
   --accent: 0 119 200;
   --accent-ink: 255 255 255;
 }
 @media (prefers-color-scheme: dark) {
-  :where(:root:not([data-theme="light"])[data-skin="doraemon"][data-accent="skin"]),
-:where(:root:not([data-theme="light"]) [data-skin="doraemon"][data-accent="skin"]) {
+  :where(:root:not([data-theme="light"])[data-skin="blue"][data-accent="skin"]),
+:where(:root:not([data-theme="light"]) [data-skin="blue"][data-accent="skin"]) {
     --accent: 0 160 233;
     --accent-ink: 26 37 48;
   }
 }
-:where(:root[data-theme="dark"][data-skin="doraemon"][data-accent="skin"]),
-:where(:root[data-theme="dark"] [data-skin="doraemon"][data-accent="skin"]) {
+:where(:root[data-theme="dark"][data-skin="blue"][data-accent="skin"]),
+:where(:root[data-theme="dark"] [data-skin="blue"][data-accent="skin"]) {
   --accent: 0 160 233;
   --accent-ink: 26 37 48;
 }
 
 /* dark: auto (follows the OS) */
 @media (prefers-color-scheme: dark) {
-  :where(:root:not([data-theme="light"])[data-skin="doraemon"]),
-:where(:root:not([data-theme="light"]) [data-skin="doraemon"]) {
+  :where(:root:not([data-theme="light"])[data-skin="blue"]),
+:where(:root:not([data-theme="light"]) [data-skin="blue"]) {
   --r-chip: 999px;
   --r-control: 999px;
   --r-card: 24px;
@@ -184,8 +184,8 @@
 }
 
 /* dark: explicit override */
-:where(:root[data-theme="dark"][data-skin="doraemon"]),
-:where(:root[data-theme="dark"] [data-skin="doraemon"]) {
+:where(:root[data-theme="dark"][data-skin="blue"]),
+:where(:root[data-theme="dark"] [data-skin="blue"]) {
   --r-chip: 999px;
   --r-control: 999px;
   --r-card: 24px;
@@ -264,8 +264,8 @@
 
 /* fallback: no backdrop-filter support */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-:where(:root[data-skin="doraemon"]),
-:where([data-skin="doraemon"]) {
+:where(:root[data-skin="blue"]),
+:where([data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -324,8 +324,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root:not([data-theme="light"])[data-skin="doraemon"]),
-:where(:root:not([data-theme="light"]) [data-skin="doraemon"]) {
+:where(:root:not([data-theme="light"])[data-skin="blue"]),
+:where(:root:not([data-theme="light"]) [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -384,8 +384,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root[data-theme="dark"][data-skin="doraemon"]),
-:where(:root[data-theme="dark"] [data-skin="doraemon"]) {
+:where(:root[data-theme="dark"][data-skin="blue"]),
+:where(:root[data-theme="dark"] [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -448,8 +448,8 @@
 
 /* fallback: reduced transparency */
 @media (prefers-reduced-transparency: reduce) {
-:where(:root[data-skin="doraemon"]),
-:where([data-skin="doraemon"]) {
+:where(:root[data-skin="blue"]),
+:where([data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -508,8 +508,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root:not([data-theme="light"])[data-skin="doraemon"]),
-:where(:root:not([data-theme="light"]) [data-skin="doraemon"]) {
+:where(:root:not([data-theme="light"])[data-skin="blue"]),
+:where(:root:not([data-theme="light"]) [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -568,8 +568,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root[data-theme="dark"][data-skin="doraemon"]),
-:where(:root[data-theme="dark"] [data-skin="doraemon"]) {
+:where(:root[data-theme="dark"][data-skin="blue"]),
+:where(:root[data-theme="dark"] [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -632,8 +632,8 @@
 
 /* fallback: more contrast → edge forced to contrastEdge */
 @media (prefers-contrast: more) {
-:where(:root[data-skin="doraemon"]),
-:where([data-skin="doraemon"]) {
+:where(:root[data-skin="blue"]),
+:where([data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -692,8 +692,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root:not([data-theme="light"])[data-skin="doraemon"]),
-:where(:root:not([data-theme="light"]) [data-skin="doraemon"]) {
+:where(:root:not([data-theme="light"])[data-skin="blue"]),
+:where(:root:not([data-theme="light"]) [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -752,8 +752,8 @@
   --m-control-bg: rgb(var(--surface-3));
   --m-primary-bg: rgb(var(--accent));
 }
-:where(:root[data-theme="dark"][data-skin="doraemon"]),
-:where(:root[data-theme="dark"] [data-skin="doraemon"]) {
+:where(:root[data-theme="dark"][data-skin="blue"]),
+:where(:root[data-theme="dark"] [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;
@@ -815,8 +815,8 @@
 }
 
 /* fallback: data-fidelity="low" */
-:where(:root[data-fidelity="low"][data-skin="doraemon"]),
-:where(:root[data-fidelity="low"] [data-skin="doraemon"]) {
+:where(:root[data-fidelity="low"][data-skin="blue"]),
+:where(:root[data-fidelity="low"] [data-skin="blue"]) {
   --scene: rgb(var(--canvas));
   --m-ground-sheen: none;
   --m-ground-backdrop: none;

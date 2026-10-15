@@ -11,8 +11,8 @@ Classification: 🟩 skin candidate (buildable via fast-path) · 🟨 token-leve
 
 ## Done
 
-- ✅ **Doraemon** (2026-10-15, user-requested outside batch numbering):
-  `packages/ui/skins/doraemon.ts` — gadget-blue decor hue + AA-safe
+- ✅ **Blue** (2026-10-15, user-requested outside batch numbering; formerly Doraemon):
+  `packages/ui/skins/blue.ts` — gadget-blue decor hue + AA-safe
   `#0077C8` interactive accent via A2 `accentHint` (this session also WIRED
   `data-accent="skin"`, which was compiled but never applied by
   `useSkin`/bootstrap — 7 pre-existing accentHints were inert before).
