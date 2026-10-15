@@ -2230,6 +2230,7 @@ Skin switches are instant (no tween, §9.6) and **must not** remount the tree: t
 | `clay` | layered | medium | 14 · 20 · 28 · 36, stroke 0 | Stacked inset + drop shadows | 260ms overshoot, .94 | AA | Playful consumer, kids, onboarding |
 | `neumorph` | layered | medium | 12 · 16 · 24 · 32 | Paired opposed shadows, inverted wells | 220ms | AA-with-fallback | Smart-home, controls panels (opt-in) |
 | `depth` | 3d | high | 10 · 16 · 22 · 30 | Real Z-space + pointer tilt | 240ms | AA | Showcase, product configurators |
+| `doraemon` | layered | low | Pill controls, 24/36, stroke 2 | Blue-tinted gadget shadows + chrome blue/yellow rule, bell-yellow tints | 220ms back-out, .96 | AA | Playful consumer, kids, fan-brand showcases |
 
 **Authoring principle.** A skin must change **material, geometry and motion together**. Changing only colour is a theme; changing only radius is a tweak. If two skins differ in just one of the three, merge them.
 
@@ -3477,3 +3478,20 @@ hover close badge). All controlled; theme tokens only, no `--m-*` in markup.
 
 Tests: `test/batch72-tabs-variants.test.tsx` (9 cases). Design page: "Tabs variants
 (batch 72)" (layout tab).
+
+### E.5.59 Steppers — as-built (batch 73, todo/09 §E)
+
+New file `components/navigation/Stepper.tsx`. `stepStatus(i, value, errorAt)` pure helper
+(before = complete, at = current, `errorAt` wins). `ProgressDots` (carousel-style page dots —
+active dot stretches into a pill; interactive mode = buttons with `aria-label`, static mode =
+`role="img"` spans, both `aria-current="step"`). `Stepper` (numbered steps, horizontal or
+vertical; complete steps show ✓ in an accent circle, current is ringed + `aria-current="step"`,
+`errorAt` renders a `!` danger circle; connectors between steps fill accent behind progress;
+clickable via `onChange` — only completed/current steps respond, `disabled` steps stay inert;
+horizontal labels centre under circles, vertical rail uses exact 15px centre). `TimelineStepper`
+(vertical rail with `ring-surface-1` status markers, timestamps right-aligned, clickable titles,
+disabled titles render as plain text — no button). Theme tokens only, `mat-*` semantics, no
+`--m-*` in markup; distinct from `StepperSlider` (numeric ±) and `Timeline` (display-only).
+
+Tests: `test/batch73-steppers.test.tsx` (8 cases). Design page: "Steppers (batch 73)"
+(layout tab).

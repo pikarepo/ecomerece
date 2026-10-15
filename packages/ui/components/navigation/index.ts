@@ -28,6 +28,15 @@ export type { LinkProps, LinkVariant } from './Link';
 export { Link } from './Link';
 export type { SidebarItem, SidebarProps } from './Sidebar';
 export { Sidebar } from './Sidebar';
+export type {
+  ProgressDotsProps,
+  StepItem,
+  StepperProps,
+  StepStatus,
+  TimelineStep,
+  TimelineStepperProps,
+} from './Stepper';
+export { ProgressDots, Stepper, stepStatus, TimelineStepper } from './Stepper';
 export type { TabItem, TabsProps } from './Tabs';
 export { Tabs } from './Tabs';
 export type {

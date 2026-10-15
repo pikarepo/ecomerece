@@ -16,6 +16,7 @@ var t=ls.getItem('theme'),s=ls.getItem('skin'),f=ls.getItem('fidelity');
 if(t==='dark'||t==='light')d.setAttribute('data-theme',t);
 if(s&&s!=='system'&&/^[a-z0-9-]{1,32}$/.test(s)){
   d.setAttribute('data-skin',s);
+  d.setAttribute('data-accent','skin');
   var sk=document.createElement('link');
   sk.rel='stylesheet';
   sk.href=window.__SKIN_BASE__+s+'.css';

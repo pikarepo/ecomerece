@@ -9,6 +9,18 @@ design-page picker, update DESIGN.md/SKIN-PACK-REPORT.
 Classification: 🟩 skin candidate (buildable via fast-path) · 🟨 token-level
 (theme/axis work, not a new skin) · ⛔ rejected-for-now (reason noted).
 
+## Done
+
+- ✅ **Doraemon** (2026-10-15, user-requested outside batch numbering):
+  `packages/ui/skins/doraemon.ts` — gadget-blue decor hue + AA-safe
+  `#0077C8` interactive accent via A2 `accentHint` (this session also WIRED
+  `data-accent="skin"`, which was compiled but never applied by
+  `useSkin`/bootstrap — 7 pre-existing accentHints were inert before).
+  Nunito UI + Fredoka display, pill controls, 24/36 radii, blue-tinted
+  shadows, chrome blue/yellow top rule, inset-pocket wells. Registered
+  Expressive, `build:skins` ✓, contrast snapshot updated (all fills ≥4.5:1),
+  skin + theme-layer + useSkin tests green, DESIGN.md §39 row added.
+
 ## Design-system flavors → 🟩 one skin per session
 
 | Batch | Skin | Notes |

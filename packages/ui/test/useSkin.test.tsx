@@ -98,6 +98,19 @@ describe('useSkin', () => {
     h.unmount();
   });
 
+  test('setSkin activates data-accent="skin" (A2) and drops it with system', () => {
+    const h = renderHook(() => useSkin(REG));
+
+    h.latest().setSkin('clay');
+    expect(document.documentElement.getAttribute('data-accent')).toBeNull(); // not yet
+    commitSkin('clay');
+    expect(document.documentElement.getAttribute('data-accent')).toBe('skin');
+
+    act(() => h.latest().setSkin('system'));
+    expect(document.documentElement.getAttribute('data-accent')).toBeNull();
+    h.unmount();
+  });
+
   test('re-selecting the active skin is a no-op (no re-fetch, no new link)', () => {
     const h = renderHook(() => useSkin(REG));
 

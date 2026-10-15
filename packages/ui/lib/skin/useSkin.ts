@@ -98,6 +98,8 @@ export function useSkin(
       if (next === 'system') {
         root.removeAttribute('data-skin');
         root.removeAttribute('data-dimension');
+        // A2 — the per-skin accent lives only while a skin is active.
+        root.removeAttribute('data-accent');
         document.getElementById('skin-css')?.remove();
         try {
           localStorage.setItem('skin', 'system');
@@ -108,6 +110,8 @@ export function useSkin(
 
       // Already applied — don't re-fetch or repaint the same stylesheet.
       if (root.getAttribute('data-skin') === next && document.getElementById('skin-css')) {
+        // self-heal: older sessions restored data-skin without data-accent (A2).
+        root.setAttribute('data-accent', 'skin');
         return;
       }
 
@@ -126,6 +130,9 @@ export function useSkin(
         link.id = 'skin-css';
         root.setAttribute('data-skin', next);
         root.setAttribute('data-dimension', entry?.dimension ?? 'layered');
+        // A2 — activate the skin's accentHint (compiled under
+        // [data-skin="…"][data-accent="skin"]); inert for skins without one.
+        root.setAttribute('data-accent', 'skin');
         try {
           localStorage.setItem('skin', next);
         } catch {}

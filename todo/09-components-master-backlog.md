@@ -86,7 +86,7 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 |---|---|---|
 | 71 | Floating nav / macOS dock · radial/pie menu · hamburger · off-canvas · fullscreen overlay menu | ✅ batch 71 (`components/navigation/FloatingNav.tsx`; `.fx-menu-item` reveal utility in `engine.css`) |
 | 72 | Tabs variants: sticky · underline (E.6 #7 skin variant) · pill (✅ shipped) · closable/editable · draggable · overflow (OverflowTabs as a prop/derivative) · browser/document/workspace tabs | ✅ batch 72 (`components/navigation/TabsVariants.tsx`; underline/pill = base `Tabs` per skin) |
-| 73 | Steppers: page-dots/progress dots (✅ Carousel dots) · numbered steps · vertical stepper · clickable stepper · timeline stepper | ⬜ |
+| 73 | Steppers: page-dots/progress dots (✅ Carousel dots) · numbered steps · vertical stepper · clickable stepper · timeline stepper | ✅ batch 73 (`components/navigation/Stepper.tsx` — ProgressDots · Stepper · TimelineStepper) |
 | 14 (todo/08) | Pagination v2: first/last · page-size selector · jump-to-page · total count | ✅ batch 14 |
 | 15 (todo/08) | Breadcrumb variants: collapsed-to-dropdown · with icons | ✅ batch 15 |
 | 74 | Multi-level sidebar · icon-only/mini sidebar (✅ IconRail) · accordion nav | ⬜ |

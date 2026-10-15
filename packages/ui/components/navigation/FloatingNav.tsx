@@ -104,8 +104,11 @@ export function RadialMenu({
     <div className={cn('relative inline-block', className)}>
       {items.map((item, i) => {
         const angle = Math.PI - (i * Math.PI) / Math.max(n - 1, 1);
-        const x = Math.cos(angle) * radius;
-        const y = -Math.sin(angle) * radius;
+        // Round to fixed precision — server/client JS engines can disagree in
+        // the last float bits of Math.cos/sin, and a raw transform string
+        // difference is a React hydration mismatch.
+        const x = Math.round(Math.cos(angle) * radius * 1000) / 1000;
+        const y = Math.round(-Math.sin(angle) * radius * 1000) / 1000;
         return (
           <button
             key={item.id}

@@ -269,12 +269,15 @@ import {
   OffCanvas,
   OverflowTabs,
   PasteImageZone,
+  ProgressDots,
   RadialMenu,
   SavedViews,
   SortBuilder,
   StepperSlider,
+  Stepper,
   StickyTabs,
   SwatchSelect,
+  TimelineStepper,
   TabbedForm,
   TagInput,
   ThumbsRating,
@@ -3734,6 +3737,7 @@ export default function DesignQaPage() {
         {show('controls') && <Batch70SecurityDemos />}
         {show('layout') && <Batch71NavDemos />}
         {show('layout') && <Batch72TabsDemos />}
+        {show('layout') && <Batch73StepperDemos />}
 
         {/* ── fixed bottom tab bar ── */}
         <BottomTabBar items={navItems} value="home" onChange={() => {}} />
@@ -3785,6 +3789,9 @@ function Batches62To69Demos() {
   ]);
   const [facets, setFacets] = useState<Record<string, string[]>>({ category: ['Phone'] });
   const [preset, setPreset] = useState<'today' | '7d' | '30d' | 'month' | 'year' | 'custom'>('7d');
+  /* batch 67 — UnsavedChangesBar demo dirty flag (never leave `when` hard-wired
+   * true: it arms beforeunload globally and pins the bar on the page). */
+  const [unsavedDemo, setUnsavedDemo] = useState(false);
 
   const catalogFields = [
     { id: 'name', label: 'Name' },
@@ -3928,7 +3935,7 @@ function Batches62To69Demos() {
             <Stack gap={3}>
               <HStack gap={4} className="flex-wrap items-center">
                 <AsyncValidationIndicator status="validating" message="Checking availability…" />
-                <DirtyIndicator dirty touched />
+                <DirtyIndicator dirty={unsavedDemo} touched />
               </HStack>
               <ValidationSummary
                 issues={[
@@ -3936,7 +3943,16 @@ function Batches62To69Demos() {
                   { field: 'zip', message: 'Postal code is required' },
                 ]}
               />
-              <UnsavedChangesBar when onSave={() => {}} onDiscard={() => {}} />
+              <HStack gap={3}>
+                <Button size="sm" variant="secondary" onClick={() => setUnsavedDemo((v) => !v)}>
+                  {unsavedDemo ? 'Clear dirty' : 'Make form dirty'}
+                </Button>
+                <UnsavedChangesBar
+                  when={unsavedDemo}
+                  onSave={() => setUnsavedDemo(false)}
+                  onDiscard={() => setUnsavedDemo(false)}
+                />
+              </HStack>
             </Stack>
           </SubSection>
         </Stack>
@@ -4317,6 +4333,85 @@ function Batch72TabsDemos() {
                 { value: 'ts', label: 'Editor', icon: <Pencil size={12} /> },
                 { value: 'css', label: 'Preview', icon: <Globe size={12} /> },
                 { value: 'md', label: 'Terminal', icon: <Box size={12} /> },
+              ]}
+            />
+          </Stack>
+        </Card>
+      </Stack>
+    </Section>
+  );
+}
+
+
+/* ──────────────── batch 73 demo (self-contained state) ──────────────── */
+
+function Batch73StepperDemos() {
+  const [dot, setDot] = useState(2);
+  const [step, setStep] = useState(1);
+  const [vstep, setVstep] = useState(1);
+  const [tstep, setTstep] = useState(0);
+
+  return (
+    <Section
+      title="Steppers (batch 73)"
+      subtitle="progress dots · numbered steps · vertical · clickable · timeline"
+    >
+      <Stack gap={6}>
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Progress dots (clickable; active dot stretches):
+            </Text>
+            <ProgressDots count={5} value={dot} onChange={setDot} label="Onboarding pages" />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={4}>
+            <Text size="sm" tone="ink-2">
+              Numbered stepper (click a completed step):
+            </Text>
+            <Stepper
+              value={step}
+              onChange={setStep}
+              steps={[
+                { label: 'Cart', description: '2 items' },
+                { label: 'Shipping', description: 'Address & method' },
+                { label: 'Payment', description: 'Card or wallet' },
+                { label: 'Done', description: 'Receipt', disabled: true },
+              ]}
+            />
+            <Text size="sm" tone="ink-2">
+              Vertical + error state:
+            </Text>
+            <Stepper
+              orientation="vertical"
+              value={vstep}
+              errorAt={vstep === 3 ? 2 : undefined}
+              onChange={setVstep}
+              steps={[
+                { label: 'Upload', description: 'Choose a file' },
+                { label: 'Scan', description: 'Virus + type check' },
+                { label: 'Publish', description: 'Needs review' },
+                { label: 'Live' },
+              ]}
+            />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Timeline stepper (time-machine log):
+            </Text>
+            <TimelineStepper
+              value={tstep}
+              onChange={setTstep}
+              steps={[
+                { title: 'Depart Tokyo', timestamp: '09:00', description: 'Desk drawer portal' },
+                { title: 'Edo period', timestamp: '1603', description: 'Samurai encounter' },
+                { title: 'Future Tokyo', timestamp: '2112', description: "Doraemon's birthday" },
+                { title: 'Return', timestamp: '—' },
               ]}
             />
           </Stack>
