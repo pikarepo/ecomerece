@@ -114,6 +114,21 @@ export type { SegmentedControlProps, SegmentedOption } from './SegmentedControl'
 export { SegmentedControl } from './SegmentedControl';
 export type { SliderProps } from './Slider';
 export { Slider } from './Slider';
+export type {
+  HistogramSliderProps,
+  MarksSliderProps,
+  SliderMark,
+  StepperSliderProps,
+  TooltipSliderProps,
+  VerticalSliderProps,
+} from './SliderExtras';
+export {
+  HistogramSlider,
+  MarksSlider,
+  StepperSlider,
+  TooltipSlider,
+  VerticalSlider,
+} from './SliderExtras';
 export type { SwitchProps } from './Switch';
 export { Switch } from './Switch';
 export type { PanPadProps, RotateControlProps, ZoomControlsProps } from './ViewportControls';

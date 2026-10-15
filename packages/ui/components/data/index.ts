@@ -8,6 +8,25 @@ export type { DataBarProps } from './DataBar';
 export { DataBar } from './DataBar';
 export type { DurationProps } from './Duration';
 export { Duration } from './Duration';
+export type {
+  DateRangePresetsProps,
+  FacetedFilterPanelProps,
+  FacetGroup,
+  FacetOption,
+  FilterBuilderProps,
+  SavedView,
+  SavedViewsProps,
+  SortBuilderProps,
+  SortDir,
+  SortRule,
+} from './FilterBuilder';
+export {
+  DateRangePresets,
+  FacetedFilterPanel,
+  FilterBuilder,
+  SavedViews,
+  SortBuilder,
+} from './FilterBuilder';
 export type { GaugeKPIProps } from './GaugeKPI';
 export { GaugeKPI } from './GaugeKPI';
 export type { MetricCardProps } from './MetricCard';

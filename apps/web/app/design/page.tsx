@@ -245,6 +245,54 @@ import {
   UsernameInput,
 } from '@ecomerece/ui';
 import {
+  AsyncValidationIndicator,
+  CameraCapture,
+  ClosableTabs,
+  ConditionalField,
+  DateRangePresets,
+  Dock,
+  DocumentTabs,
+  DraggableTabs,
+  DirtyIndicator,
+  EmailChipsInput,
+  FacetedFilterPanel,
+  FieldArray,
+  FilterBuilder,
+  FormWizard,
+  FullscreenMenu,
+  HistogramSlider,
+  Hamburger,
+  ImageSelectGrid,
+  LikertScale,
+  MarksSlider,
+  NpsScale,
+  OffCanvas,
+  OverflowTabs,
+  PasteImageZone,
+  RadialMenu,
+  SavedViews,
+  SortBuilder,
+  StepperSlider,
+  StickyTabs,
+  SwatchSelect,
+  TabbedForm,
+  TagInput,
+  ThumbsRating,
+  TileSelect,
+  ToggleChipGroup,
+  TokenInput,
+  TooltipSlider,
+  UnsavedChangesBar,
+  UploadQueue,
+  Honeypot,
+  PasskeyPrompt,
+  RecoveryCodes,
+  TwoFactorSetup,
+  TwoFactorStatus,
+  ValidationSummary,
+  VerticalSlider,
+} from '@ecomerece/ui';
+import {
   AlignCenter,
   AlignLeft,
   AlignRight,
@@ -3681,9 +3729,599 @@ export default function DesignQaPage() {
           </Section>
         )}
 
+        {/* ════════════════ BATCHES 62–69 ════════════════ */}
+        {show('controls') && <Batches62To69Demos />}
+        {show('controls') && <Batch70SecurityDemos />}
+        {show('layout') && <Batch71NavDemos />}
+        {show('layout') && <Batch72TabsDemos />}
+
         {/* ── fixed bottom tab bar ── */}
         <BottomTabBar items={navItems} value="home" onChange={() => {}} />
       </div>
     </Stage3D>
+  );
+}
+
+
+/* ──────────────── batch 62–69 demos (self-contained state) ──────────────── */
+
+const IMG_SLATE =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%23334155'/><circle cx='40' cy='40' r='16' fill='%2394a3b8'/></svg>";
+const IMG_TEAL =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%230f766e'/><circle cx='40' cy='40' r='16' fill='%235eead4'/></svg>";
+const IMG_CLAY =
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><rect width='80' height='80' fill='%237c2d12'/><circle cx='40' cy='40' r='16' fill='%23fdba74'/></svg>";
+
+function Batches62To69Demos() {
+  /* batch 62 — selection extras */
+  const [tile, setTile] = useState('standard');
+  const [imgs, setImgs] = useState<string[]>(['p1']);
+  const [swatch, setSwatch] = useState('#6366f1');
+  const [chips, setChips] = useState<string[]>(['new-in']);
+  const [nps, setNps] = useState<number | null>(9);
+  const [likert, setLikert] = useState<number | null>(4);
+  const [thumbs, setThumbs] = useState<'up' | 'down' | null>('up');
+  /* batch 63 — slider extras */
+  const [mslider, setMSlider] = useState(40);
+  const [tslider, setTSlider] = useState(60);
+  const [vslider, setVSlider] = useState(30);
+  const [hslider, setHSlider] = useState(50);
+  const [sslider, setSSlider] = useState(20);
+  /* batch 64 — chip inputs */
+  const [tags, setTags] = useState(['sale']);
+  const [tokens, setTokens] = useState<Array<{ key: string; value: string }>>([
+    { key: 'env', value: 'prod' },
+  ]);
+  const [emails, setEmails] = useState(['ada@example.com']);
+  /* batch 68 — field arrays & conditional */
+  const [rows, setRows] = useState(['Line item A']);
+  const [shipAlt, setShipAlt] = useState(true);
+  /* batch 69 — search & filter */
+  const [rules, setRules] = useState<Array<{ field: string; operator: string; value: string }>>([
+    { field: 'price', operator: 'is greater than', value: '100' },
+  ]);
+  const [sorts, setSorts] = useState<Array<{ field: string; dir: 'asc' | 'desc' }>>([
+    { field: 'name', dir: 'asc' },
+  ]);
+  const [facets, setFacets] = useState<Record<string, string[]>>({ category: ['Phone'] });
+  const [preset, setPreset] = useState<'today' | '7d' | '30d' | 'month' | 'year' | 'custom'>('7d');
+
+  const catalogFields = [
+    { id: 'name', label: 'Name' },
+    { id: 'price', label: 'Price' },
+    { id: 'category', label: 'Category' },
+  ];
+
+  return (
+    <>
+      <Section
+        title="Selection extras (batch 62)"
+        subtitle="Tile select · image grid · swatches · toggle chips · NPS · Likert · thumbs"
+      >
+        <Stack gap={5}>
+          <SubSection title="Tile select & image grid">
+            <Stack gap={4}>
+              <TileSelect
+                value={tile}
+                onValueChange={setTile}
+                label="Shipping"
+                options={[
+                  { value: 'standard', label: 'Standard', description: '3–5 business days' },
+                  { value: 'express', label: 'Express', description: '1–2 business days' },
+                  { value: 'overnight', label: 'Overnight', description: 'Next morning' },
+                ]}
+              />
+              <ImageSelectGrid
+                columns={3}
+                label="Cover photo"
+                selected={imgs}
+                onSelectedChange={setImgs}
+                items={[
+                  { id: 'p1', src: IMG_SLATE, label: 'Slate' },
+                  { id: 'p2', src: IMG_TEAL, label: 'Teal' },
+                  { id: 'p3', src: IMG_CLAY, label: 'Clay' },
+                ]}
+              />
+            </Stack>
+          </SubSection>
+          <SubSection title="Swatches, toggle chips & thumbs">
+            <HStack gap={5} className="flex-wrap items-start">
+              <SwatchSelect
+                value={swatch}
+                onValueChange={setSwatch}
+                label="Color"
+                colors={['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444']}
+              />
+              <ToggleChipGroup
+                values={chips}
+                onValuesChange={setChips}
+                label="Tags"
+                options={[
+                  { value: 'new-in', label: 'New in' },
+                  { value: 'sale', label: 'Sale' },
+                  { value: 'clearance', label: 'Clearance' },
+                  { value: 'organic', label: 'Organic' },
+                ]}
+              />
+              <ThumbsRating value={thumbs} onValueChange={setThumbs} />
+            </HStack>
+          </SubSection>
+          <SubSection title="Survey scales">
+            <Stack gap={4}>
+              <NpsScale value={nps} onValueChange={setNps} />
+              <LikertScale value={likert} onValueChange={setLikert} label="How was checkout?" />
+            </Stack>
+          </SubSection>
+        </Stack>
+      </Section>
+
+      <Section
+        title="Slider extras (batch 63)"
+        subtitle="Marks · tooltip · vertical · histogram · stepper"
+      >
+        <Card padding="md">
+          <Stack gap={5}>
+            <MarksSlider
+              value={mslider}
+              onValueChange={setMSlider}
+              label="Quality"
+              marks={[
+                { value: 0, label: 'Low' },
+                { value: 50, label: 'Mid' },
+                { value: 100, label: 'High' },
+              ]}
+            />
+            <TooltipSlider value={tslider} onValueChange={setTSlider} label="With tooltip" />
+            <HStack gap={6} className="items-end">
+              <VerticalSlider value={vslider} onValueChange={setVSlider} label="Vertical" />
+              <HistogramSlider
+                value={hslider}
+                onValueChange={setHSlider}
+                label="Price distribution"
+                bins={[2, 5, 9, 14, 20, 26, 22, 16, 10, 6, 3]}
+              />
+            </HStack>
+            <StepperSlider value={sslider} onValueChange={setSSlider} label="Stepper" step={10} />
+          </Stack>
+        </Card>
+      </Section>
+
+      <Section
+        title="Chip inputs, uploads & validation (batches 64–67)"
+        subtitle="Tag/token/email chips · upload queue, camera & paste · async/dirty/summary"
+      >
+        <Stack gap={5}>
+          <SubSection title="Chip inputs (batch 64)">
+            <Grid2>
+              <TagInput
+                values={tags}
+                onValuesChange={setTags}
+                suggestions={['new-in', 'clearance', 'gift']}
+              />
+              <TokenInput tokens={tokens} onTokensChange={setTokens} label="HTTP headers" />
+              <EmailChipsInput emails={emails} onEmailsChange={setEmails} />
+            </Grid2>
+          </SubSection>
+          <SubSection title="Upload upgrades (batch 66)">
+            <Stack gap={3}>
+              <UploadQueue
+                items={[
+                  { id: 'a', name: 'hero.png', size: 204_800, progress: 40, status: 'uploading' },
+                  { id: 'b', name: 'sheet.pdf', size: 1_024_000, progress: 100, status: 'done' },
+                  {
+                    id: 'c',
+                    name: 'clip.mov',
+                    size: 2_048_000,
+                    progress: 12,
+                    status: 'error',
+                    error: 'Network error',
+                  },
+                ]}
+              />
+              <HStack gap={3} className="flex-wrap items-center">
+                <CameraCapture />
+                <PasteImageZone className="flex-1" />
+              </HStack>
+            </Stack>
+          </SubSection>
+          <SubSection title="Validation parts (batch 67)">
+            <Stack gap={3}>
+              <HStack gap={4} className="flex-wrap items-center">
+                <AsyncValidationIndicator status="validating" message="Checking availability…" />
+                <DirtyIndicator dirty touched />
+              </HStack>
+              <ValidationSummary
+                issues={[
+                  { field: 'email', message: 'Enter a valid email address' },
+                  { field: 'zip', message: 'Postal code is required' },
+                ]}
+              />
+              <UnsavedChangesBar when onSave={() => {}} onDiscard={() => {}} />
+            </Stack>
+          </SubSection>
+        </Stack>
+      </Section>
+
+      <Section
+        title="Form layouts (batch 68)"
+        subtitle="Wizard · tabbed form · conditional fields · field arrays"
+      >
+        <Stack gap={5}>
+          <FormWizard
+            steps={[
+              { id: 'account', label: 'Account', content: <Text size="sm" tone="ink-2">Account details step</Text> },
+              { id: 'shipping', label: 'Shipping', content: <Text size="sm" tone="ink-2">Shipping details step</Text> },
+              { id: 'review', label: 'Review', content: <Text size="sm" tone="ink-2">Review & confirm step</Text> },
+            ]}
+          />
+          <TabbedForm
+            tabs={[
+              { id: 'profile', label: 'Profile', content: <Text size="sm" tone="ink-2">Profile fields</Text> },
+              { id: 'security', label: 'Security', content: <Text size="sm" tone="ink-2">Security fields</Text> },
+            ]}
+          />
+          <Stack gap={3}>
+            <Checkbox
+              checked={shipAlt}
+              onCheckedChange={setShipAlt}
+              label="Ship to a different address"
+            />
+            <ConditionalField show={shipAlt}>
+              <TextField label="Alternative address" placeholder="Street, city, ZIP" />
+            </ConditionalField>
+          </Stack>
+          <FieldArray
+            label="Line items"
+            values={rows}
+            renderItem={(value) => <span className="text-sm text-ink">{value}</span>}
+            onAdd={() => setRows((r) => [...r, `Line item ${r.length + 1}`])}
+            onRemove={(i) => setRows((r) => r.filter((_, j) => j !== i))}
+          />
+        </Stack>
+      </Section>
+
+      <Section
+        title="Search & filter (batch 69)"
+        subtitle="Sort/filter builders · saved views · date-range presets · faceted panel"
+      >
+        <Grid2>
+          <Card padding="md">
+            <SortBuilder fields={catalogFields} value={sorts} onChange={setSorts} />
+          </Card>
+          <Card padding="md">
+            <FilterBuilder fields={catalogFields} value={rules} onChange={setRules} />
+          </Card>
+          <Card padding="md">
+            <SavedViews
+              activeId="all"
+              views={[
+                { id: 'all', name: 'All products', count: 128 },
+                { id: 'cheap', name: 'Under $100', count: 12 },
+              ]}
+              onSelect={() => {}}
+            />
+          </Card>
+          <Card padding="md">
+            <Stack gap={3}>
+              <DateRangePresets active={preset} onSelect={setPreset} />
+              <FacetedFilterPanel
+                selected={facets}
+                onChange={setFacets}
+                onClear={() => setFacets({})}
+                groups={[
+                  {
+                    id: 'category',
+                    label: 'Category',
+                    options: [
+                      { value: 'Phone', label: 'Phone', count: 12 },
+                      { value: 'Laptop', label: 'Laptop', count: 5 },
+                    ],
+                  },
+                  {
+                    id: 'brand',
+                    label: 'Brand',
+                    options: [
+                      { value: 'acme', label: 'Acme', count: 7 },
+                      { value: 'umbra', label: 'Umbra', count: 10 },
+                    ],
+                  },
+                ]}
+              />
+            </Stack>
+          </Card>
+        </Grid2>
+      </Section>
+    </>
+  );
+}
+
+
+/* ──────────────── batch 70 demo (self-contained state) ──────────────── */
+
+function Batch70SecurityDemos() {
+  const [status, setStatus] = useState<TwoFactorStatus>('idle');
+  const [revealed, setRevealed] = useState(false);
+  const [hpValue, setHpValue] = useState('');
+
+  return (
+    <Section
+      title="Security forms (batch 70)"
+      subtitle="2FA setup · recovery codes · passkey prompt · honeypot"
+    >
+      <Grid2>
+        <Card padding="md">
+          <TwoFactorSetup
+            issuer="Aeroforge"
+            account="ada@example.com"
+            secret="jbswy3dpehp3h3nd"
+            otpauthUri="otpauth://totp/Aeroforge:ada@example.com?secret=jbswy3dpehp3h3nd&issuer=Aeroforge"
+            status={status}
+            onVerify={() => setStatus('verified')}
+          />
+        </Card>
+        <Stack gap={5}>
+          <Card padding="md">
+            <RecoveryCodes
+              codes={['H7G2-K9QZ', 'M4T8-B1XR', 'P0VD-65NW']}
+              masked={!revealed}
+              onReveal={() => setRevealed((v) => !v)}
+              onRegenerate={() => setRevealed(false)}
+            />
+          </Card>
+          <PasskeyPrompt onContinue={() => {}} onCancel={() => {}} />
+        </Stack>
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Honeypot (invisible — gate submissions on an empty value):
+            </Text>
+            <TextField
+              label="Website"
+              placeholder="https://…"
+              value={hpValue}
+              onChange={(e) => setHpValue(e.currentTarget.value)}
+            />
+            <Honeypot value="" onValueChange={() => {}} />
+            <Text size="xs" tone="ink-3">
+              Bot-filled value detected: {hpValue ? 'yes' : 'no'}
+            </Text>
+          </Stack>
+        </Card>
+      </Grid2>
+    </Section>
+  );
+}
+
+
+/* ──────────────── batch 71 demo (self-contained state) ──────────────── */
+
+function Batch71NavDemos() {
+  const [radialOpen, setRadialOpen] = useState(false);
+  const [burgerOpen, setBurgerOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [overlayOpen, setOverlayOpen] = useState(false);
+
+  return (
+    <Section
+      title="Floating nav (batch 71)"
+      subtitle="dock · radial menu · hamburger · off-canvas drawer · fullscreen menu"
+    >
+      <Grid2>
+        <Card padding="md">
+          <Stack gap={4}>
+            <Text size="sm" tone="ink-2">
+              Hamburger (morphs into an ✕):
+            </Text>
+            <Hamburger
+              open={burgerOpen}
+              onOpenChange={setBurgerOpen}
+              label="Toggle demo navigation"
+            />
+            <HStack gap={3}>
+              <Button variant="secondary" onClick={() => setDrawerOpen(true)}>
+                Open off-canvas
+              </Button>
+              <Button variant="secondary" onClick={() => setOverlayOpen(true)}>
+                Open fullscreen menu
+              </Button>
+            </HStack>
+          </Stack>
+        </Card>
+        <Card padding="md">
+          <Stack gap={4}>
+            <Text size="sm" tone="ink-2">
+              Radial menu (click the centre toggle):
+            </Text>
+            <div className="h-40">
+              <RadialMenu
+                open={radialOpen}
+                onOpenChange={setRadialOpen}
+                items={[
+                  { id: 'edit', label: 'Edit', icon: <Pencil size={16} /> },
+                  { id: 'copy', label: 'Copy', icon: <Copy size={16} /> },
+                  { id: 'star', label: 'Star', icon: <Star size={16} /> },
+                  { id: 'trash', label: 'Delete', icon: <Trash2 size={16} /> },
+                ]}
+              />
+            </div>
+          </Stack>
+        </Card>
+        <Card padding="md">
+          <Stack gap={2}>
+            <Text size="sm" tone="ink-2">
+              Dock — floats fixed at the top edge of the viewport:
+            </Text>
+            <Dock
+              edge="top"
+              items={[
+                { id: 'home', label: 'Home', icon: <Home size={18} />, active: true },
+                { id: 'search', label: 'Search', icon: <Search size={18} /> },
+                { id: 'bag', label: 'Bag', icon: <ShoppingBag size={18} /> },
+                { id: 'alerts', label: 'Alerts', icon: <Bell size={18} /> },
+                { id: 'settings', label: 'Settings', icon: <Settings size={18} /> },
+              ]}
+            />
+          </Stack>
+        </Card>
+      </Grid2>
+
+      <OffCanvas open={drawerOpen} onClose={() => setDrawerOpen(false)} title="Off-canvas panel">
+        <Stack gap={3}>
+          <Text size="sm" tone="ink-2">
+            Slide-in drawer with scrim. Escape or a scrim click closes it.
+          </Text>
+          <Link href="#" onClick={() => setDrawerOpen(false)}>
+            Close from a link
+          </Link>
+        </Stack>
+      </OffCanvas>
+
+      <FullscreenMenu
+        open={overlayOpen}
+        onClose={() => setOverlayOpen(false)}
+        header="Aeroforge"
+        items={[
+          { id: 'shop', label: 'Shop' },
+          { id: 'lookbook', label: 'Lookbook' },
+          { id: 'about', label: 'About' },
+          { id: 'contact', label: 'Contact' },
+        ]}
+      />
+    </Section>
+  );
+}
+
+
+/* ──────────────── batch 72 demo (self-contained state) ──────────────── */
+
+function Batch72TabsDemos() {
+  const [stickyVal, setStickyVal] = useState('all');
+  const [closableVal, setClosableVal] = useState('home');
+  const [dragVal, setDragVal] = useState('inbox');
+  const [overVal, setOverVal] = useState('e');
+  const [docVal, setDocVal] = useState('ts');
+  const [closableItems, setClosableItems] = useState([
+    { value: 'home', label: 'Home' },
+    { value: 'docs', label: 'Docs' },
+    { value: 'api', label: 'API reference' },
+  ]);
+
+  return (
+    <Section
+      title="Tabs variants (batch 72)"
+      subtitle="sticky · closable/editable · draggable · overflow · browser/document/workspace"
+    >
+      <Stack gap={6}>
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Sticky — pins inside its scroll container:
+            </Text>
+            <StickyTabs
+              value={stickyVal}
+              onChange={setStickyVal}
+              items={[
+                { value: 'all', label: 'All' },
+                { value: 'open', label: 'Open' },
+                { value: 'done', label: 'Done' },
+              ]}
+            />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Closable + editable — double-click a label to rename it:
+            </Text>
+            <ClosableTabs
+              value={closableVal}
+              onChange={setClosableVal}
+              editable
+              onRename={(v, label) =>
+                setClosableItems((items) =>
+                  items.map((i) => (i.value === v ? { ...i, label } : i)),
+                )
+              }
+              onClose={(v) => {
+                setClosableItems((items) => items.filter((i) => i.value !== v));
+                if (closableVal === v) setClosableVal('');
+              }}
+              items={closableItems}
+            />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Draggable — drag a tab onto another, or focus one and press Alt+←/→:
+            </Text>
+            <DraggableTabs
+              value={dragVal}
+              onChange={setDragVal}
+              items={[
+                { value: 'inbox', label: 'Inbox' },
+                { value: 'drafts', label: 'Drafts' },
+                { value: 'sent', label: 'Sent' },
+                { value: 'archive', label: 'Archive' },
+              ]}
+            />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={3}>
+            <Text size="sm" tone="ink-2">
+              Overflow — past maxVisible the tail moves into the More menu (active stays inline):
+            </Text>
+            <OverflowTabs
+              maxVisible={4}
+              value={overVal}
+              onChange={setOverVal}
+              items={[
+                { value: 'a', label: 'Alpha' },
+                { value: 'b', label: 'Beta' },
+                { value: 'c', label: 'Gamma' },
+                { value: 'd', label: 'Delta' },
+                { value: 'e', label: 'Epsilon' },
+              ]}
+            />
+          </Stack>
+        </Card>
+
+        <Card padding="md">
+          <Stack gap={4}>
+            <Text size="sm" tone="ink-2">
+              Browser chrome — traffic lights, favicons, hover close:
+            </Text>
+            <DocumentTabs
+              chrome="browser"
+              value={docVal}
+              onChange={setDocVal}
+              onClose={(v) => setDocVal(v === docVal ? '' : docVal)}
+              items={[
+                { value: 'ts', label: 'index.ts', icon: <FileText size={14} /> },
+                { value: 'css', label: 'styles.css', icon: <Layers size={14} /> },
+                { value: 'md', label: 'README.md', icon: <Box size={14} /> },
+              ]}
+            />
+            <Text size="sm" tone="ink-2">
+              Workspace chrome — icons in chips:
+            </Text>
+            <DocumentTabs
+              chrome="workspace"
+              value={docVal}
+              onChange={setDocVal}
+              items={[
+                { value: 'ts', label: 'Editor', icon: <Pencil size={12} /> },
+                { value: 'css', label: 'Preview', icon: <Globe size={12} /> },
+                { value: 'md', label: 'Terminal', icon: <Box size={12} /> },
+              ]}
+            />
+          </Stack>
+        </Card>
+      </Stack>
+    </Section>
   );
 }

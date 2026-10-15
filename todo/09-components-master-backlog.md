@@ -70,22 +70,22 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 | 46 | Pickers I (light): unit picker · currency picker · timezone picker · avatar picker | ✅ batch 46 (`components/form/Pickers.tsx`) |
 | 47 | Pickers II (medium): emoji picker · font picker · icon picker · gradient/shadow picker | ✅ batch 47 (`components/form/AdvancedPickers.tsx`) |
 | 48 | Pickers III (heavy): cron · recurrence · template/layout/theme pickers | ✅ template/layout/theme (batch 48, `components/form/TemplatePickers.tsx`); ⛔ cron+recurrence own-task |
-| 62 | Selection extras: tile select · image select grid · swatch select · toggle chips · NPS scale · Likert · thumbs (Rating ✅, tri-state checkbox ✅ via `indeterminate`) | ⬜ |
-| 63 | Slider extras: marks · tooltip · vertical · range histogram · stepper slider (Slider ✅, Range dual-thumb ✅) | ⬜ |
-| 64 | Text editing: tag input · token input · email-chips input | ⬜ |
+| 62 | Selection extras: tile select · image select grid · swatch select · toggle chips · NPS scale · Likert · thumbs (Rating ✅, tri-state checkbox ✅ via `indeterminate`) | ✅ batch 62 (`components/form/SelectionExtras.tsx`) |
+| 63 | Slider extras: marks · tooltip · vertical · range histogram · stepper slider (Slider ✅, Range dual-thumb ✅) | ✅ batch 63 (`components/controls/SliderExtras.tsx`) |
+| 64 | Text editing: tag input · token input · email-chips input | ✅ batch 64 (`components/form/ChipInputs.tsx`) |
 | 65 | Editors: mention/hashtag editor · slash-command editor · block editor · WYSIWYG toolbar + inline markdown preview · find & replace | ⛔ heavyweight editors (each its own task) |
-| 66 | Upload upgrades: multi-file progress (FileUpload `multiple` ✅ — add per-file progress) · folder DnD · paste image · camera · chunked/resumable · queue · thumbnails · video trimmer | ⬜/⛔ trimmer heavy |
-| 67 | Validation parts: async-validation spinner · dirty/touched indicator · unsaved-changes prompt · error focus-first-field · validation summary (inline error/field hint/success/warning/counter/required ✅ exist via Field) | ⬜ |
-| 68 | Form layouts: stepper form · tabbed form · one-question-at-a-time · survey/builder · conditional fields · field arrays | ⬜/builder⛔ |
-| 69 | Search & filter: faceted filters · filter-chips bar · saved filters · sort dropdown · range (price/date) · color/rating filters · active-filter summary · clear-all | ⬜ (commerce high value) |
-| 70 | Security forms: 2FA setup (QR+code) · recovery codes · passkey prompt · CAPTCHA-free honeypot (CAPTCHA widget ⛔ third-party) | ⬜ |
+| 66 | Upload upgrades: multi-file progress (FileUpload `multiple` ✅ — add per-file progress) · folder DnD · paste image · camera · chunked/resumable · queue · thumbnails · video trimmer | ✅ batch 66 (`components/form/UploadExtras.tsx`: per-file queue · camera · paste/drop zone; chunked/resumable + trimmer ⛔ own-task; folder DnD folds into `FileUpload`) |
+| 67 | Validation parts: async-validation spinner · dirty/touched indicator · unsaved-changes prompt · error focus-first-field · validation summary (inline error/field hint/success/warning/counter/required ✅ exist via Field) | ✅ batch 67 (`components/form/Validation.tsx`) |
+| 68 | Form layouts: stepper form · tabbed form · one-question-at-a-time · survey/builder · conditional fields · field arrays | ✅ batch 68 (`components/form/FormLayouts.tsx`; builder ⛔ own-task) |
+| 69 | Search & filter: faceted filters · filter-chips bar · saved filters · sort dropdown · range (price/date) · color/rating filters · active-filter summary · clear-all | ✅ batch 69 (`components/data/FilterBuilder.tsx`; filter-chips bar pairs with `FilterChip` batch 42, color/rating filters pair with batch 62) |
+| 70 | Security forms: 2FA setup (QR+code) · recovery codes · passkey prompt · CAPTCHA-free honeypot (CAPTCHA widget ⛔ third-party) | ✅ batch 70 (`components/form/SecurityForms.tsx`; QR image itself is a backend concern) |
 
 ## E — Additional navigation
 
 | Batch | Items | Status |
 |---|---|---|
-| 71 | Floating nav / macOS dock · radial/pie menu · hamburger · off-canvas · fullscreen overlay menu | ⬜ |
-| 72 | Tabs variants: sticky · underline (E.6 #7 skin variant) · pill (✅ shipped) · closable/editable · draggable · overflow (OverflowTabs as a prop/derivative) · browser/document/workspace tabs | ⬜ |
+| 71 | Floating nav / macOS dock · radial/pie menu · hamburger · off-canvas · fullscreen overlay menu | ✅ batch 71 (`components/navigation/FloatingNav.tsx`; `.fx-menu-item` reveal utility in `engine.css`) |
+| 72 | Tabs variants: sticky · underline (E.6 #7 skin variant) · pill (✅ shipped) · closable/editable · draggable · overflow (OverflowTabs as a prop/derivative) · browser/document/workspace tabs | ✅ batch 72 (`components/navigation/TabsVariants.tsx`; underline/pill = base `Tabs` per skin) |
 | 73 | Steppers: page-dots/progress dots (✅ Carousel dots) · numbered steps · vertical stepper · clickable stepper · timeline stepper | ⬜ |
 | 14 (todo/08) | Pagination v2: first/last · page-size selector · jump-to-page · total count | ✅ batch 14 |
 | 15 (todo/08) | Breadcrumb variants: collapsed-to-dropdown · with icons | ✅ batch 15 |

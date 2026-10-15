@@ -3348,3 +3348,132 @@ backlog and intentionally not built here.
 
 Tests: `test/batch48-template-pickers.test.tsx` (3 cases). Design page: "Form inputs II (batches
 43–48)" → "Pickers III — template / layout / theme (batch 48)".
+
+### E.5.49 Selection extras — as-built (batch 62, todo/09 §D)
+
+New file `components/form/SelectionExtras.tsx`. `TileSelect` (radio-card tiles with description +
+icon slot), `ImageSelectGrid` (multi-select image tiles, `columns`, SVG/URL `src`), `SwatchSelect`
+(single- or multi-select colour swatches via `multiple` + `onValuesChange`), `ToggleChipGroup`
+(multi-toggle chips), `NpsScale` (0–10 `role="toolbar"` buttons + low/high captions), `LikertScale`
+/ `LikertGroup` (`DEFAULT_LIKERT` agreement options, single- or multi-statement), `ThumbsRating`
+(up/down `ThumbsValue`). Rating stays in `surface/Rating`; tri-state checkbox stays in `Checkbox`.
+
+Tests: `test/batch62-selection-extras.test.tsx` (6 cases). Design page: "Selection extras
+(batch 62)".
+
+### E.5.50 Slider extras — as-built (batch 63, todo/09 §D)
+
+New file `components/controls/SliderExtras.tsx`, all built on the existing `Slider`/`Range`
+primitives: `MarksSlider` (`SliderMark[]` tick labels), `TooltipSlider` (bubble echoing the live
+value), `VerticalSlider` (`height`, orientation-aware input), `HistogramSlider` (bin bars behind the
+track for distribution filtering), `StepperSlider` (−/+ buttons clamped to `min`/`max`/`step`).
+
+Tests: `test/batch63-slider-extras.test.tsx` (5 cases). Design page: "Slider extras (batch 63)".
+
+### E.5.51 Chip / token inputs — as-built (batch 64, todo/09 §D)
+
+New file `components/form/ChipInputs.tsx`. `TagInput` (free-text chips + `suggestions`),
+`TokenInput` (`key:value` pairs typed through the exported `parseToken`-style helper, exposed
+`Token` type), `EmailChipsInput` (validates against exported `EMAIL_RE`, one chip per recipient).
+All are controlled (`values`/`tokens`/`emails` + `on*Change`) so state ownership stays with the
+form.
+
+Tests: `test/batch64-chip-inputs.test.tsx` (6 cases). Design page: "Chip inputs, uploads &
+validation (batches 64–67)" → "Chip inputs (batch 64)".
+
+### E.5.52 Upload upgrades — as-built (batch 66, todo/09 §D)
+
+New file `components/form/UploadExtras.tsx`. `UploadQueue` (per-file rows: thumbnail/`FileIcon`,
+name, `formatBytes` size, percentage, per-status tone, retry + remove buttons, `UploadItem`/
+`UploadStatus` types), `CameraCapture` (hidden `capture="environment"` file input behind a button),
+`PasteImageZone` (keyboard-focusable region for Ctrl/⌘+V paste + drag-and-drop of images; the two
+a11y suppressions on the zone are traced — static div, no pointer action, focus exists only to
+receive the paste event). Chunked/resumable upload and the video trimmer stay ⛔ own-task.
+
+Tests: `test/batch66-upload-extras.test.tsx` (4 cases). Design page: "… (batches 64–67)" →
+"Upload upgrades (batch 66)".
+
+### E.5.53 Validation parts — as-built (batch 67, todo/09 §D)
+
+New file `components/form/Validation.tsx`. `AsyncValidationIndicator` (`role="status"`
+idle/validating/valid/invalid states), `DirtyIndicator` (dirty/touched pill), `focusFirstInvalid`
+(pure helper that focuses and returns the first `[data-invalid]` element inside a root), `Summary`
+(`ValidationIssue[]` list with `onIssueClick`), `useBeforeUnload` (guards `beforeunload` while
+`when`), `UnsavedChangesBar` (save/discard sticky bar). Field-level error/hint/counter stay in
+`Field` (batch 43).
+
+Tests: `test/batch67-validation.test.tsx` (5 cases). Design page: "… (batches 64–67)" →
+"Validation parts (batch 67)".
+
+### E.5.54 Form layouts — as-built (batch 68, todo/09 §D)
+
+New file `components/form/FormLayouts.tsx`. `FormWizard` (`mode="stepper"` numbered header with
+`aria-current`, or `mode="one-question"`; `onStepChange`/`onComplete`), `TabbedForm`
+(tabs + panel, `onTabChange`), `ConditionalField` (show/hide wrapper — pairs with any controlled
+flag), `FieldArray<T>` (list of `renderItem` rows with add/remove; the list root is a `fieldset`
+with the fieldset reset so biome's `useAriaPropsSupportedByRole`/`useSemanticElements` stay clean).
+The full survey/builder flow stays ⛔ own-task.
+
+Tests: `test/batch68-form-layouts.test.tsx` (5 cases). Design page: "Form layouts (batch 68)".
+
+### E.5.55 Search & filter — as-built (batch 69, todo/09 §D)
+
+New file `components/data/FilterBuilder.tsx`. `SortBuilder` (multi-rule field + asc/desc toggle,
+`SortRule`/`SortDir` types), `FilterBuilder` (multi-rule field + operator select + value input,
+`DEFAULT_OPERATORS`, `FilterRule` type), `SavedViews` (active-view list + save/delete),
+`DateRangePresets` (`DateRangePreset` toolbar buttons with `aria-pressed`), `FacetedFilterPanel`
+(`FacetGroup[]` checkbox facets with counts + clear-all). All roots are `fieldset`s with
+`aria-label` (biome-clean a11y semantics). No commerce-specific logic — pure controlled UI.
+
+Tests: `test/batch69-search-filter.test.tsx` (6 cases). Design page: "Search & filter
+(batch 69)".
+
+### E.5.56 Security forms — as-built (batch 70, todo/09 §D)
+
+New file `components/form/SecurityForms.tsx`. `TwoFactorSetup` (optional backend-provided QR
+`img`, manual-entry Base32 key grouped by 4 + `otpauthUri` caption, `OTP`-based 6-digit entry with
+`TwoFactorStatus` idle/verifying/verified/error states, `role="alert"` error + `role="status"`
+success), `RecoveryCodes` (masked list, reveal/hide, copy-all via `navigator.clipboard` with a
+traced empty-handler button — no clipboard event misuse, optional regenerate, one-time-use
+warning), `PasskeyPrompt` (`mat-panel` card, primary continue + ghost "use password instead"),
+`Honeypot` (`sr-only`, `tabIndex={-1}`, `autoComplete="off"`, `aria-hidden` wrapper — gate
+submissions on `value === ''`; binds `onChange`+`onInput` for happy-dom). No QR encoder shipped —
+the QR image is a backend concern, keeping the kit dependency-free.
+
+Tests: `test/batch70-security-forms.test.tsx` (9 cases). Design page: "Security forms
+(batch 70)".
+
+### E.5.57 Floating nav — as-built (batch 71, todo/09 §E)
+
+New file `components/navigation/FloatingNav.tsx`. `Dock` (macOS-style `mat-chrome` pill of
+icon buttons, `edge` top/bottom, hover-lift transform, `aria-current="page"` for the active
+item), `RadialMenu` (centre toggle + items spread over the top half-circle; geometry is inline
+`transform`, items `aria-hidden`/`tabIndex=-1` while closed, toggle `aria-expanded`),
+`Hamburger` (three-bar → ✕ morph, controlled), `OffCanvas` (Portal drawer + scrim, Escape and
+scrim-click close, `role="presentation"` scrim with traced biome ignore), `FullscreenMenu`
+(Portal `role="dialog" aria-modal` overlay with large links; staggered reveal via the new
+`.fx-menu-item` keyframe utility in `engine.css` — the kit has no `tailwindcss-animate`, so
+`animate-in`-style classes are not available). All components are fully controlled; no
+`--m-*` custom properties in markup.
+
+Tests: `test/batch71-floating-nav.test.tsx` (5 cases). Design page: "Floating nav
+(batch 71)" (layout tab).
+
+### E.5.58 Tabs variants — as-built (batch 72, todo/09 §E)
+
+New file `components/navigation/TabsVariants.tsx` (base `Tabs` untouched — its underline is
+E.6 #7 and the pill look comes free from `--r-control` in the soft skin). `StickyTabs`
+(base Tabs in a `sticky` `mat-chrome` bar, `offset` px), `ClosableTabs` (per-tab close as a
+two-sibling-button `<span>` composition — no nested buttons; `editable` renames on
+double-click via an inline input: Enter commits `onRename`, Escape cancels, no `autoFocus`
+attribute — focus comes from a ref callback to keep biome's `noAutofocus` clean),
+`DraggableTabs` (HTML5 drag-drop reorder + keyboard `Alt+ArrowLeft/Right`, internal order
+stays synced with appearing/disappearing items, `onReorder(from, to)` indices),
+`OverflowTabs` (tail past `maxVisible` moves into a `Dropdown` "More" menu with
+`aria-haspopup`/`aria-expanded`; the active tab is always kept inline; closes on
+`useClickAway`/Escape), `DocumentTabs` (`chrome="browser"` traffic-light dots ·
+`"document"` plain strip · `"workspace"` icon chips; raised active tab `rounded-t-control`,
+hover close badge). All controlled; theme tokens only, no `--m-*` in markup.
+
+Tests: `test/batch72-tabs-variants.test.tsx` (9 cases). Design page: "Tabs variants
+(batch 72)" (layout tab).

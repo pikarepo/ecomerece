@@ -27,7 +27,13 @@ export interface TileSelectProps {
   className?: string;
 }
 
-export function TileSelect({ options, value, onValueChange, label = 'Options', className }: TileSelectProps) {
+export function TileSelect({
+  options,
+  value,
+  onValueChange,
+  label = 'Options',
+  className,
+}: TileSelectProps) {
   return (
     <div role="toolbar" aria-label={label} className={cn('grid gap-3 sm:grid-cols-2', className)}>
       {options.map((opt) => {
@@ -57,7 +63,9 @@ export function TileSelect({ options, value, onValueChange, label = 'Options', c
             )}
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium text-ink">{opt.label}</span>
-              {opt.description && <span className="block text-xs text-ink-3">{opt.description}</span>}
+              {opt.description && (
+                <span className="block text-xs text-ink-3">{opt.description}</span>
+              )}
             </span>
             {selected && <Check className="size-4 shrink-0 text-accent" aria-hidden />}
           </button>

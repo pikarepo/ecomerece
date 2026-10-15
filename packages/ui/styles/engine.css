@@ -288,6 +288,28 @@
       opacity: 0;
     }
   }
+  /* Fullscreen menu (batch 71): staggered reveal of overlay links —
+     delay is set per item via inline `animation-delay`. */
+  .fx-menu-item {
+    opacity: 0;
+    animation: fx-menu-item 240ms var(--ease, ease) forwards;
+  }
+  @keyframes fx-menu-item {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fx-menu-item {
+      animation: none;
+      opacity: 1;
+    }
+  }
 
   /* Gradient border button (batch 39): a masked 1px ring painted from the
      role's `edge`/`glow` tokens (set inline as `--m-fx-grad-a/-b`, with token
