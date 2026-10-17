@@ -311,6 +311,29 @@
     }
   }
 
+  /* Loading (batch 97): indeterminate sweep inside an overflow-hidden
+     progress track — the only Progress variant with no determinate fill.
+     The bar is 40% wide (set in the component), so 100% of its own width
+     only travels 40% of the track: the `to` translate is 250%. */
+  .fx-indeterminate {
+    animation: fx-indeterminate 1400ms var(--ease, ease) infinite;
+  }
+  @keyframes fx-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(250%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .fx-indeterminate {
+      animation: none;
+      transform: none;
+      width: 40%;
+    }
+  }
+
   /* Gradient border button (batch 39): a masked 1px ring painted from the
      role's `edge`/`glow` tokens (set inline as `--m-fx-grad-a/-b`, with token
      fallbacks below). The ring is a `::before` so the `mat-*` fill underneath

@@ -1,10 +1,18 @@
+/** @jsxImportSource react */
+import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
+
+export type PresenceStatus = 'online' | 'away' | 'busy' | 'offline';
 
 export interface AvatarProps {
   src?: string;
   alt?: string;
   name?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Presence dot pinned to the bottom-right corner. */
+  status?: PresenceStatus;
+  /** Small overlay (icon or label) pinned to the top-right corner. */
+  badge?: ReactNode;
   className?: string;
 }
 
@@ -16,7 +24,23 @@ const sizeClasses = {
   xl: 'size-14 text-base',
 } as const;
 
-function initials(name: string): string {
+const STATUS_TONE: Record<PresenceStatus, string> = {
+  online: 'bg-success',
+  away: 'bg-warning',
+  busy: 'bg-danger',
+  offline: 'bg-ink-3',
+};
+
+const STATUS_SIZE: Record<NonNullable<AvatarProps['size']>, string> = {
+  xs: 'size-2',
+  sm: 'size-2',
+  md: 'size-2.5',
+  lg: 'size-2.5',
+  xl: 'size-3',
+};
+
+/** First two whitespace-separated words, first grapheme uppercased. */
+export function getInitials(name: string): string {
   return name
     .trim()
     .split(/\s+/)
@@ -25,24 +49,48 @@ function initials(name: string): string {
     .join('');
 }
 
-export function Avatar({ src, alt, name, size = 'md', className }: AvatarProps) {
+export function Avatar({ src, alt, name, size = 'md', status, badge, className }: AvatarProps) {
+  const statusLabel = status ? `, ${status}` : '';
   const classes = cn(
-    'inline-flex shrink-0 items-center justify-center rounded-full bg-surface-3 object-cover font-semibold text-ink-2',
+    'inline-flex shrink-0 items-center justify-center rounded-full border border-line/10 bg-surface-4 object-cover font-semibold text-ink-2',
     sizeClasses[size],
     className,
   );
 
-  if (src) {
-    return <img src={src} alt={alt ?? name ?? ''} className={cn(classes, 'object-cover')} />;
-  }
+  const core = src ? (
+    <img
+      src={src}
+      alt={alt ?? (name ? `${name}${statusLabel}` : '')}
+      className={cn(classes, 'object-cover')}
+    />
+  ) : name ? (
+    <span className={classes} role="img" aria-label={`${name}${statusLabel}`}>
+      {getInitials(name)}
+    </span>
+  ) : (
+    <span className={classes} aria-hidden="true" />
+  );
 
-  if (name) {
-    return (
-      <span className={classes} role="img" aria-label={name}>
-        {initials(name)}
-      </span>
-    );
-  }
+  if (!status && !badge) return core;
 
-  return <span className={classes} aria-hidden="true" />;
+  return (
+    <span className="relative inline-flex">
+      {core}
+      {status && (
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute bottom-0 right-0 rounded-full ring-2 ring-surface-1',
+            STATUS_TONE[status],
+            STATUS_SIZE[size],
+          )}
+        />
+      )}
+      {badge && (
+        <span className="absolute -right-1 -top-1 inline-flex items-center justify-center">
+          {badge}
+        </span>
+      )}
+    </span>
+  );
 }

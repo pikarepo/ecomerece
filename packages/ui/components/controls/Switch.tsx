@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import type { ButtonHTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 import { focusRing } from '../../lib/focus';

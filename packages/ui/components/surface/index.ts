@@ -14,8 +14,8 @@ export {
 } from './AnimatedText';
 export type { AspectRatioProps } from './AspectRatio';
 export { AspectRatio } from './AspectRatio';
-export type { AvatarProps } from './Avatar';
-export { Avatar } from './Avatar';
+export type { AvatarProps, PresenceStatus } from './Avatar';
+export { Avatar, getInitials } from './Avatar';
 export type { BadgeProps, ChipProps, StatusDotProps } from './Badge';
 export { Badge, Chip, StatusDot, Tag } from './Badge';
 export type { CardProps } from './Card';
@@ -82,6 +82,15 @@ export type {
 export { KeyboardAvoidingView, PullToRefresh, SafeArea } from './Mobile';
 export type { OrientationProps, OrientationValue } from './Orientation';
 export { Orientation, useOrientation } from './Orientation';
+export type {
+  AvatarGroupProps,
+  AvatarPerson,
+  BylineProps,
+  NameRoleProps,
+  TeamMember,
+  TeamStackProps,
+} from './People';
+export { AvatarGroup, Byline, NameRole, TeamStack } from './People';
 export type {
   BleedProps,
   Breakpoint,

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface UseOverlayOptions {
   open: boolean;
@@ -8,6 +8,11 @@ export interface UseOverlayOptions {
    * Enabled by default for modals/sheets/panels.
    */
   trapFocus?: boolean;
+  /**
+   * Escape closes the overlay (default). Disable while another overlay is
+   * stacked on top so Escape only reaches the topmost one (batch 93).
+   */
+  closeOnEscape?: boolean;
 }
 
 /**
@@ -15,8 +20,18 @@ export interface UseOverlayOptions {
  * Per DESIGN.md §21.9 — Escape closes, backdrop click closes, focus traps and
  * returns to the trigger.
  */
-export function useOverlay({ open, onClose, trapFocus = true }: UseOverlayOptions) {
-  const containerRef = useRef<HTMLDivElement>(null);
+export function useOverlay({
+  open,
+  onClose,
+  trapFocus = true,
+  closeOnEscape = true,
+}: UseOverlayOptions) {
+  // Tracked as state, not a plain ref: overlays render through `Portal`, which
+  // mounts one effect-pass late — a ref-based effect would first run against a
+  // null container and never re-run (the trap silently never installed).
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  /** Historical name — attach with `ref={containerRef}`. */
+  const containerRef = setContainer;
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // Lock body scroll while open.
@@ -31,7 +46,7 @@ export function useOverlay({ open, onClose, trapFocus = true }: UseOverlayOption
 
   // Escape to close. Guarded for reduced-motion is handled by CSS.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !closeOnEscape) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -40,7 +55,7 @@ export function useOverlay({ open, onClose, trapFocus = true }: UseOverlayOption
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [open, onClose]);
+  }, [open, onClose, closeOnEscape]);
 
   // Remember the trigger so focus can be restored on close.
   useEffect(() => {
@@ -53,9 +68,7 @@ export function useOverlay({ open, onClose, trapFocus = true }: UseOverlayOption
 
   // Trap focus inside the container.
   useEffect(() => {
-    if (!open || !trapFocus) return;
-    const container = containerRef.current;
-    if (!container) return;
+    if (!open || !trapFocus || !container) return;
 
     const focusableSelector = [
       'a[href]',
@@ -104,7 +117,7 @@ export function useOverlay({ open, onClose, trapFocus = true }: UseOverlayOption
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', handleFocus);
     };
-  }, [open, trapFocus]);
+  }, [open, trapFocus, container]);
 
   return { containerRef };
 }

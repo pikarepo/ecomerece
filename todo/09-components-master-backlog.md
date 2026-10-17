@@ -89,47 +89,47 @@ Note: `Div`/`Box`/`Container`/`Stack`/`HStack`/`Grid`/`Surface` already shipped 
 | 73 | Steppers: page-dots/progress dots (✅ Carousel dots) · numbered steps · vertical stepper · clickable stepper · timeline stepper | ✅ batch 73 (`components/navigation/Stepper.tsx` — ProgressDots · Stepper · TimelineStepper) |
 | 14 (todo/08) | Pagination v2: first/last · page-size selector · jump-to-page · total count | ✅ batch 14 |
 | 15 (todo/08) | Breadcrumb variants: collapsed-to-dropdown · with icons | ✅ batch 15 |
-| 74 | Multi-level sidebar · icon-only/mini sidebar (✅ IconRail) · accordion nav | ⬜ |
-| 75 | Bottom tab bar with FAB · floating bottom nav (BottomTabBar ✅) | ⬜ |
-| 76 | Footers: mega · fat · sticky · social bar | ⬜ |
-| 77 | Command-palette upgrades: groups (CommandMenu ✅ baseline) · recent searches · quick actions · keyboard hints | ⬜ |
-| 78 | Permalink/anchor copier · share-link copier · back/history dropdown · recently viewed | ⬜ |
-| 79 | Site-search overlay · voice search | ⬜/⛔ voice = platform API |
+| 74 | Multi-level sidebar · icon-only/mini sidebar (✅ IconRail) · accordion nav | ✅ batch 74 (`components/navigation/SideNavVariants.tsx` — MultiLevelSidebar · MiniSidebar · AccordionNav) |
+| 75 | Bottom tab bar with FAB · floating bottom nav (BottomTabBar ✅) | ✅ batch 75 (`components/navigation/BottomNavVariants.tsx` — BottomTabBarFAB · FloatingBottomNav) |
+| 76 | Footers: mega · fat · sticky · social bar | ✅ batch 76 (`components/navigation/Footer.tsx` — MegaFooter · FatFooter · StickyFooter · SocialBar) |
+| 77 | Command-palette upgrades: groups (CommandMenu ✅ baseline) · recent searches · quick actions · keyboard hints | ✅ batch 77 (`components/navigation/CommandMenu.tsx` — quick actions · recent searches · grouped live filtering · shortcut + footer keyboard hints) |
+| 78 | Permalink/anchor copier · share-link copier · back/history dropdown · recently viewed | ✅ batch 78 (`components/navigation/ShareLinks.tsx` — PermalinkCopier · ShareLink; `components/navigation/HistoryNav.tsx` — HistoryDropdown · RecentlyViewed) |
+| 79 | Site-search overlay · voice search | ✅ batch 79 (`components/navigation/SiteSearch.tsx` — SiteSearch; `components/navigation/VoiceSearch.tsx` — VoiceSearchButton · useSpeechRecognition) — voice = platform Web Speech API, degrades to disabled when unsupported ⛔/✅ |
 
 ## F — Data display
 
 | Batch | Items | Status |
 |---|---|---|
 | 17 (todo/08) | Table v2: row selection + bulk bar · summary row · grouped headers | ✅ batch 17 (all shipped — `columnGroups` landed in the todo/08 completion pass) |
-| 80 | Table variants: striped · bordered · hoverable · compact (✅ density) · borderless · responsive stack (✅ density="responsive"?) · card-rows · nested/tree table · master-detail | ⬜ mostly variants |
-| 81 | Table power: editable cells · frozen columns · resizable columns · reorderable rows · multi-sort · merged cells | ⬜ (multi-session) |
+| 80 | Table variants: striped · bordered · hoverable · compact (✅ density) · borderless · responsive stack (✅ density="responsive"?) · card-rows · nested/tree table · master-detail | ✅ batch 80 (`components/data/Table.tsx` — added `striped` · `bordered` · `borderless` · `hoverable` · `cardRows` · `responsive="stack"` · `renderDetail` (master-detail) · `getSubRows` (nested/tree) + controlled/uncontrolled expansion; compact already via `density`) |
+| 81 | Table power: editable cells · frozen columns · resizable columns · reorderable rows · multi-sort · merged cells | ✅ batch 81 (`components/data/Table.tsx` — `editable`/`onCellEdit` · `frozen` columns · `resizable`/`onResize` · `reorderable`/`onReorder` (drag + keyboard) · `multiSort`/`sorts`/`onSortsChange` + `cycleSort` · `colSpan`/`rowSpan`) |
 | **9 (todo/08)** | In-cell data-viz: Sparkline ✅ · DataBar ✅ · MetricCard ✅ | ✅ batch 9 |
-| 82 | In-cell remaining: Bullet · heat cell · icon indicators (traffic-light/arrows) | ⬜ |
+| 82 | In-cell remaining: Bullet · heat cell · icon indicators (traffic-light/arrows) | ✅ batch 82 (`data/Bullet.tsx` · `data/HeatCell.tsx` · `data/IconIndicators.tsx` — `Bullet` · `HeatCell`/`heatClass`/`heatIntensity` · `StatusLights` · `TrendArrow`/`formatDelta`) |
 | 12 (todo/08) | KPI family: scorecard · gauge KPI · SLA/health indicator | ✅ batch 12 (all shipped — `GaugeKPI` landed in the todo/08 completion pass) |
 | 11 (todo/08) | Time & date display: TimeAgo · timezone clock · countdown · duration · stopwatch · business hours | ✅ batch 11 (all shipped — stopwatch + business hours landed in the todo/08 completion pass) |
-| 83 | People: Avatar status/badge/initials (✅ initials) · avatar group +N overflow · name+role block · author byline · team stack | ⬜ |
-| 84 | Cards I (content): Article · Blog · News · Video · Music/Album · Podcast · Movie · Recipe | ⬜ |
-| 85 | Cards II (commerce): Product · Property/Listing · Hotel · Flight · Ticket · Coupon · Gift card · Credit-card visual | ⬜ (commerce-core — high priority) |
-| 86 | Cards III (work): Contact · Business · Team member · Review · Notification · Task · Project · File · Folder · App · Integration · Feature · Metric Alert · Empty/Skeleton card (✅ SkeletonCard) · Flip/Expandable/Draggable/Selectable/Horizontal/Overlay-image/Hover-reveal/Stacked | ⬜ |
-| 87 | Lists: chat · contact · notification · checklist · todo · playlist/queue · search results (GroupedList ✅) · sticky-header grouped · alphabet index A–Z · swipe list (batch 29 dependency) · reorderable · infinite · nested | ⬜ |
+| 83 | People: Avatar status/badge/initials (✅ initials) · avatar group +N overflow · name+role block · author byline · team stack | ✅ batch 83 (`surface/Avatar.tsx` +`status`/`badge`/`getInitials` · `surface/People.tsx` — `AvatarGroup` (+N) · `TeamStack` · `NameRole` · `Byline`) |
+| 84 | Cards I (content): Article · Blog · News · Video · Music/Album · Podcast · Movie · Recipe | ✅ batch 84 (`data/ContentCards.tsx` — `ArticleCard` · `BlogCard` · `NewsCard` · `VideoCard` · `AlbumCard`/`MusicCard` · `PodcastCard` · `MovieCard` · `RecipeCard`) |
+| 85 | Cards II (commerce): Product · Property/Listing · Hotel · Flight · Ticket · Coupon · Gift card · Credit-card visual | ✅ batch 85 (`data/CommerceCards.tsx` — `ProductCard` · `PropertyCard`/`ListingCard` · `HotelCard` · `FlightCard` · `TicketCard` · `CouponCard` · `GiftCard` · `CreditCardVisual` + `formatPrice`/`maskCardNumber`) |
+| 86 | Cards III (work): Contact · Business · Team member · Review · Notification · Task · Project · File · Folder · App · Integration · Feature · Metric Alert · Empty/Skeleton card (✅ SkeletonCard) · Flip/Expandable/Draggable/Selectable/Horizontal/Overlay-image/Hover-reveal/Stacked | ✅ batch 86 (`data/WorkCards.tsx` — `ContactCard` · `BusinessCard` · `TeamMemberCard` · `ReviewCard` · `NotificationCard` · `TaskCard` · `ProjectCard` · `FileCard` · `FolderCard` · `AppCard` · `IntegrationCard` · `FeatureCard` · `MetricAlertCard`; `data/CardVariants.tsx` — `HorizontalCard` · `OverlayImageCard` · `HoverRevealCard` · `FlipCard` · `ExpandableCard` · `SelectableCard` · `DraggableCard` · `StackedCards`) |
+| 87 | Lists: chat · contact · notification · checklist · todo · playlist/queue · search results (GroupedList ✅) · sticky-header grouped · alphabet index A–Z · swipe list (batch 29 dependency) · reorderable · infinite · nested | ✅ batch 87 (`list/Lists.tsx` — `ChatList` · `ContactList` · `NotificationList` · `ChecklistList` · `TodoList` · `PlaylistList` · `SearchResults` · `StickyHeaderList` · `AlphabetIndexList` · `SwipeList` · `ReorderableList` · `InfiniteList` · `NestedList`) |
 | 88 | Structure diagrams: hierarchy · dependency graph · relationship/ERD · sequence viewer · state machine · swimlane · funnel steps · process flow · journey map | ⛔ heavyweight (own tasks; funnel may be simple) |
 | 89 | Geospatial: map family, markers, heatmaps, route, geofence | ⛔ map tiles/3rd-party |
-| 90 | Documents: preview · thumbnails · annotation pins · version history · diff view · TOC panel · reader mode | ⬜/⛔ diff-view medium |
-| 91 | Financial: ticker/quote · price-change badge · order book · depth chart · portfolio breakdown · transaction list · balance card · invoice/receipt · budget bar | ⬜ (commerce-core) |
-| 92 | Media display: thumbnail grid · poster · playlist row · podcast row · now-playing bar · lyrics view · queue panel | ⬜ |
+| 90 | Documents: preview · thumbnails · annotation pins · version history · diff view · TOC panel · reader mode | ✅ batch 90 (`data/Documents.tsx` — `DocumentPreview` · `DocumentThumbnails` · `AnnotationPins` · `VersionHistory` · `DiffView` · `ReaderMode` · `TocPanel`; TOC rail = `StickyToc` ✅, inline diff = `TextDiff` ✅) |
+| 91 | Financial: ticker/quote · price-change badge · order book · depth chart · portfolio breakdown · transaction list · balance card · invoice/receipt · budget bar | ✅ batch 91 (`components/data/Financial.tsx`) |
+| 92 | Media display: thumbnail grid · poster · playlist row · podcast row · now-playing bar · lyrics view · queue panel | ✅ batch 92 (`components/data/MediaDisplay.tsx`) |
 
 ## G — Feedback, states & overlays
 
 | Batch | Items | Status |
 |---|---|---|
 | 13 (todo/08) | HoverCard · rich/interactive tooltip (Tooltip ✅ baseline) | ✅ batch 13 |
-| 93 | Modal variants: size/fullscreen/scrollable/side/stacked/nested (Modal ✅ baseline) · wizard dialog | ⬜ |
-| 94 | Popover variants: hover/focus/with arrow (Popover ✅ click baseline) · mega dropdown · quick view/peek panel | ⬜ |
-| 95 | Toast upgrades: positions · loading/promise toast · grouped · progress toast (ToastProvider ✅ baseline tones) | ⬜ |
-| 96 | System banners: announcement · promo · cookie · GDPR modal · push/prompt modals (install/update/permission) · session-timeout warning | ⬜ |
-| 97 | Loading: spinner variants (ring/dots/bars/pulse/orbit — Spinner ✅ baseline) · circular/stepped/indeterminate/buffer progress (Progress ✅ linear) · infinite-scroll loader · route transition bar · splash screen | ⬜ |
-| 98 | State pages: offline state · 400/403/404 (✅ 404 via Next) /500/503 · under construction · expired link · thank-you page · verification pending | ⬜ |
-| 99 | Guidance: inline help · contextual help panel · walkthrough/product tour (step/spotlight) · checklist widget · tips carousel · feature announcement · new badge/beta tag (✅ Badge) · changelog popup · onboarding modal | ⬜ |
+| 93 | Modal variants: size/fullscreen/scrollable/side/stacked/nested (Modal ✅ baseline) · wizard dialog | ✅ batch 93 (`overlay/Modal.tsx` +`size: xl\|fullscreen` · `scrollable` · `side` · `trapFocus` · `closeOnEscape`; `overlay/ModalVariants.tsx` — `WizardDialog` + `clampStep`; also fixed `useOverlay` focus trap that never installed through `Portal`) |
+| 94 | Popover variants: hover/focus/with arrow (Popover ✅ click baseline) · mega dropdown · quick view/peek panel | ✅ batch 94 (`overlay/Popover.tsx` +`triggerOn: click\|hover\|focus` · `arrow`; `overlay/PopoverVariants.tsx` — `MegaDropdown` · `QuickViewPanel`) |
+| 95 | Toast upgrades: positions · loading/promise toast · grouped · progress toast (ToastProvider ✅ baseline tones) | ✅ batch 95 (`feedback/Toast.tsx` +`position` (provider + per-toast regions) · `loading` (sticky when `durationMs ≤ 0`) · `promise()` · `group` (+N collapse) · `progress` bar · `push` returns id · `update`/`dismiss` on context; `clampProgress`) |
+| 96 | System banners: announcement · promo · cookie · GDPR modal · push/prompt modals (install/update/permission) · session-timeout warning | ✅ batch 96 (`feedback/SystemBanners.tsx` — `AnnouncementBanner` · `PromoBanner` · `CookieConsentBanner` (+`CookiePreferences`) · `GdprConsentModal` (+`ConsentPurpose`, opt-in defaults) · `PromptModal`/`PromptKind` install\|update\|permission · `SessionTimeoutWarning` + `formatCountdown`; also added the missing JSX pragma to `controls/Switch.tsx`) |
+| 97 | Loading: spinner variants (ring/dots/bars/pulse/orbit — Spinner ✅ baseline) · circular/stepped/indeterminate/buffer progress (Progress ✅ linear) · infinite-scroll loader · route transition bar · splash screen | ✅ batch 97 (`data/Spinner.tsx` +`SpinnerVariant`; `data/Progress.tsx` +`ProgressVariant`/`steps`/`buffer`/`showValue`/`label`; new `data/LoadingVariants.tsx` — `InfiniteScrollLoader` (auto IO → button fallback) · `RouteProgressBar` · `SplashScreen`; new `.fx-indeterminate` keyframe in `styles/engine.css` with reduced-motion fallback) |
+| 98 | State pages: offline state · 400/403/404 (✅ 404 via Next) /500/503 · under construction · expired link · thank-you page · verification pending | ✅ batch 98 (`feedback/StatePages.tsx` — private `StatePageShell`; `OfflineState` · `ErrorPage`/`StatePageErrorCode`/`ERROR_PAGE_COPY` (400\|403\|404\|500\|503) · `UnderConstructionPage` · `ExpiredLinkPage` · `ThankYouPage` · `VerificationPendingPage`) |
+| 99 | Guidance: inline help · contextual help panel · walkthrough/product tour (step/spotlight) · checklist widget · tips carousel · feature announcement · new badge/beta tag (✅ Badge) · changelog popup · onboarding modal | ✅ batch 99 (`feedback/Guidance.tsx` — `InlineHelp` · `HelpPanel` · `ProductTour` (spotlight+card, Escape→`onSkip`) · `ChecklistWidget`/`GuidanceChecklistItem` · `TipsCarousel`/`GuidanceTip` · `FeatureAnnouncement` · `ChangelogPopup` · `OnboardingModal`; new/beta tags remain ✅ `Badge`) — plus the user-reported `InfiniteScrollLoader` hydration fix (IO support detected post-mount) |
 | (todo/08) | 18: status family — sync status · save status · connection quality · battery/signal · order/package tracking · delivery timeline (Timeline ✅) | ✅ shipped in the todo/08 completion pass (`SyncStatus`/`SaveStatus`/`ConnectionQuality`/`BatteryIndicator`; tracking/delivery = `Timeline` ✅; batch 18 itself shipped the commerce quick wins) |
 
 ## H — Additional chart types (engine: ink+accent per §23; SVG-first, happy-dom-testable)

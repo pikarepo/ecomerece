@@ -1340,7 +1340,7 @@ Track `mat-well rounded-full h-1.5`; fill `rounded-full bg-accent transition-all
 </div>
 ```
 
-`min-w` + `overflow-auto` keeps the page from scrolling sideways. Sticky header needs an **opaque** `bg-surface-2` — in translucent skins (glass) the sticky header must stay opaque or rows show through; the validator checks this. No zebra striping.
+`min-w` + `overflow-auto` keeps the page from scrolling sideways. Sticky header needs an **opaque** `bg-surface-2` — in translucent skins (glass) the sticky header must stay opaque or rows show through; the validator checks this. No zebra striping by default — it is opt-in via `striped` (batch 80).
 
 ### 21.17 Tabs vs segmented control
 
@@ -1348,7 +1348,7 @@ Tabs switch **views**; a segmented control filters or scopes **one** view. `syst
 
 ### 21.18 Avatar
 
-`rounded-full border border-line/10 object-cover`; initials fallback on `bg-surface-4 text-ink-2`. Never colour-code fallbacks by name hash.
+`rounded-full border border-line/10 object-cover`; initials fallback on `bg-surface-4 text-ink-2`. Never colour-code fallbacks by name hash. Optional `status` adds a corner presence dot (`online`→`bg-success`, `away`→`bg-warning`, `busy`→`bg-danger`, `offline`→`bg-ink-3`) ringed with `ring-2 ring-surface-1` and appended to the accessible name; optional `badge` is a small overlay at the top-right. Presence is never the only signal — the status is named in the label. (`getInitials(name)` is exported.)
 
 ### 21.19 Layout primitives — the bare tags
 
@@ -2530,7 +2530,8 @@ layers aria-hidden and pointer-events:none.
 
 AVOID gradients in markup · skin selectors or dark: in components · literal radii/shadows/blurs ·
 white-at-opacity text · inverting dark to make light · identical rounded cards with identical shadows
-· a skin that is only a colour change · two competing accents · floating labels · zebra striping ·
+· a skin that is only a colour change · two competing accents · floating labels · zebra striping
+by default ·
 boxed page on grey · hover-only functionality · ALL CAPS labels · "Something went wrong".
 ```
 
@@ -3495,3 +3496,784 @@ disabled titles render as plain text — no button). Theme tokens only, `mat-*` 
 
 Tests: `test/batch73-steppers.test.tsx` (8 cases). Design page: "Steppers (batch 73)"
 (layout tab).
+
+### E.5.60 Side navigation — as-built (batch 74, todo/09 §E)
+
+New file `components/navigation/SideNavVariants.tsx` exporting three pieces. Shared model
+`NavLeaf` / `NavGroup` (`children`) / `NavItem`, discriminated by `Array.isArray(children)`.
+**`MultiLevelSidebar`** — nested sidebar rendered as `<nav><ul><li>`; group rows toggle with
+`aria-expanded`/`aria-controls` (pointing at a nested `<ul aria-label>`), leaves navigate and
+carry `aria-current="page"` (groups never do); the path to `value` auto-opens via
+`ancestorsOf`/`withActivePath` so the active leaf is never hidden; controlled (`expanded` +
+`onExpandedChange`) or uncontrolled (`defaultExpanded`); indentation scales with depth.
+**`MiniSidebar`** — compact sidebar that collapses to an icon-only rail (width 72px ↔ 15rem);
+a bottom toggle (`aria-expanded`, default label "Toggle sidebar") flips it; collapsed rows keep
+their accessible name through `aria-label` + native `title` tooltip and hide labels/badges.
+**`AccordionNav`** — accordion navigation (`<nav><ul><li>`): each group is a disclosure
+(`aria-expanded`/`aria-controls`), items are navigable leaves with `aria-current="page"`;
+`allowMultiple` (off by default) chooses single-open vs many; `defaultOpen`/`open` +
+`onOpenChange`. Distinct from `list/Accordion` (generic content) and `Sidebar` (flat levels) —
+this family adds nesting/collapse. Theme tokens only, `mat-*` semantics, no `--m-*` in markup.
+
+Tests: `test/batch74-side-nav-variants.test.tsx` (8 cases). Design page: "Side navigation
+(batch 74)" (layout tab).
+
+### E.5.61 Bottom nav variants — as-built (batch 75, todo/09 §E)
+
+New file `components/navigation/BottomNavVariants.tsx` exporting two shells that build on the
+`BottomTabBar` item shape (`BottomTabItem`). Shared `BottomNavAction` (`icon`/`label`/`onClick`/
+`badge`) + `FabPosition` (`center`/`start`/`end`). **`BottomTabBarFAB`** — full-width bottom tab
+bar (`mat-chrome`, `z-chrome`, safe-area bottom padding) with a raised centre FAB: tabs keep
+`aria-current="page"`, badges render a danger pill; the FAB interrupts the row at `fabPosition`
+(`center` splits evenly around it, `start`/`end` put it first/last) and `raised` (default) lifts
+it above the bar via negative margin. **`FloatingBottomNav`** — centred `mat-chrome` pill that
+hovers above the bottom edge (`fixed inset-x-0 bottom-4`, not full-width); `labels` toggles
+icon+text (labelled) vs icon-only (native `title` tooltip + `aria-label`); optional `action`
+floats a FAB above the pill centre. Distinct from `BottomTabBar` (plain, no FAB), `Dock`
+(macOS hover-lift) and `IconRail`. Both default to `fixed`; pass `className="static …"` for a
+contained preview. Theme tokens only, `mat-*` semantics, no `--m-*` in markup.
+
+Tests: `test/batch75-bottom-nav-variants.test.tsx` (7 cases). Design page: "Bottom nav variants
+(batch 75)" (layout tab).
+
+### E.5.62 Footers — as-built (batch 76, todo/09 §E)
+
+New file `components/navigation/Footer.tsx` exporting four pieces over a shared model
+(`FooterLink` — `label`/`href`/`external`; `FooterColumn` — `title`/`links`; `SocialLink` —
+`label`/`href`/`icon`). **`SocialBar`** — labelled `<nav>` of round `mat-control` icon links,
+each `target="_blank" rel="noopener noreferrer"` with `aria-label` + native `title`. **`MegaFooter`**
+— sitemap footer (`mat-ground`): brand + newsletter block beside up to four `<ul>` link columns
+(column titles are `h6` headings), then a bottom bar with the social bar, legal copy and legal
+links in a `Container`. **`FatFooter`** — brand-forward footer: oversized wordmark (`text-4xl`→
+`text-5xl`) + tagline + social bar on the left, compact link columns on the right, closed by a
+legal rule. **`StickyFooter`** — `sticky bottom-0 z-chrome` `mat-chrome` action bar (safe-area
+bottom padding) for consent/bulk-action bars; flex content + right-aligned `actions` slot + an
+optional labelled dismiss (✕) button wired via `onDismiss`. External `FooterLink`s get
+`target`/`rel` auto-applied through `Link`. Theme tokens only, `mat-*` semantics, no `--m-*` in
+markup; distinct from `BottomTabBar`/`FloatingBottomNav` (tab navigation) and `CartDrawer`.
+
+Tests: `test/batch76-footers.test.tsx` (6 cases). Design page: "Footers (batch 76)" (layout tab).
+
+### E.5.63 Command palette — as-built (batch 77, todo/09 §E)
+
+New file `components/navigation/CommandMenu.tsx`. The state baseline already lived in
+`packages/frontend` (`useCommandPaletteStore`, recents persisted to sessionStorage); this is the
+headless UI half — `packages/ui` stays store-free, so recents come in as props (`recentSearches` /
+`onClearRecentSearches`). Rendered through `Portal` as a `role="dialog"` `aria-modal` panel over a
+`bg-canvas/60` scrim. The search field is a `role="combobox"` (with `aria-expanded` /
+`aria-controls` / `aria-activedescendant`) driving a `role="listbox"`; rows are `role="option"`
+with `aria-selected` on the active row and `aria-keyshortcuts` derived from the item's `shortcut`
+(`⌘`/`⌥`/`⇧`/`⌃` are normalised to Meta/Alt/Shift/Control).
+
+Content model: `CommandItem` (`id`/`label`/`icon`/`hint`/`shortcut`/`keywords`/`disabled`/
+`closeOnSelect`/`onSelect`) and `CommandGroup` (heading + items). Render order is **quick actions
+(pinned) → recent searches → groups**; recents only exist while the query is empty, and
+`closeOnSelect: false` keeps the palette open (used by "Clear recent searches"). Filtering matches
+`label` + `keywords` and drops empty groups. Keyboard: ↑/↓ cycle the active row (wrapping), ↵ runs
+it, or submits the trimmed query through `onSubmitQuery` when nothing matches; Escape and an
+outside pointer (both via `useClickAway`) dismiss. The footer spells out the hints as `Kbd` chips
+(↑↓ Navigate · ↵ Select · Esc Close) alongside an optional `footer` slot, and each item's
+`shortcut` renders as trailing `Kbd` chips. Query is controlled (`value`/`onValueChange`) or
+internal (`defaultValue`). Theme tokens only, `mat-overlay` surface, no `--m-*` in markup.
+
+Tests: `test/batch77-command-menu.test.tsx` (11 cases). Design page: "Command menu (batch 77)"
+(layout tab).
+
+### E.5.64 Share links & history nav — as-built (batch 78, todo/09 §E)
+
+Two new files. `components/navigation/ShareLinks.tsx`: `PermalinkCopier` copies `value`, else `url`
+(or the current location) with an optional `#anchor`, flips to a `Check` + `copiedLabel` for
+`resetDelay` ms, and reports the text via `onCopied`; `ShareLink` prefers `navigator.share` (unless
+`copyOnly`), aborting quietly when the sheet is dismissed (`AbortError`, never copies behind the
+user's back), else copies and reports through `onShare` as `'share' | 'clipboard' | 'unavailable'`.
+Both share one best-effort `writeToClipboard` helper (insecure context / denied permission leaves
+the button unchanged) and a `useCopiedFlag` reset timer.
+
+`components/navigation/HistoryNav.tsx`: `HistoryDropdown` is a split `mat-control` — a back arrow
+(`onBack`, disabled when omitted) and a chevron that opens a recent-entries menu reusing `Dropdown`
+(`triggerRef` + `useClickAway` + Escape, mirroring `OverflowTabs`); entries are
+`{ id, label, hint?, icon?, href?, onSelect? }`, truncated to `max` (default 8), the chevron
+disables when the list is empty, open state is controlled (`open`/`onOpenChange`) or internal
+(`defaultOpen`), and selection calls `onSelect` then `onNavigate`. `RecentlyViewed` renders a
+`role`-free `<section>` + `<h3>` with an optional `Clear` button and a `<ul>` in a `rail`
+(horizontal scroll) or `list` layout, each row a `mat-control` card with thumbnail (or clock icon),
+label + `hint`; `href` rows render a `Link`, the rest a button, and an empty list renders `null`.
+Theme tokens only (`mat-control`/`mat-raised`/`mat-overlay`), no `--m-*` in markup.
+
+Tests: `test/batch78-share-links.test.tsx` (9 cases) + `test/batch78-history-nav.test.tsx`
+(12 cases). Design page: "Share links & history nav (batch 78)" (layout tab).
+
+### E.5.65 Site-search overlay & voice search — as-built (batch 79, todo/09 §E)
+
+Two new files. `components/navigation/SiteSearch.tsx` — a top-anchored `role="dialog"` panel
+mirroring `Modal` (`Portal` + `useOverlay` for body scroll lock, focus trap, focus restore and
+Escape) with `CommandMenu`'s listbox model: a `Search` icon + `role="combobox"` field
+(`aria-expanded`/`aria-controls`/`aria-activedescendant`) + voice button + close ✕, a
+`role="listbox"` of grouped `role="option"` rows, and a footer of `Kbd` hints (↑↓ Navigate · ↵
+Search · Esc Close) plus an optional `footer` slot. Query is controlled (`value`/`onValueChange`)
+or internal (`defaultValue`); while empty the `trending` sections render (falling back to
+`sections` when none are given), otherwise `sections` filter case-insensitively over `label` +
+`keywords`. ↑/↓ cycle the active row (wrapping, resetting on query change), ↵ runs the active row
+(`onSelect` + `onClose`) or submits the trimmed query through `onSubmit`; the scrim
+(`role="presentation"`, biome-suppressed `noStaticElementInteractions`) closes too. Keyboard
+handling is `onKeyDownCapture` (React drops bubble-phase `keydown` on inputs under happy-dom).
+
+`components/navigation/VoiceSearch.tsx` — `useSpeechRecognition({ lang, continuous,
+interimResults, onResult, onError })` headless controller over the platform Web Speech API
+(`SpeechRecognition` / `webkitSpeechRecognition`, with self-contained local types so we don't
+depend on `lib.dom`): `supported` is detected in an effect (SSR renders the unsupported state),
+`start()` bails when unsupported or already listening, the handle is abandoned on `end`/`error`
+(restarting a finished handle throws), and interim/final transcripts are reported trimmed with
+`isFinal`. `VoiceSearchButton` wraps it in an `IconButton` — mic-off + disabled when unsupported,
+`aria-pressed` + pulsing red mic while listening — and `SiteSearch` embeds it, setting the query
+from each transcript (and optionally auto-submitting via `submitOnVoice`).
+
+Tests: `test/batch79-site-search.test.tsx` (12 cases) + `test/batch79-voice-search.test.tsx`
+(10 cases). Design page: "Site search & voice search (batch 79)" (layout tab).
+
+### E.5.66 Table variants — as-built (batch 80, todo/09 §F)
+
+`components/data/Table.tsx` gains purely additive variant props (all default to today's behaviour,
+so the batch-17 tests stay green). Presentation: `striped` (zebra body rows, skipped on selected
+rows — explicit index parity, so detail rows don't offset it), `bordered` (a rule between every
+column plus a hairline around the table), `borderless` (flush: no card chrome, no row dividers, no
+outer border — wins over `bordered`/`cardRows`), `hoverable` (row tint without `onRowClick`) and
+`cardRows` (`border-separate` + `border-spacing-y-2`, each row's cells `bg-surface-2` with rounded
+ends). `responsive="stack"` reflows below `md`: the `<table>` becomes `block md:table`, the header
+`hidden md:table-header-group`, each row `block … md:table-row`, and every cell
+`flex items-center justify-between … md:table-cell` with the column's `stackLabel` (falling back to
+a string `header`, then `key`) shown as a `md:hidden` label — select/expand controls are hidden on
+mobile. `compact` density already shipped.
+
+Expansion adds one leading toggle column for two models: `renderDetail(row)` (master-detail) renders
+a full-width `<tr>` under an expanded row, while `getSubRows(row)` (nested/tree) flattens the
+visible tree depth-first and indents each descendant's toggle cell by `depth × 16px`. State is
+controlled (`expandedKeys` + `onExpandedKeysChange`) or uncontrolled (`defaultExpandedKeys`); the
+toggle sets `aria-expanded` and stops click propagation so it never triggers `onRowClick`; leaf rows
+render a spacer instead of a button. When both models are given the detail row renders above child
+rows.
+
+Tests: `test/batch80-table-variants.test.tsx` (15 cases). Design page: "Table variants (batch 80)"
+(data tab). `TableResponsive` is exported from the `data` barrel.
+
+### E.5.67 Table power — as-built (batch 81, todo/09 §F)
+
+`components/data/Table.tsx` adds six interactive capabilities, all additive. **Merged cells**: a
+column may carry `colSpan`/`rowSpan`, applied to its header + body cells (and the `tfoot` summary).
+**Frozen columns**: `frozen: 'left' | 'right'` pins a column with `sticky` + `z-raised`; offsets
+accumulate from each column's `width` (or `frozenOffset`), body cells get an opaque `bg-surface-1`
+so scrolled content can't bleed through. **Resizable columns**: `resizable` renders a
+`role="separator"` handle at each header's right edge; pointer-drag updates a `widths` map (clamped
+to 48px) and reports via `onResize(key, width)`, which is also stamped onto the header/body cells.
+**Reorderable rows**: `reorderable` makes each `<tr>` draggable (drag a row onto another →
+`onReorder(from, to)`) and adds a leading grip that is keyboard-operable with ↑/↓ (the row drag
+uses the component's own `dragIndex` state, so it works without `DataTransfer`). **Multi-sort**:
+`multiSort` + `sorts`/`onSortsChange` keep an ordered `TableSort[]`; a plain header click cycles
+`asc → desc → removed` (replacing the list) and a **Shift-click** toggles that key in place, each
+active column showing a `1`, `2`, … rank chip. The pure `cycleSort` helper is exported for reuse.
+**Editable cells**: `editable` turns each body cell (opt-out with `editable: false`) into a button
+that swaps to a text input on click — seeded from `column.editValue` (or a string cell) — and
+commits on **Enter** (`onCellEdit(rowKey, columnKey, value)`) or discards on **Escape**. Control
+columns now render in the order reorder → expand → select.
+
+Tests: `test/batch81-table-power.test.tsx` (15 cases — includes `MouseEvent`-based shift-click and
+pointer-drag synthesis, and `cycleSort` unit coverage). Design page: "Table power (batch 81)" (data
+tab). `TableSort` is exported from the `data` barrel; batch-17/80 table tests remain green.
+
+### E.5.68 In-cell marks — as-built (batch 82, todo/09 §F)
+
+Three new `components/data` primitives for dense rows, KPI strips and matrix grids.
+
+`Bullet.tsx` — **`Bullet`** bullet graph: one measure against an optional target, read through
+qualitative bands. `value`, `target?`, `ranges?` (increasing thresholds → `poor / ok / good`
+shading via `bg-line/10|20|30`), `max?` (defaults to `max(100, value, target, last range)`),
+`tone` (`accent | success | warning | danger`), `showValue?`. The track is a `mat-well`; band
+spans are positioned by percentage, the measure bar is tone-filled, and the target is a `bg-ink`
+tick. Root carries `role="img"` with an aria-label combining value, target and bands; inner marks
+are `aria-hidden`.
+
+`HeatCell.tsx` — **`HeatCell`** heat cell: `value`, `min`/`max`, `ramp`
+(`accent | success | warning | danger | diverging`), `format?`, `children?`. The background is a
+**role class + opacity bucket** (`heatClass` → e.g. `bg-success/40`), never a raw theme token, so
+it respects the 02-E §1 markup contract; `diverging` picks `success` for non-negative values and
+`danger` for negatives, with intensity from `|value| / maxAbs`. Pure `heatIntensity(value, min, max)`
+and `heatClass(ramp, value, min, max)` are exported. Root is `role="img"`.
+
+`IconIndicators.tsx` — two in-cell marks. **`StatusLights`** traffic-light triplet: `level`
+(`good | warn | bad | neutral`), `size` (`sm | md`), `orientation` (`row | column`); only the active
+light is coloured (others `bg-line/25`) so status is never colour-only, root `role="img"`.
+**`TrendArrow`** directional indicator: `direction` (`up | down | flat`), optional signed `value`
+(`formatDelta` → `+12.4%` / `-3.2`), `percent?`, `upIsGood?` (default true — flips the tone map),
+`tone?` override. Icons `TrendingUp | TrendingDown | Minus`; tone classes
+`text-success | text-danger | text-ink-3 | text-accent`. Pure `formatDelta(value, percent)` exported.
+
+Tests: `test/batch82-incell.test.tsx` (17 cases). Design page: "In-cell marks (batch 82)" (data
+tab). Exports from the `data` barrel: `Bullet`/`BulletProps`/`BulletTone`; `HeatCell`/`HeatCellProps`/
+`HeatRamp`/`heatIntensity`/`heatClass`; `StatusLights`/`StatusLightsProps`/`StatusLevel`/
+`TrendArrow`/`TrendArrowProps`/`TrendDirection`/`TrendTone`/`formatDelta`.
+
+### E.5.69 People — as-built (batch 83, todo/09 §F)
+
+`components/surface/Avatar.tsx` gains **presence** (`status?: online | away | busy | offline`) and a
+**badge** overlay (`badge?: ReactNode`); both wrap the core in a `relative` span and pin a corner
+element (status dot `ring-2 ring-surface-1` bottom-right, badge top-right). The accessible name
+carries the status (`"Alex Chen, busy"`) so presence is never colour-only. §21.18 now also applies:
+initials fallback is `bg-surface-4 text-ink-2` with `border border-line/10`. `getInitials(name)` is
+exported.
+
+`components/surface/People.tsx` adds four composites:
+
+- **`AvatarGroup`** — overlapping avatars (`-space-x-2`, each ringed `ring-2 ring-surface-1`) with a
+  `+N` chip once the list exceeds `max` (default 4); `total` overrides the count that drives `N`,
+  `size` follows the Avatar scale. Root `role="img"`, label `"<label> — N people"`.
+- **`TeamStack`** — a `<ul>` of avatar + name + role columns (`showNames?`, `max`, `total`, `size`),
+  collapsing the remainder into a `+N` tile; label `"<label> — N members"`.
+- **`NameRole`** — avatar + name + muted role block (`avatar?`, `href?` links the name, `trailing?`,
+  `stacked?`, `size`).
+- **`Byline`** — author byline: optional avatar, `prefix?` ("By"), author (`href?`), `role?`, `date?`
+  joined by a `separator?` (default `·`); `size` (`sm | md`).
+
+Tests: `test/batch83-people.test.tsx` (16 cases). Design page: "People (batch 83)" (data tab).
+Exports from the `surface` barrel: `Avatar`/`AvatarProps`/`PresenceStatus`/`getInitials`;
+`AvatarGroup`/`AvatarGroupProps`/`AvatarPerson`; `TeamStack`/`TeamStackProps`/`TeamMember`;
+`NameRole`/`NameRoleProps`; `Byline`/`BylineProps`.
+
+### E.5.70 Content cards — as-built (batch 84, todo/09 §F)
+
+`components/data/ContentCards.tsx` — eight content cards sharing a private `Shell` (root is an
+`<a>` when `href` is set — with `focusRing()` — else an `<article>`; `group mat-card block
+overflow-hidden rounded-card`), a `Cover` (aspect `video | wide | square | poster`, `bg-surface-3`,
+lazy `object-cover` image with a `group-hover:scale-105` zoom and an `ImageOff` placeholder), a
+`PlayOverlay` (real `<button aria-label="Play">` when `onPlay` and no `href`, decorative otherwise),
+a `DurationBadge`, a `Meta`/`Dot` line and a `TagRow`.
+
+- **`ArticleCard`** — `title`, `excerpt?`, `category?` (accent `Badge` on the cover), `image?`,
+  `href?`, `author?`, `date?`, `readTime?`.
+- **`BlogCard`** — led by an author row (`Avatar` + name + date), `title`, `excerpt?`, `tags?`,
+  `readTime?`.
+- **`NewsCard`** — uppercase `section?` kicker, `headline`, `summary?`, `source?`, `date?`.
+- **`VideoCard`** — thumbnail + `duration?` badge + play, `channel?`, `views?`, `date?`, `onPlay?`.
+- **`AlbumCard`** (alias **`MusicCard`**) — square cover + play, `artist`, `year?`, `tracks?`.
+- **`PodcastCard`** — cover + play with an inline layout, `show?`, `episode?`, `duration?`, `date?`.
+- **`MovieCard`** — `poster` (2:3), `year?`, `runtime?`, `rating?` (read-only `Rating`), `genres?`.
+- **`RecipeCard`** — `cookTime?`, `servings?`, `difficulty?` (easy/medium/hard → success/warning/
+  danger `Badge`), `rating?`.
+
+Root tokens only (`mat-card`/`surface-*`/role colors); no raw theme tokens. Also fixed: `Badge.tsx`
+now carries the `/** @jsxImportSource react */` pragma (required for any component file first
+rendered by `bun test` from the repo root).
+
+Tests: `test/batch84-content-cards.test.tsx` (12 cases). Design page: "Content cards (batch 84)"
+(data tab). Exports from the `data` barrel: `ArticleCard`/`ArticleCardProps`, `BlogCard`/
+`BlogCardProps`, `NewsCard`/`NewsCardProps`, `VideoCard`/`VideoCardProps`, `AlbumCard`/`AlbumCardProps`,
+`MusicCard`, `PodcastCard`/`PodcastCardProps`, `MovieCard`/`MovieCardProps`, `RecipeCard`/
+`RecipeCardProps`.
+
+### E.5.71 Commerce cards — as-built (batch 85, todo/09 §F)
+
+`components/data/CommerceCards.tsx` — eight commerce cards plus two pure helpers and a card-visual
+pair. Helpers: **`formatPrice(amount, currency='USD', locale='en-US')`** (locale-stable
+`Intl.NumberFormat` currency string) and **`maskCardNumber(number)`** (keeps the last four digits,
+grouped in fours → `•••• •••• •••• 4242`). Shared private `Shell` (root `<a>` with `focusRing()`
+when `href`, else `<article>`; `group mat-card block overflow-hidden rounded-card`), `Cover`
+(aspect `video | wide | square | poster`, `bg-surface-3`, lazy zoom, `ImageOff` placeholder), `Meta`/
+`Dot`, `CardTitle`, `PriceRow` (price + optional struck-through original + computed `-N%` danger
+`Badge`). Root tokens only (`mat-*`/`surface-*`/role colors) — **no raw theme tokens**; credit/gift
+card backgrounds use the skin material roles via `CARD_MATERIAL` (`mat-primary text-accent-ink` |
+`mat-raised` | `mat-panel`) rather than a hand-rolled gradient.
+
+- **`ProductCard`** — square cover, `badge?`/`badgeTone?`, optional `onWishlist` (`Heart` button),
+  `title`, `rating?` + `reviews?` (read-only `Rating`), `price`/`originalPrice?`/`currency?`, `stock?`
+  (`StockIndicator`), optional `onAddToCart` primary button.
+- **`PropertyCard`** (alias **`ListingCard`**) — wide cover, `tag?`/`tagTone?`, `price` +
+  `priceInterval?` (`month | night | sqft`), `address?` (`MapPin`), `beds?`/`baths?`/`area?` meta.
+- **`HotelCard`** — wide cover, guest-score chip (`rating`, `Star`), `stars?` (`role="img"` star
+  row), `location?` + `reviews?`, governed `amenities?` icon map (wifi/breakfast/parking/gym/pool/
+  restaurant/tv → `role="img"` `aria-label`), `pricePerNight` + "/ night".
+- **`FlightCard`** — airline (`Plane`), `from`→`to` with `departTime`/`arriveTime`, a rule with
+  `duration?` and `stops?` (`Direct` / `N stop(s)`), `price` + optional `onSelect` button.
+- **`TicketCard`** — event stub: `date?`/`event` (`href` link)/`venue?`/`section?`/`row?`/`seat?`
+  plus a dashed right stub with `Notch` (top/bottom semicircles), `price?` and mono `code?`.
+- **`CouponCard`** — dashed-border card, large `discount`, `title?`, `code` badge, `expires?` and
+  optional `onCopy` ghost button.
+- **`GiftCard`** — `1.586:1` material card, `brand`, `Gift` icon, `balance` (formatted), `code?`
+  and `expiry?`.
+- **`CreditCardVisual`** — `1.586:1` material card (`role="group"` with a
+  `"<label?> <brand> ending NNNN"` `aria-label`), `Credit` tag, masked number (mono tracking),
+  `holder?` and `expiry?`; `tone` picks the material role. (Not yet exported to the design page's
+  payment *inputs* — those remain `form/PatternInputs`.)
+
+Tests: `test/batch85-commerce-cards.test.tsx` (19 cases). Design page: "Commerce cards (batch 85)"
+(data tab). Exports from the `data` barrel: `formatPrice`, `maskCardNumber`, `ProductCard`/
+`ProductCardProps`, `PropertyCard`/`PropertyCardProps`, `ListingCard`/`ListingCardProps`, `HotelCard`/
+`HotelCardProps`, `FlightCard`/`FlightCardProps`, `TicketCard`/`TicketCardProps`, `CouponCard`/
+`CouponCardProps`, `GiftCard`/`GiftCardProps`, `CreditCardVisual`/`CreditCardVisualProps`.
+
+### E.5.72 Work cards & card variants — as-built (batch 86, todo/09 §F)
+
+Two new `components/data` files. `WorkCards.tsx` — thirteen work/domain cards over a private `Shell`
+(root `<a>` with `focusRing()` when `href`, else `<article>`; `group mat-card block overflow-hidden
+rounded-card`), `Meta`/`Dot`/`CardTitle`-style heads and shared `Avatar`/`Rating`/`Badge`/`Chip`/
+`IconTile`/`Progress`/`Button` parts. **`ContactCard`** (avatar + role/company + mailto/tel links +
+Email/Call) · **`BusinessCard`** (logo + category + rating/reviews + address/phone/website + Directions) ·
+**`TeamMemberCard`** (`<ul>` socials) · **`ReviewCard`** (verified `BadgeCheck` + rating + body + Helpful) ·
+**`NotificationCard`** (`IconTile` tone + unread `role="img"` dot + Mark read / Dismiss) · **`TaskCard`**
+(`aria-pressed` completion toggle + priority `Badge` + assignee `Avatar` + due + `Chip` tags) ·
+**`ProjectCard`** (`Progress` + `AvatarGroup` members + `doneCount/taskCount`) · **`FileCard`** (kind→icon
+map, thumbnail, download) · **`FolderCard`** (item count + shared) · **`AppCard`** (rating + Install/Open) ·
+**`IntegrationCard`** (connected badge + Connect/Disconnect) · **`FeatureCard`** (icon + Learn-more link) ·
+**`MetricAlertCard`** (status→icon/tone map + value + `TrendArrow` + threshold + View).
+
+`CardVariants.tsx` — eight layout/interaction variants: **`HorizontalCard`** (media beside content) ·
+**`OverlayImageCard`** (text over an `bg-ink/60` scrim + optional CTA) · **`HoverRevealCard`** (detail
+revealed on `group-hover`/`group-focus-within`, full-card stretched link) · **`FlipCard`** (3D
+`rotateY(180deg)` with `aria-hidden` on the hidden face and an `aria-pressed` flip button) ·
+**`ExpandableCard`** (`aria-expanded`/`aria-controls` + `hidden` body, `defaultOpen`) ·
+**`SelectableCard`** (native `sr-only` checkbox + visual check, `ring-accent` when selected, `disabled`) ·
+**`DraggableCard`** (`draggable` + grip `role="img"` label + opacity while dragging) · **`StackedCards`**
+(`<ul>` deck with peeking `mat-card` edges + `+N` overflow).
+
+Pragmas added to `data/Skeleton.tsx` and `surface/IconTile.tsx` (first rendered by the batch-86 tests).
+Root tokens only — no raw theme tokens. Tests: `test/batch86-work-cards.test.tsx` (15 cases) +
+`test/batch86-card-variants.test.tsx` (12). Design page: "Work cards (batch 86)" (data tab). Exports
+from the `data` barrel: all 13 `WorkCards` + 8 `CardVariants` components and their `*Props` types,
+plus `FileKind`, `TaskPriority`, `MetricAlertStatus`.
+
+### E.5.73 Lists — as-built (batch 87, todo/09 §F)
+
+New `components/list/Lists.tsx` — thirteen list/feed patterns over a shared row shell (`<ul>` root,
+`mat-card` when framed, `focusRing()` on interactive rows). **`ChatList`** (avatar + name + message
+snippet + time + unread count badge + active row, `onSelect`) · **`ContactList`** (avatar + name +
+subtitle + `mailto:` link, `onSelect`) · **`NotificationList`** (leading icon `LucideIcon` + title +
+description + time + unread `role="img"` dot, `onSelect`) · **`ChecklistList`** (native `sr-only`
+checkbox + label strike-through when done, `onToggle`) · **`TodoList`** (`TodoPriority`
+`low|medium|high` → `Badge` tone, `aria-pressed` done toggle, due time, `onAdd`) · **`PlaylistList`**
+(index column swaps to a playing `Music` glyph, title/artist/duration, `onSelect`) · **`SearchResults`**
+(local `Highlight` wraps query matches in `<mark>`, type label + url, `onSelect`) · **`StickyHeaderList`**
+(`StickyGroup[]`, group `<h4>` headers pinned with `sticky top-0 bg-surface-2`, scroll container) ·
+**`AlphabetIndexList`** (`AlphabetItem[]` grouped by first letter `#`-fallback, letter `<h4>` headers with
+`id="letter-X"` + a `nav[aria-label="Jump to letter"]` rail of anchor jumps, `onSelect`) ·
+**`SwipeList`** (action layer behind a `bg-canvas` row + Complete/Delete `aria-label` buttons,
+`onComplete`/`onDelete`) · **`ReorderableList`** (`GripVertical` handle, `Move <label> up/down` buttons,
+first-up/last-down disabled, `onReorder(next)`) · **`InfiniteList`** (`ReactNode[]` items + `hasMore`/
+`loading`/`onLoadMore` "Load more" control) · **`NestedList`** (recursive `NestedRows` with
+`aria-expanded` expanders, `NestedNode[]`, `onSelect`). Types exported: `ChatMessage`, `ContactItem`,
+`NotificationItem`, `ChecklistItem`, `TodoItem`, `TodoPriority`, `PlaylistTrack`, `SearchResultItem`,
+`StickyGroup`, `AlphabetItem`, `SwipeItem`, `ReorderableItem`, `NestedNode` and each component's
+`*Props`.
+
+Pragmas added to `list/GroupedList.tsx` and `list/ListHeader.tsx` (first rendered by the batch-87
+tests). Root tokens only — no raw theme tokens (`bg-canvas`/`bg-surface-2`/`bg-accent/20`, not the
+undefined `bg-ground`/`bg-card`). Test: `test/batch87-lists.test.tsx` (15 cases; checkbox toggles
+dispatch a real `MouseEvent` via a local `mouse()` helper). Design page: "Lists (batch 87)" (data tab).
+Exports from the `list` barrel: all 13 components + their `*Props` types and the shared item/enum
+types above.
+
+### E.5.74 Documents — as-built (batch 90, todo/09 §F)
+
+New `components/data/Documents.tsx` — seven document surfaces over a private compact `ToolButton`
+(a `size-8` icon button with `focusRing()` + `aria-label`; `IconButton` is fixed `h-11` and `cn` does
+not merge utilities, so the toolbar uses its own control). **`DocumentPreview`** (`<section>` viewer
+with filename, prev/next page — bounded by `page`/`pageCount` — zoom in/out, download, fullscreen; a
+`3/4` `bg-canvas` sheet with an optional `children` page body) · **`DocumentThumbnails`** (`<ul>` page
+rail, `aria-current` on the active page) · **`AnnotationPins`** (`src`/placeholder media with numbered
+pin buttons positioned by `x`/`y` percent + a linked `<ol>` of notes, `activeId`/`onSelect`) ·
+**`VersionHistory`** (`<ol>` timeline with a `Current` `Badge`, author · date, size, per-row Download /
+Restore) · **`DiffView`** (side-by-side line diff; status derived from `left`/`right` presence —
+`added` `bg-success/12`, `removed` `bg-danger/12`, `changed` `bg-warning/12`, `unchanged` plain; "No
+differences" empty state) · **`ReaderMode`** (`role="progressbar"` reading bar + A-/A+ size controls over
+a `useState` size step `ReaderSize = 1|2|3|4` → `text-sm|base|lg|xl`, `max-w-prose` body) ·
+**`TocPanel`** (card-framed TOC reusing `TocItem` from `Sticky.tsx`, active highlight, optional
+collapsible header with `aria-expanded`/`aria-controls`). Diff/viewer controls use `bg-canvas`,
+`bg-surface-2` and role tints — no raw theme tokens.
+
+Complements existing surfaces rather than duplicating them: the sticky rail TOC is the existing
+`StickyToc` (`surface/Sticky.tsx`, ✅) and inline character/word diff is the existing `TextDiff`
+(`surface/InlineText.tsx`, ✅). Test: `test/batch90-documents.test.tsx` (10 cases; `expandable`
+required-children components rendered as JSX to satisfy `noChildrenProp`). Design page: "Documents
+(batch 90)" (data tab). Exports from the `data` barrel: the 7 components + their `*Props` types,
+`AnnotationPin`, `DiffLine`, `DocumentPage`, `DocumentVersion` and `ReaderSize`.
+
+### E.5.75 Financial — as-built (batch 91, todo/09 §F)
+
+New `components/data/Financial.tsx` — ten finance/money surfaces plus a pure formatter.
+**`formatMoney(value, currency = '$')`** (locale-stable `Intl.NumberFormat` signed amount,
+e.g. `-$900.00`) · **`PriceChangeBadge`** (`change`/`changePercent`/`upIsGood`; lucide
+`TrendingUp`/`TrendingDown`/`Minus` glyph + signed percent, tone derived from
+`directionOf(change)` — `bg-success/12 text-success`, `bg-danger/12 text-danger`, neutral
+`bg-ink/8 text-ink-3`; direction repeated in an `sr-only` label so it is never colour-only) ·
+**`PriceTicker`** (`PriceQuote` card: symbol + name + `formatMoney(price)` + badge, optional
+`spark` array reusing the existing `Sparkline` with `tone` from the change sign) ·
+**`TickerTape`** (`<ul aria-label="Market ticker">` of horizontal quotes; each percent is a
+`role="img"` span so the `aria-label` ("up/down N%") is valid) · **`OrderBook`** (two-column
+bids/asks table with proportional depth bars — `bg-success/15` right-anchored on bids,
+`bg-danger/15` left-anchored on asks, width `size/max × 100%`) · **`DepthChart`** (cumulative
+`cumulative()` levels → bid/ask `<polygon>` areas + `<polyline>` outlines over a `0 0 100 40`
+viewBox with `vectorEffect="non-scaling-stroke"`, centre `stroke-line/40` rule, `<figure>`
+with `role="img"` label + Bids/Price/Asks caption) · **`PortfolioBreakdown`** (segmented
+`aria-hidden` bar over role-tone classes + a legend `<ul>` with swatch, percent-of-total and
+`formatMoney` value per `Holding`) · **`TransactionList`** (`divide-y` rows: `ArrowDownRight`
+green incoming / `ArrowUpRight` red outgoing, description + date · category, signed amount,
+`Pending` note) · **`BalanceCard`** (`mat-primary text-accent-ink` hero: label + `Wallet`
+icon, big tabular balance, Available/Pending `<dl>`, optional `Plus` "Add funds" action
+button) · **`InvoiceReceipt`** (number/date header, From/To slots, line-item `<table>` with
+optional `× quantity`, `Subtotal`/`Tax (N%)`/`Total` `<dl>` — tax computed from
+`subtotal × taxRate`) · **`BudgetBar`** (`role="progressbar"` with `aria-valuenow` clamped to
+100, tone `bg-success` → `bg-warning` at ≥80% → `bg-danger` when over, "left"/"Over budget by"
+helper line). Root tokens only (`mat-*`, role tints `success/danger/warning/info`,
+`bg-surface-3`, `stroke-line/40`) — no raw theme tokens.
+
+Distinct from existing primitives: the signed-change pill is presentation (badge) versus the
+batch-82 `TrendArrow` indicator, `formatMoney` is a signed plain number helper alongside
+batch-85's locale-currency `formatPrice`, and `PriceTicker` composes the existing `Sparkline`
+rather than redrawing one. Test: `test/batch91-financial.test.tsx` (12 cases). Design page:
+"Financial (batch 91)" (data tab). Exports from the `data` barrel: the 10 components +
+their `*Props` types, `PriceQuote`, `OrderLevel`, `Holding`, `Transaction`, `InvoiceLine` and
+`formatMoney`.
+
+### E.5.76 Media display — as-built (batch 92, todo/09 §F)
+
+New `components/data/MediaDisplay.tsx` — seven media surfaces plus the pure
+`fmtTime(seconds)` (`m:ss`) helper. A private `Art` helper renders the shared artwork frame
+(`<img>` with `alt` + `loading="lazy"` when `src`, else an `aria-hidden` `bg-surface-3
+text-ink-4` icon fallback keyed per surface — `ImageOff`/`Film`/`Music`/`Headphones`). **`ThumbnailGrid`**
+(`<ul>` of aspect-video tiles; `columns` 2/3/4/6 static map or the responsive 2→3→4 default;
+each tile is an `aria-pressed` button, selected tiles get `ring-2 ring-accent`, optional
+bottom-right duration chip and an accent "Now playing" glyph with `sr-only` text) ·
+**`PosterCard`** (`<figure>` 2:3 `aspect-[2/3]` frame over `bg-ink/60` scrim with a
+`text-white` `figcaption` title/meta, `Badge` slot top-left, optional top-right play button
+`aria-label="Play <title>"`; display-only without `onPlay` — distinct from `MovieCard`,
+which is a content card with rating/genres) · **`PlaylistRow`** (composable single track row:
+artwork + title/artist (accent + `Music` glyph while `playing`) + duration + optional like
+toggle `aria-pressed` + `mat-primary` play/pause whose `aria-label` flips Play↔Pause) ·
+**`PodcastRow`** (episode row: artwork + title + show · date + duration, optional listened
+`progress` 0–1 → `role="progressbar"` accent line with `aria-valuenow` + percent readout,
+download + play actions) · **`NowPlayingBar`** (`mat-chrome` bar reusing the batch-57
+**`MediaControls`** transport, artwork + title/artist, and a private `SeekSlider` —
+`role="slider"` + `tabIndex={0}` with `aria-valuenow/min/max` + `aria-valuetext`
+(`1:12 of 3:20`), click-to-seek guarded on zero-width rects, ←/→/↑/↓ ±5s, Home/End → 0/total;
+times shown as `fmtTime`) · **`LyricsView`** (`mat-well` scroll region `<section aria-label>`
++ `<ul>`; the active line is marked by an accent left rail + `font-medium` **and**
+`aria-current="true"` — never colour-only; optional per-line buttons via `onLineClick`,
+`timeMs` surfaces as `sr-only` timestamps) · **`QueuePanel`** (`<section>` with a `ListMusic`
+header — title + "N tracks" + optional Clear — over an `<ol>`: current row `aria-current` +
+accent tint + `Music` glyph, title button `onSelect`, `Move <title> up/down` buttons with
+ends `disabled`, `Remove <title>`, empty state "Queue is empty"; row controls are siblings of
+the title button, so no nested buttons). Root tokens only (`mat-card`/`mat-chrome`/`mat-well`/
+`mat-primary`, `bg-accent/8`, `bg-ink/60|70`, role accents) — no raw theme tokens.
+
+Complements rather than duplicates: `PlaylistList` (batch 87) is the full playlist *list*
+with inline select, while `PlaylistRow` is a single composable row with play/like controls;
+`MediaControls` (batch 57) is reused for transport instead of being redrawn; `MediaControls`
+covers generic transport, `NowPlayingBar` adds the track context + seek. Test:
+`test/batch92-media-display.test.tsx` (13 cases; keyboard seek via synthesized `keydown`).
+Design page: "Media display (batch 92)" (data tab). Exports from the `data` barrel: the 7
+components + their `*Props` types, `MediaThumb`, `LyricLine`, `QueueItem` and `fmtTime`.
+
+### E.5.77 Modal variants — as-built (batch 93, todo/09 §G)
+
+Baseline `overlay/Modal.tsx` gains additive variant props (**`size`** now
+`sm|md|lg|xl|fullscreen` — `xl` = `max-w-4xl`, `fullscreen` = `h-full w-full max-w-none` inside
+the backdrop inset; **`scrollable`** turns the panel into a `flex max-h-full flex-col
+overflow-hidden` column so the header stays `flex-none`, the body scrolls
+(`min-h-0 flex-1 overflow-y-auto`) and the footer stays pinned; **`side="left"|"right"`**
+anchors the panel to the edge — backdrop `justify-start|end`, panel `h-full`, `data-side`
+stamped) plus two stacking gates: **`trapFocus`** and **`closeOnEscape`** (both default on;
+set `false` on a modal that has another modal stacked above it so Tab and Escape stay with
+the topmost dialog). `Modal.tsx` also gained the required
+`/** @jsxImportSource react */` pragma (first time rendered by root `bun test`).
+
+**Real defect fixed in `lib/useOverlay.ts`** (surfaced by the batch-93 focus test): the focus
+trap never installed — `Portal` mounts one effect-pass late, so the trap effect first ran
+against a `null` container and, with `[open, trapFocus]` deps, could never re-run. The
+container is now tracked with `useState` (returned under the same `containerRef` name, which
+every consumer only attaches as `ref={containerRef}`), the trap effect depends on it, and a
+new `closeOnEscape` option (default `true`, wired from `Modal`) lets a lower stacked overlay
+stand down. This restores the documented §21.9 contract (focus traps on open) for `Modal`,
+`SidePanel`, `BottomSheet`, `ConfirmDialog` and `SiteSearch` — full suite 763/0 after the
+change.
+
+New `overlay/ModalVariants.tsx` — **`WizardDialog`** (stepped dialog over the baseline
+`Modal`: `ModalWizardStep[]` (`id`/`title`/`content`), "Step X of N" + step heading over the
+body, batch-73 **`ProgressDots`** header with `aria-current="step"`, Back/Next footer with
+ends disabled and Next swapping to `finishLabel` on the last step; controlled (`step` +
+`onStepChange`) or uncontrolled (`defaultStep`); `onFinish` fires on the last step and the
+owner decides whether to close) + pure **`clampStep(step, count)`** bounds helper. The step
+type is `ModalWizardStep`, not `WizardStep` — the form barrel already exports a `WizardStep`
+for `FormWizard`. Complements `SidePanel` (utility panel with trigger), `BottomSheet`
+(bottom edge) and `ConfirmDialog` (inline confirm) rather than duplicating them. Test:
+`test/batch93-modal-variants.test.tsx` (11 cases: sizes/side/scrollable classes, Escape
+gating, focus-trap behaviour incl. the disabled case, stacked Escape isolation, wizard
+stepping + `clampStep`). Design page: "Modal variants (batch 93)" (overlay tab). Exports
+from the `overlay` barrel: `WizardDialog`/`WizardDialogProps`/`ModalWizardStep`/`clampStep`
+plus the extended `ModalProps`.
+
+### E.5.78 Popover variants — as-built (batch 94, todo/09 §G)
+
+Baseline `overlay/Popover.tsx` gains additive variant props (**`triggerOn`
+`click|hover|focus`** — `click` keeps the original toggle; `hover` opens on
+`mouse enter`/`leave` of the wrapper (the panel is a DOM child, so no gap timer is
+needed); `focus` opens on React `focus` (bubbling `focusin`) and closes on blur
+when `relatedTarget` leaves the wrapper — outside-click and Escape keep working in
+every mode; **`arrow`** renders an `aria-hidden` rotated `size-2.5 mat-overlay`
+square hugging the panel edge — `-top-1`/`-bottom-1` by `side`, offset by `align`
+— so it inherits the panel's skin surface), plus the required
+`/** @jsxImportSource react */` pragma (first render by root `bun test`). The
+trigger keeps its `aria-haspopup`/`aria-expanded` span wrapper; all existing
+click-popover call sites are unchanged.
+
+New `overlay/PopoverVariants.tsx` — two composed panels over the baseline popover.
+**`MegaDropdown`** (nav mega menu: `MegaMenuColumn[]` — `title` + `MegaMenuItem[]`
+(`label`/`href` → anchor with optional `description`, else a `button` with
+`onSelect`) in a static 1–4 `grid-cols-*` layout over `min-w-[420px]`, optional
+bordered `footer` row; `triggerOn` defaults to `hover`, click still toggles) ·
+**`QuickViewPanel`** (peek card: `title`/`subtitle`/`media` slot/`description`, a
+2-up `<dl>` of `QuickViewMeta` label/value pairs, an `actions` row, arrow on by
+default, `w-72`, hover-triggered — interactive with real actions, distinct from the
+CSS-only role-`tooltip` `HoverCard`, from the click `Dropdown` and from modal
+`SidePanel`). Root tokens only (`mat-overlay`, `bg-surface-3`, `border-line/10`,
+`text-ink*`) — no raw theme tokens. Test: `test/batch94-popover-variants.test.tsx`
+(7 cases: baseline click regression, Escape/outside close, hover via
+`mouseover`/`mouseout`, focus via `focusin`/`focusout`, arrow edge per side,
+MegaDropdown columns/links/footer/`onSelect`, QuickViewPanel meta/actions/arrow).
+Design page: "Popover variants (batch 94)" (overlay tab, visible in the `all` view).
+Exports from the `overlay` barrel: `MegaDropdown`/`MegaDropdownProps`/
+`MegaMenuColumn`/`MegaMenuItem`/`QuickViewPanel`/`QuickViewPanelProps`/`QuickViewMeta`
+plus the extended `PopoverProps`.
+
+### E.5.79 Toast upgrades — as-built (batch 95, todo/09 §G)
+
+Baseline `feedback/Toast.tsx` gains additive batch-95 capabilities without touching
+existing `push({ message, tone, durationMs, action })` call sites (the root
+`<ToastProvider>` in `apps/web/app/layout.tsx` keeps its default look — mobile-first
+bottom strip → `sm:` bottom-right with safe-area padding).
+
+- **`position`** — provider prop and per-toast `position` override, one of
+  **`ToastPosition`** = `top|bottom` × `left|center|right`. Each position in use gets
+  its own `fixed z-toast` region (`data-toast-region` + `data-position`); the provider
+  default region always exists, overrides lazily add theirs. Mobile stays a full-width
+  `left-4 right-4` strip; `sm:` tightens to a corner (`items-start`/`items-end`), and
+  bottom regions keep `env(safe-area-inset-bottom)` (tops get the inset-top variant).
+- **Loading toast** — `loading: true` swaps the tone dot for a spinning `LoaderCircle`
+  (`text-accent animate-spin`) and defaults to **sticky**: `durationMs <= 0` now means
+  "no auto-dismiss timer" (previously `0` fired instantly), explicit `durationMs`
+  still wins. Documented on `Toast.durationMs`.
+- **`promise(pending, labels, opts?)`** on `useToast()` — pushes a sticky loading
+  toast, then settles it to `success`/`danger` (labels accept functions of the settled
+  value/error), re-arming the default 4s — or `opts.durationMs`. Rejections update the
+  card **and** rethrow, so callers still own the error.
+- **Grouped toasts** — `group: string` collapses same-key pushes into one card:
+  latest message/tone wins, a `+N` badge (`sr-only` "more in this group") counts the
+  collapsed members, and the auto-dismiss timer re-arms. A synchronous `toastsRef`
+  mirror (single `commit()` writer) lets `push` see earlier pushes in the same tick
+  without a re-render; the §21.12 three-toast cap still applies.
+- **Progress toast** — `progress: number` (clamped by exported **`clampProgress`**) renders
+  a `role="progressbar"` bar with `aria-valuenow` plus a mono `%` label under the
+  message; drive it with the new **`update(id, patch)`** (a `durationMs` in the patch
+  re-arms dismissal; `progress: undefined` removes the bar). **`push` now returns the
+  id**, **`dismiss(id)`** is exposed on the context, and **`ToastProvider`/`ToastCard`**
+  carry the required `/** @jsxImportSource react */` pragma (rendered by root `bun test`).
+
+Test: `test/batch95-toast-upgrades.test.tsx` (14 cases: id + default region, three-toast
+cap, action/dismiss regressions, sticky `durationMs: 0` vs timed auto-dismiss, provider +
+per-toast positions, spinner swap, promise success/error incl. rethrow, group collapse
+`+2`, progress bar/update/clamp, unknown-id no-op, `useToast` throw, `clampProgress`).
+Design page: "Toast upgrades (batch 95)" (feedback tab, visible in the `all` view — six
+position buttons, sticky loading, upload progress, promise success/error, grouped push).
+Exports from the `feedback` barrel: `ToastPosition`/`PromiseToastLabels` types +
+`clampProgress` alongside the extended `Toast`/`ToastInput` shapes and the context's
+`push/update/dismiss/promise`.
+
+### E.5.80 System banners — as-built (batch 96, todo/09 §G)
+
+New `feedback/SystemBanners.tsx` (line-1 JSX pragma) — six surfaces over existing
+primitives (`Button`, `Switch`, `Modal`; tinted-rule tone edges copied from `Banner`,
+so tone stays semantics), all with **controlled visibility** (`open`, default `true`
+for the banners; `onDismiss` is where the owner flips it):
+
+- **`AnnouncementBanner`** — slim in-flow strip (`role="region"`), tone dot, optional
+  link + labelled dismiss. For site-wide status/promo notices at the top of a layout.
+- **`PromoBanner`** — accent-tinted card: `badge` slot, headline, description,
+  optional `secondary` (ghost) + `cta` (primary button, or accent `a` when `ctaHref`),
+  absolute dismiss. Distinct from neutral `Banner` (no CTA emphasis) and `Toast`.
+- **`CookieConsentBanner`** — bottom-fixed `z-chrome` bar (safe-area padded), two-step
+  flow: decide (Reject non-essential · Manage preferences · Accept all) ⇄ tune four
+  `Switch` categories (Necessary locked on) → `onSave(prefs)` with
+  **`CookiePreferences`**`{ necessary, preferences, analytics, marketing }`; optional
+  `policyHref`.
+- **`GdprConsentModal`** — `Modal` (`scrollable`) with `ConsentPurpose[]`
+  (label/description/`required`/`defaultChecked`), required switches locked,
+  footer •Reject non-essential (left) •Save choices •Accept all; `onSave` gets a
+  `Record<string, boolean>`. **Non-required purposes start OFF** — pre-ticked consent
+  is not valid consent; selections initialise once on mount (mount while `open`, or
+  remount per flow, to reset). Defaults: strictly-necessary / preferences / analytics /
+  marketing.
+- **`PromptModal` + `PromptKind`** — the install / update / permission ("push prompt")
+  family in one modal: icon well (`Download`/`RefreshCw`/`Bell`), per-kind default copy
+  and labels ("Install"/"Not now", "Update available"→"Update now", "Enable
+  notifications"→"Allow"), every string overridable plus `title`/`description`/`badge`;
+  footer ghost-cancel + primary-confirm; confirm does **not** close — the owner closes
+  from `onConfirm`.
+- **`SessionTimeoutWarning` + exported `formatCountdown`** — expiry warning over `Modal`:
+  "You'll be signed out in `countdown`…" (`s` below a minute, `m:ss` above), ≤10s flips
+  the countdown to `text-danger` + `data-urgent`, primary "Stay signed in" is what
+  Escape/backdrop also trigger (**never signs the user out by accident**), optional
+  quiet `danger` "Sign out now".
+
+Test: `test/batch96-system-banners.test.tsx` (13 cases: announcement link/dismiss+
+closed render, promo CTA/secondary/dismiss, cookie decide step + manage switch matrix
+incl. locked necessary + save payload + back, cookie closed, GDPR purposes/save/accept/
+reject + inert closed modal, three prompt kinds + overrides + cancel via button and
+Escape, session countdown/urgent/custom format/no-sign-out, `formatCountdown` units).
+Also fixed en route: `controls/Switch.tsx` was missing the
+`/** @jsxImportSource react */` pragma (first time it renders under root `bun test`,
+it compiled to Hono nodes → "Objects are not valid as a React child").
+
+Design page: "System banners (batch 96)" (feedback tab, visible in the `all` view).
+**Convention (user request): batch sections on `/design` render in strict ascending
+order from the first batch to the last** — the whole page was re-sequenced (TS-AST
+split of the container's JSX children, chunks keyed by their `batch N`, non-batch
+chunks ride with their nearest preceding batch; multiset-preserving, verified
+ascending `9→96` in source and in the prerendered HTML). Exports from the `feedback`
+barrel: `AnnouncementBanner`/`PromoBanner`/`CookieConsentBanner`/`GdprConsentModal`/
+`PromptModal`/`SessionTimeoutWarning`/`formatCountdown` + their props types,
+`CookiePreferences`, `ConsentPurpose`, `PromptKind`.
+
+### E.5.81 Loading — as-built (batch 97, todo/09 §G)
+
+**`data/Spinner.tsx`** gains **`SpinnerVariant` = `ring | dots | bars | pulse | orbit`**
+(additive `variant` prop, default `ring` keeps the original `Loader2` look; `data-variant`
+on the root; `role="status"`/`aria-live`/`sr-only` label unchanged) — dots = three
+staggered `animate-pulse` discs (150ms steps), bars = four columns of varying heights
+with 120ms steps, pulse = one breathing disc, orbit = `animate-spin` wrapper carrying an
+offset dot. The required `/** @jsxImportSource react */` pragma was added (first render
+by root `bun test`).
+
+**`data/Progress.tsx`** gains **`ProgressVariant` = `linear | circular | stepped |
+indeterminate | buffer`** (+ `steps`, `buffer`, `showValue`, `label`; default `linear`
+byte-compiles to the previous markup apart from `aria-label`/`data-variant`).
+· **`circular`**: `role="progressbar"` wrapper over an `r=40` two-circle SVG
+(`stroke-dasharray`/`offset` sweep with `stroke-{tone}` classes, `-rotate-90` start-at-top),
+centre `font-mono` % readout (hidden with `showValue={false}`).
+· **`stepped`**: N pills (default 5) filled `round(value/max·N)`; `aria-valuenow/max`
+report **filled steps of total**, unfilled `bg-line/15`.
+· **`indeterminate`**: sweeps a 2/5-width tone bar via the new **`.fx-indeterminate`
+keyframe in `styles/engine.css`** (translated 250% because the bar is 40% wide;
+`prefers-reduced-motion` pins it to a static 40% bar) — and, correctly, **omits
+`aria-valuenow`** so AT announces "busy" instead of a fake value.
+· **`buffer`**: soft `bg-tone/30` "loaded" fill behind the solid value fill.
+
+**New `data/LoadingVariants.tsx`** (line-1 pragma):
+· **`InfiniteScrollLoader`** — trailing sentinel (distinct from batch-87 `InfiniteList`,
+a full container): states via `data-state` = `loading` (dots spinner with `label`) ·
+`end` (Check + `endLabel`, no button) · `idle`/`sentinel`; `trigger="auto"` observes
+intersection through `IntersectionObserver` (guarded → **falls back to a Load more
+button** so it never dead-ends), observer disconnected on cleanup and paused while
+`loading`.
+· **`RouteProgressBar`** — `fixed top-0 z-toast h-0.5` transition bar, stays mounted so
+`active` animates `scale-x-0 → scale-x-100`; inactive is `aria-hidden`.
+· **`SplashScreen`** — `fixed inset-0` boot screen: brand slot, title/description, a
+spinner (any batch-97 variant; the nested `Spinner` owns the live region) and a status
+line; controlled by `open` (default shown).
+
+Test: `test/batch97-loading.test.tsx` (17 cases: baseline ring + linear regressions
+incl. clamped width/tone, every variant's structure and stagger delays, circular
+readout+hide, stepped aria math/edge (0 filled), indeterminate (no `aria-valuenow`,
+fx class), buffer fill widths/tones, loader loading/button/end/auto-fallback, route bar
+active↔inactive + AT hiding, splash content/closed/variant). Design page: "Loading
+(batch 97)" (feedback tab, rendered **right after batch 96 per the ascending-order
+convention**) — five spinners, ±10% driven linear + circular/stepped/buffer/indeterminate,
+a 3-page infinite list, a route-bar simulation and a 1.6s auto-closing splash.
+Exports (data barrel): `SpinnerVariant`, `ProgressVariant`,
+`InfiniteScrollLoader(Props)`, `RouteProgressBar(Props)`, `SplashScreen(Props)`.
+
+### E.5.82 State pages — as-built (batch 98, todo/09 §G)
+
+New `feedback/StatePages.tsx` (line-1 JSX pragma) over a private **`StatePageShell`**
+(centred column mirroring `EmptyState` metrics: mono eyebrow → `size-16` tone circle →
+title → ≤42ch description → `mid` slot → centred action row; tones `neutral|success|
+warning|danger` map to `bg-*-10` circles). `States.tsx` (EmptyState/ErrorState) is
+untouched — these are whole-surface pages, not in-view states.
+
+- **`OfflineState`** — `WifiOff` warning circle, offline copy, optional `status` sync
+  note (mono), `onRetry` + extra `action` slot. Distinct from `ErrorState` (failed fetch
+  inside a view).
+- **`ErrorPage` + `StatePageErrorCode` + exported `ERROR_PAGE_COPY`** — full-page
+  **400 · 403 · 404 · 500 · 503**: mono eyebrow label, oversized `text-6xl` status code
+  (plus `sr-only — <label>`), tone-mapped icon (400/403/503 warning · 404 neutral · 500
+  danger), stock title/description from the copy map — all overridable — with
+  `onRetry` convenience (500/503), `primaryAction`/`secondaryAction` slots (replace the
+  retry) and a mono `details` box (request id/trace). The kit 404 mirrors Next's
+  `not-found` so non-Next hosts can reuse it.
+- **`UnderConstructionPage`** — `Construction` icon, "Work in progress" eyebrow, ETA
+  note, decorative (aria-hidden) indeterminate `Progress` bar + action slot.
+- **`ExpiredLinkPage`** — `Link2Off`, `expiresAt` note, `onResend` primary,
+  `homeHref` quiet anchor + action slot.
+- **`ThankYouPage`** — success-tone `PartyPopper`, `reference` chip (mono, e.g. order
+  number), action + home link.
+- **`VerificationPendingPage`** — `MailCheck`, default copy embeds `maskedEmail`
+  (`a•••@…`), decorative indeterminate bar, `hint` (spam note), `onResend`.
+
+Test: `test/batch98-state-pages.test.tsx` (11 cases: all five codes render copy+code+
+icon, tone circles per code, overrides/retry/actions/details, `ERROR_PAGE_COPY` key set
++ entry sanity — icon asserted as function **or** object since lucide icons are
+`memo(forwardRef(...))`, offline retry/status/override, construction bar under
+`aria-hidden` + ETA + action, expired resend/home-href, thank-you reference/success
+tone, verification masked-email/hint/resend + generic fallback). Design page: "State
+pages (batch 98)" (feedback tab, rendered **directly after batch 97 per the
+ascending-order convention**) — offline card, a 5-code error grid, and one card each
+for construction/expired/thank-you/verification wired to toasts. Exports (feedback
+barrel): `ErrorPage`/`OfflineState`/`UnderConstructionPage`/`ExpiredLinkPage`/
+`ThankYouPage`/`VerificationPendingPage` + props types, `StatePageErrorCode`,
+`ERROR_PAGE_COPY`.
+
+### E.5.83 Guidance — as-built (batch 99, todo/09 §G)
+
+New `feedback/Guidance.tsx` (line-1 pragma) over `Popover`/`Modal`/`Button`/`Progress`/
+`ProgressDots`. (New-badge/beta-tag was already ✅ via `Badge`/`Chip` — no new code.)
+
+- **`InlineHelp`** — "?" affordance (or custom label) inline with copy; click-opens a
+  72-width explanation popover (title + body), Escape/outside close. Between `Tooltip`
+  (hover gloss) and `HelpPanel`.
+- **`HelpPanel`** — contextual drawer: right-edge `Modal` (`side="right"`, `scrollable`)
+  with intro children + `HelpPanelItem[]` (link or plain + description) + footer.
+- **`ProductTour`** — step/spotlight walkthrough in a `Portal`: scrim, ringed spotlight
+  hole measured from the step's `target` selector (`getBoundingClientRect`, re-measured
+  on resize; absent target → centred card) and a `role="dialog"` card — "Step X of N",
+  Back/Next→Finish, Skip, clickable `ProgressDots`; controlled (`step`+`onStepChange`)
+  or internal; **Escape triggers `onSkip`** (never a silent close). `defaultIndex`.
+- **`ChecklistWidget`** — onboarding checklist card: "N of M done" + `Progress` bar +
+  per-item toggle buttons (`aria-pressed`, Check/Circle, line-through when done,
+  optional per-item link), `onToggle(id, done)` and `onDone` on completion of the last
+  item. Type is **`GuidanceChecklistItem`** — `ChecklistItem` was already taken by
+  batch 87's list barrel (ambiguous re-export, caught by typecheck).
+- **`TipsCarousel`** — one-tip card with polite live region, "Tip N of M", wrap-around
+  prev/next + `ProgressDots`; controlled or internal index; `GuidanceTip` type.
+- **`FeatureAnnouncement`** — "What's new" anchor with a NEW chip (or custom trigger)
+  opening a 80-wide card: NEW badge + title, description, `media` screenshot slot, CTA
+  (link or button) + "Got it" `onDismiss`; arrow on.
+- **`ChangelogPopup`** — "Changelog" anchor opening version entries (`v{version}` mono
+  chip, `Latest` chip, date, bullet items in a max-h scroll list) + "View all releases"
+  link. 
+- **`OnboardingModal`** — welcome `Modal`: brand slot, headline, description, feature
+  bullets (icon circle + title/description), footer Skip (`onClose`) / primary
+  `onStart`; Escape closes.
+
+**Hydration fix (user-reported, batch 97 component)** — `InfiniteScrollLoader`
+evaluated `typeof IntersectionObserver !== 'undefined'` **during render**: SSR HTML
+painted the button fallback while the client's first render painted the observer
+sentinel → hydration mismatch on `/design` (same class as the batch-11 `BusinessHours`
+fix; first paint must be deterministic). IO support is now detected in a **mount-only
+`useState`+`useEffect` swap** — server and first client render both show the button;
+capable clients upgrade to the sentinel after mount. Batch-97 tests unchanged (17/17).
+
+Test: `test/batch99-guidance.test.tsx` (12 cases: InlineHelp open/Escape + custom
+label, HelpPanel right-side modal/link/✕-close, ProductTour step flow incl. Finish +
+Back + Escape + dot jump + controlled-index lock + spotlight measurement (0-size box →
++8px padding) + closed null, Checklist progress/`aria-pressed`/onToggle+onDone, Tips
+wrap-around + dots + `onIndexChange`, FeatureAnnouncement trigger/NEW chip/content/
+CTA/dismiss, Changelog versions/latest/`viewAllHref`, Onboarding features/start/
+skip/Escape). Design page: "Guidance (batch 99)" (feedback tab, **directly after batch
+98 per the order convention**). Exports (feedback barrel): the eight components + prop
+types (`GuidanceChecklistItem`, `GuidanceTip`, `TourStep`, `ChangelogEntry`,
+`HelpPanelItem`, `OnboardingFeature`…).

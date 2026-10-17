@@ -1,5 +1,5 @@
 /** @jsxImportSource react */
-import type { ComponentPropsWithoutRef } from 'react';
+import { type ComponentPropsWithoutRef, useEffect, useState } from 'react';
 import { cn } from '../../lib/cn';
 
 export interface BusinessHoursProps extends ComponentPropsWithoutRef<'span'> {
@@ -119,9 +119,18 @@ export function businessStatus(
   return { open: false, next: `opens ${when} ${formatClock12(open)}` };
 }
 
+/** Deterministic first paint — matches the prerendered HTML so hydration is clean. */
+const CLOSED_STATUS: BusinessStatus = { open: false };
+
 /**
  * Open/closed business-hours status (todo/08 batch 11 completion).
  * Renders a status dot + `Open · closes 5:00 PM` style text.
+ *
+ * The live clock is read **after mount**, never during the server render: with
+ * no `now` the first paint is always the deterministic closed state (identical
+ * on server and client), and an effect swaps in the real status once we are
+ * safely on the client. Passing a frozen `now` (tests, stories) computes
+ * synchronously and skips the effect.
  */
 export function BusinessHours({
   open,
@@ -135,7 +144,20 @@ export function BusinessHours({
   className,
   ...props
 }: BusinessHoursProps) {
-  const status = businessStatus(now ?? new Date(), { open, close, days, timezone });
+  const frozen = now !== undefined;
+  const [live, setLive] = useState<BusinessStatus | null>(null);
+
+  // Mount-only on purpose: re-running on every render would loop (inline
+  // `days` arrays change identity every render and businessStatus returns a
+  // fresh object each call).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: compute the live status once on mount
+  useEffect(() => {
+    setLive(businessStatus(new Date(), { open, close, days, timezone }));
+  }, []);
+
+  const status: BusinessStatus = frozen
+    ? businessStatus(now, { open, close, days, timezone })
+    : (live ?? CLOSED_STATUS);
 
   return (
     <span

@@ -1,3 +1,4 @@
+/** @jsxImportSource react */
 import type { ComponentType, ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
