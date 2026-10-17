@@ -3,6 +3,7 @@
 **Tailwind CSS · Theme × Skin × Fidelity × Dimension · 320px → 3840px · Web, Android and iOS webviews**
 
 Version 3.0 — adds the **Skin Engine** (Part VII)
+Version 3.1 — adds the **Physics kernel** (Part VIII, §43–§51)
 Supersedes v2.0. Section numbers §1–§32 are unchanged so existing references still resolve; the skin engine lives in §33–§42 and amends the sections it touches.
 
 ---
@@ -54,6 +55,9 @@ Corrections to the first skin-engine draft, folded in here:
 
 **Part VII — Skin engine**
 33. [Four axes](#33-four-axes) · 34. [Materials](#34-materials-roles-and-slots) · 35. [Tailwind plugin](#35-tailwind-plugin-mat-utilities) · 36. [Skin definition format](#36-skin-definition-format) · 37. [Compiler and fallbacks](#37-compiler-and-guaranteed-fallbacks) · 38. [Loading, registry, runtime](#38-loading-registry-and-runtime) · 39. [Bundled skins](#39-bundled-skins) · 40. [3D](#40-3d-three-honest-tiers) · 41. [Validator and CI gates](#41-skin-validator-and-ci-gates) · 42. [Migrating to the skin engine](#42-migrating-to-the-skin-engine)
+
+**Part VIII — Physics kernel (2D game laws)**
+43. [Scope and determinism](#43-scope-and-determinism-contract) · 44. [Fixed-timestep clock](#44-the-fixed-timestep-clock) · 45. [Collision laws](#45-collision-laws) · 46. [Motion and lanes](#46-motion-and-lane-physics) · 47. [Distance and scoring](#47-distance-and-scoring) · 48. [Spawning](#48-spawning) · 49. [Game state machine](#49-game-state-machine) · 50. [Canvas and skin integration](#50-canvas-and-skin-integration) · 51. [Testing discipline](#51-testing-discipline)
 
 **Appendices**
 A. [Token export](#appendix-a--token-export-json) · B. [AI prompt block](#appendix-b--paste-ready-ai-prompt-block) · C. [Cheat sheet](#appendix-c--one-page-cheat-sheet) · D. [Glossary](#appendix-d--glossary) · E. [`packages/ui` reference](#appendix-e--packagesui-implementation-reference) · F. [Skin authoring checklist](#appendix-f--skin-authoring-checklist)
@@ -109,6 +113,8 @@ Signals 1–6 are expressed through the **skin**. Signal 7 and everything in Par
 | Decide a layout at a breakpoint | §18, §20 |
 | Build a component | §21 |
 | Add 3D | §40 |
+| Cache skins locally / manage installs | §38.5 |
+| Enforce a frame budget | §28.6 |
 | See what is shipped | Appendix E |
 | Add light mode to a dark build | §32 |
 | Move an existing build to skins | §42 |
@@ -161,6 +167,7 @@ v2.0 listed eleven non-negotiables. They mixed two different things: laws that p
 | I8 | **Both themes ship together** for every skin. | Schema check |
 | I9 | **Recompose, never scale** (Part IV) and **360/320 first.** | Visual regression |
 | I10 | **Status never by colour alone; real semantics; no hover-only function.** | Review |
+| I11 | **Component Registry Sync:** Whenever any new functionality or component is added or modified in the UI, `components.md` at root MUST be updated immediately with file path, exports, props, and overview. | Review / Catalog audit |
 
 ### 4.2 Skin-owned — defaults below describe the `system` skin
 
@@ -1562,6 +1569,24 @@ Virtualise above ~200 rows; keep row markup shallow (three elements deep).
 
 `content` globs must cover every file with class names; never build class names dynamically (`` `bg-${color}` ``). **Skin CSS is generated at build time and never depends on the scanner**, which is why skin variables are safe from purge — but component classes (`data-[open=true]:…`) still must be static strings. Production CSS: ~12–18 KB gzipped core + 2–4 KB per loaded skin.
 
+### 28.6 Frame budget is enforced, not documented
+
+"Best performance" is a runtime contract (`packages/ui/lib/perf/frameMonitor.ts`, todo/14). The engine feeds rAF deltas to a rolling monitor that escalates a level **high → medium → low** only after consecutive bad windows and recovers when comfortable:
+
+| Level | `maxParticles` | `shadowMapSize` | `pixelRatioCap` | `allowBlur` |
+|---|---|---|---|---|
+| high | 160 | 1024 | 1.5 | yes |
+| medium | 80 | 512 | 1.25 | yes |
+| low | 24 | 256 | 1 | no |
+
+`perfBudgetFor(level)` is the single table engine features read (slab engine shadows, game particles, canvas DPR) instead of hardcoding magic numbers; `prefersReducedMotion()` forces the low-motion form. Levels degrade under load (§38.4 `fidelity`) and stay deterministic.
+
+A **static guard** (`test/perf-budget.test.ts`) makes the rule enforceable in CI — it fails the gate on any component that:
+- binds a `scroll` listener without `{ passive: true }`;
+- calls `setInterval` without a paired `clearInterval` (leak);
+- calls `requestAnimationFrame` without `cancelAnimationFrame` (leak);
+- mints a WebGL context outside the two approved probe files (`skin/capabilities.ts`, `depth/blurGovernor.ts`).
+
 ---
 
 ## 29. Implementation guide
@@ -2217,6 +2242,25 @@ export function useSkin() {
 
 Skin switches are instant (no tween, §9.6) and **must not** remount the tree: they change attributes and one stylesheet.
 
+### 38.5 Local skin cache — repeat visits with no stylesheet request
+
+§38.2 fetches `/skins/<id>.css` on **every** load, even when the user never changes skin. The cache removes that request (`packages/ui/lib/skin/skinCache.ts`, todo/14):
+
+- **Key:** `skincache.v<SKIN_CACHE_VERSION>.<id>` (bump the version to invalidate every entry). Value: `JSON {css, ts}`.
+- **Read path (sync, no network):** the bootstrap looks up the active skin's entry **before** injecting anything. A hit writes `css` into `<style id="skin-css">` appended to `<head>` — present before first paint, zero requests.
+- **Miss path:** fall back to the `document.write` `<link>` (§38.2) so the first visit is still flash-free.
+- **Revalidate:** after `load`, `__skinCacheRevalidate__(id)` fetches the CSS once; if the text changed it replaces the entry (and hot-swaps the `<style>` when that skin is still active). `useSkin.setSkin` also warms the cache after a live swap.
+- **Bounds (LRU by `ts`):** `MAX_CACHE_ENTRIES = 8` and `MAX_CACHE_BYTES = 512 KiB`; a single entry over `MAX_ENTRY_BYTES = 128 KiB` is refused. `QuotaExceededError` triggers eviction-and-retry, never a throw.
+- **Corrupt / foreign entries** (bad JSON, wrong shape) are removed on read and treated as a miss.
+
+The design page surfaces the cache: an "Installed skins (local cache)" panel (`SkinManager`) lists every registry skin with its status (**Active** / **Cached** / **Remote**), byte size and a usage bar, plus **Install**, **Reinstall**, **Delete** and **Clear cache** actions.
+
+```ts
+const cache = browserSkinCache();          // null on the server / disabled storage
+cache?.put('glass', cssText, Date.now());  // LRU-capped
+await revalidateSkinCss('/skins/glass.css', 'glass');  // fetch + store (manager action)
+```
+
 ---
 
 ## 39. Bundled skins
@@ -2374,6 +2418,209 @@ No visual change until step 4.
 | `bg-surface-3` track (progress, slider) | `mat-well rounded-full` |
 | `transition-all duration-200 ease-spring` | `transition-all duration-skin ease-skin` |
 | `active:scale-[0.97]` | `active:scale-[var(--press-scale)]` |
+
+---
+
+# Part VIII — Physics kernel (2D game laws)
+
+`packages/ui/lib/physics/` — importable as **`@ecomerece/ui/physics`**. Pure
+TypeScript, zero dependencies, no DOM, no React, no `Math.random`, no
+`Date.now`. The engine already owned the *look* of a product (skins, tokens,
+materials, blur governance, WebGL slabs); Part VIII gives it the physical
+laws to run a **2D game** (arcade dodger, endless runner, shoot-'em-up)
+deterministically on top of a canvas. It is deliberately a *kernel*, not an
+engine: it never draws, never listens to input, never owns a loop — the game
+wires those around it, and every law is a pure function so the whole run
+replays tick-for-tick from a seed.
+
+## 43. Scope and determinism contract
+
+### 43.1 What the kernel is — and is not
+
+| The kernel provides | The kernel does NOT provide |
+|---|---|
+| Fixed-timestep clock with accumulator + spiral guard (§44) | A `requestAnimationFrame` loop (the game owns it, §50) |
+| AABB, circle and swept (CCD) hit detection (§45) | Rendering — canvas 2D, WebGL, or DOM, your choice (§50) |
+| Arcade lane motion + distance-based speed ramp (§46) | Input handling (keyboard/touch state is game-owned) |
+| Distance odometer = Σ v·dt → score / tiers / HUD (§47) | Audio, particles, camera shake |
+| Seeded timer spawner with lane avoidance (§48) | Entity storage beyond plain arrays (no ECS tax) |
+| Guarded game state machine `menu → playing → paused → gameover` (§49) | Physics *simulation* — no friction, mass, torque or joints |
+
+No collision *response* library, no rigid bodies: a retro dodger resolves a
+hit by ending the run, not by bouncing. That is the entire point — ~400 lines
+you can hold in your head, test exhaustively, and ship.
+
+### 43.2 The determinism contract (load-bearing)
+
+Every law is a **pure function of its inputs**. The two impure inputs a game
+normally sneaks in are banned:
+
+1. **No `Math.random`** — every random decision (spawn lanes, jitter, pickups)
+   draws from an injected `Rng` (a `() => number` in `[0, 1)`), seeded with
+   `mulberry32(seed)`. Same seed ⇒ identical run, on any engine/OS.
+2. **No `Date.now` / `performance.now` in the sim** — sim time only advances
+   through `accumulate(accumulator, frameDt)` (§44). Wall-clock enters the
+   system exactly once, as the `frameDt` argument of the render loop.
+
+This is the same discipline as the hydration fixes (§38.4, E.5.83): the first
+paint and the replay must be deterministic functions of their inputs. The
+practical payoff — a bug report of "it crashed at 812 m" becomes
+`runDodger(seed, ticks)` reproducing the exact run in CI.
+
+## 44. The fixed-timestep clock
+
+```ts
+import { accumulate, FIXED_DT, interpolationAlpha } from '@ecomerece/ui/physics';
+
+let acc = 0;
+function frame(frameDt: number) {
+  const { steps, accumulator } = accumulate(acc, frameDt);
+  acc = accumulator;
+  for (let i = 0; i < steps; i++) simulate(FIXED_DT); // 60 Hz sim steps
+  render(interpolationAlpha(acc));                    // smooth between steps
+}
+```
+
+| Constant | Value | Law |
+|---|---|---|
+| `FIXED_DT` | `1/60` | Simulation advances only in whole steps — `Σ v·dt` is identical on 30 Hz and 144 Hz displays |
+| `MAX_FRAME_DT` | `0.25` | A background tab's multi-second gap is **dropped**, never integrated (no fast-forward teleport) |
+| `MAX_STEPS_PER_FRAME` | `8` | Spiral-of-death guard: past this the backlog is discarded — a slow machine gets slow-motion, not a death spiral |
+
+The renderer interpolates between the previous and next sim state with
+`interpolationAlpha(acc)` so 60 Hz simulation stays smooth on any display.
+`accumulate` is **pure** — the caller owns the accumulator variable.
+
+## 45. Collision laws
+
+All shapes are `Aabb { x, y, w, h }` (min corner + size). At 10–20 entities
+the O(n²) pair scan (`findOverlaps`) beats any spatial index; do not optimise
+until a profile demands it (§28.5).
+
+| Law | Use | Note |
+|---|---|---|
+| `overlaps(a, b)` | Car vs car / traffic | **Edge-touching is not a collision** — grazing a lane line is legal |
+| `circleOverlaps(box, cx, cy, r)` | Pickups (coins, boosts) | Closest-point-on-box; the box never needs a circle variant |
+| `sweep(a, aVel, b, bVel, dt)` | High-speed CCD | Relative-motion slab test — a fast body **cannot tunnel** between two fixed steps; already-overlapping returns `t: 0` |
+| `expand(a, margin)` | Broad-phase padding | Cheap reject envelope |
+
+`SweepHit.t ∈ [0, 1]` is the fraction of the step at first contact; `nx/ny`
+is the unit impact axis, should a game want a bounce (it usually doesn't).
+Resolution policy is the game's: an arcade dodger ends the run on any hit.
+
+## 46. Motion and lane physics
+
+Euler integration only — `integrate(pos, vel, dt)` ⇒ `p' = p + v·dt`. Exact
+enough at a fixed timestep, trivially testable, no Verlet cleverness.
+
+**Lane physics (arcade contract).** Lateral control is *target + rate*, not
+friction: pick a lane, glide with `approach(current, target, LANE_SNAP_SPEED·dt)`,
+land exactly on the lane centre. No slip angles, no tyre model — it is a
+retro dodger, not a sim.
+
+**Difficulty is a function of distance**, never of wall-clock:
+
+```ts
+const speed = rampSpeed(odo.distance, START_SPEED, MAX_SPEED, RAMP_METRES);
+```
+
+`rampSpeed` climbs linearly across the first `RAMP_METRES` then holds. Pure ⇒
+same distance ⇒ same speed ⇒ the spawn schedule and score replay identically.
+
+## 47. Distance and scoring
+
+```ts
+const odo = createOdometer();
+odo.tick(speed, FIXED_DT); // distance += |speed| · dt
+```
+
+The odometer is **Σ v·dt over fixed steps** — the single source of truth for
+the score, the difficulty tier (`difficultyTier(distance)`), the "km driven"
+HUD stat and the speed-ramp input (§46). Nothing else in the kernel measures
+distance; nothing in the game should either.
+
+## 48. Spawning
+
+Timer-based traffic, seeded:
+
+```ts
+const spawner = createSpawner(3);            // 3 lanes
+const rng = mulberry32(seed);
+const lane = spawner.tick(FIXED_DT, odo.distance, rng); // number | null
+```
+
+| Rule | Implementation |
+|---|---|
+| Interval shrinks with distance | `spawnInterval = max(base − distance·shrink, min)` — difficulty ramps, but never becomes a solid wall |
+| Jitter | ±`policy.jitter` fraction drawn from the **injected** RNG |
+| Lane avoidance | `pickLane` never returns the previous lane (≥2 lanes) — no double-stack wall |
+| Determinism | Same seed + same distance trace ⇒ identical spawn log (asserted in tests) |
+
+## 49. Game state machine
+
+```ts
+const fsm = createGameFsm();       // starts at 'menu'
+fsm.send('START');                 // menu → playing
+fsm.send('PAUSE');                 // playing → paused
+fsm.send('RESUME');                // paused → playing
+fsm.send('CRASH');                 // playing → gameover
+fsm.send('RETRY');                 // gameover → playing
+```
+
+Illegal events are **no-ops** (`send` returns `false`, no listener fires) — a
+stray keypress in `menu` cannot corrupt the run. `onChange` returns an
+unsubscribe. Other games use `createFsm(initial, table)` with their own
+transition map; the contract (guarded, observable, no-op on illegal) is the
+same.
+
+## 50. Canvas and skin integration
+
+The kernel draws nothing. The game owns a `<canvas>`, a `requestAnimationFrame`
+loop and the input listeners — exactly the pattern `slabEngine.ts` uses for
+its own rAF loop (§40), minus WebGL. The shipped reference consumer is
+**Lane Runner** (`apps/web/app/game`, todo/13): canvas loop over
+`accumulate`/`FIXED_DT`, kit chrome, and a palette that re-reads the tokens on
+skin/theme change.
+
+```ts
+const ctx = canvas.getContext('2d')!;
+// per frame: accumulate → simulate FIXED_DT steps → draw interpolated state
+```
+
+**Skins reskin the game for free — with one seam.** DOM chrome (HUD, pause
+modal, game-over card) reads tokens via `mat-*` / `--*` like every other
+component, so switching a skin restyles it with zero game code. A canvas
+does **not** participate in the cascade: read the active skin's palette hexes
+from the `Skin` object (`palette.light/dark`, §36) or via
+`getComputedStyle(document.documentElement)` for the compiled `--*` vars, and
+feed them to the renderer. Re-read on `data-skin` change (`useSkin().onChange`
+pattern, §38.4) and the whole game follows the skin.
+
+Perf/motion rules that carry over to the game layer (§28, §38.4):
+
+- DPR cap 1.5 on small devices (`slabPixelRatio`, §40 / todo/11) — same cap
+  for a game canvas; full-screen DPR-3 is the fastest way to cook a phone.
+- Respect `prefers-reduced-motion` and skin `motion.dur` for DOM chrome;
+  in-canvas motion is game content and stays, but offer a pause.
+- The sim never allocates per tick in the hot path — plain arrays, reused
+  objects; the blur governor's lesson (§28) applies doubly at 60 Hz.
+
+## 51. Testing discipline
+
+The kernel ships with its contract as executable tests
+(`packages/ui/test/physics.test.ts`, 30 cases): every law tick-by-tick, plus
+a seeded full-run replay — two runs of the same seed must produce identical
+spawn logs, distance and crash state, and different seeds must diverge.
+
+Rules for anything added to `lib/physics`:
+
+1. Pure — inject the `Rng` and the dt; never read wall-clock or `Math.random`.
+2. No DOM/React imports (keeps it testable under plain `bun test`).
+3. Every law gets a tick-level test; every policy floor/ceiling gets a
+   boundary case (the `devicePolicy.ts` precedent, todo/11).
+4. The public surface stays on the `@ecomerece/ui/physics` subpath — it is
+   deliberately NOT in the `'use client'` barrel: server-side tools (seed
+   scans, replay analyzers) import it freely.
 
 ---
 
@@ -2625,11 +2872,13 @@ This appendix documents the **as-built** `@ecomerece/ui` and the **skin-engine d
 ```
 packages/ui/
   index.ts                     barrel
-  package.json                 exports ".", "./tokens.css", "./skin", "./skins/*"
+  package.json                 exports ".", "./tokens.css", "./skin", "./physics", "./skins/*"
   tsconfig.json                react-jsx, noEmit — typed, never compiled
   lib/
     cn.ts  focus.ts  useOverlay.ts  Portal.tsx
-    skin/                      NEW  types.ts · compile.ts · validate.ts · useSkin.ts · bootstrap.ts
+    skin/                      NEW  types.ts · compile.ts · validate.ts · useSkin.ts · bootstrap.ts · skinCache.ts (§38.5)
+    physics/                   NEW  (§43–§51) types · rng · timestep · aabb · motion · distance · spawn · stateMachine
+    perf/                      NEW  (§28.6) frameMonitor.ts · index.ts
   skins/                       NEW  system.ts soft.ts minimal.ts glass.ts clay.ts neumorph.ts depth.ts index.ts
   styles/tokens.css            theme layer (§8) — hand-written
   scripts/build-skins.ts       NEW  → public/skins/*.css
@@ -2644,6 +2893,7 @@ packages/ui/
     feedback/   ToastProvider + useToast, Banner, EmptyState, ErrorState, ConfirmDialog
     form/       Field, Input, Textarea, Select, SearchField, Combobox, DatePicker, TimePicker, OTP, FileUpload
     overlay/    Modal, BottomSheet, ActionSheet, SidePanel, Popover, Dropdown, Tooltip
+    modules/    DataGrid, SkinManager (§38.5 — installed-skins cache manager)
     depth/      Stage3D + slabEngine (lazy), SceneBackdrop, blurGovernor
 ```
 

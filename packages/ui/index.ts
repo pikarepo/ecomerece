@@ -23,10 +23,33 @@ export { Stage3D } from './lib/depth/Stage3D';
 export { focusRing } from './lib/focus';
 export { useClickAway, useInterval, usePrevious, useTimeout, useToggle } from './lib/hooks';
 export { Portal } from './lib/Portal';
+export type {
+  FrameMonitor,
+  FrameMonitorOptions,
+  PerfBudget,
+  PerfLevel,
+} from './lib/perf/frameMonitor';
+// Performance engine (DESIGN.md §39)
+export {
+  createFrameMonitor,
+  PERF_BUDGETS,
+  perfBudgetFor,
+  prefersReducedMotion,
+} from './lib/perf/frameMonitor';
 // Skin engine (DESIGN.md Part VII)
 export { bootstrapScript, bootstrapScriptTag, SKIN_ID_PATTERN } from './lib/skin/bootstrap';
 export { supportsBackdropFilter, supportsWebgl2 } from './lib/skin/capabilities';
 export { validateSkin } from './lib/skin/compile';
+export type { CacheEntry, CacheMeta, CacheStorage, SkinCache } from './lib/skin/skinCache';
+export {
+  browserSkinCache,
+  createSkinCache,
+  MAX_CACHE_BYTES,
+  MAX_CACHE_ENTRIES,
+  revalidateSkinCss,
+  SKIN_CACHE_PREFIX,
+  SKIN_CACHE_VERSION,
+} from './lib/skin/skinCache';
 export type { Material, Materials, Role, Skin } from './lib/skin/types';
 export { ROLES } from './lib/skin/types';
 export type { RegistryEntry, UseSkinResult } from './lib/skin/useSkin';

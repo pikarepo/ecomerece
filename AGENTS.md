@@ -67,6 +67,7 @@ bun test --watch            # watch mode
 - `noExplicitAny` is OFF (allows `any`)
 - Aggregates: private state, public command methods, `this.raise()` for events, `this.getEvents()` / `this.clearEvents()` in app service after save
 - **ID generation rule:** NEVER accept an ID from the API client when creating any document/aggregate. Always generate it server-side with `Id.create()` (random UUID v7). Client-supplied IDs are only allowed when addressing an existing resource (update/delete/remove/lookup) — never on `create*`/`add*` paths.
+- **Component Documentation rule:** Whenever any new UI component, control, pattern, or module is created, modified, or extended in `packages/ui` (or frontend workspaces), you MUST update `components.md` at the repo root immediately with its file path, exported components/types, and description. Keep `components.md` strictly synchronized as the source of truth for all built UI elements.
 
 ## Gotchas
 

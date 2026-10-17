@@ -16,5 +16,21 @@ export interface RegistryEntry {
 }
 
 export { startBlurGovernor } from '../depth/blurGovernor';
+export type { CacheEntry, CacheMeta, CacheStorage, SkinCache } from './skinCache';
+export {
+  browserSkinCache,
+  cacheKey,
+  createSkinCache,
+  evictionsFor,
+  isValidSkinId,
+  MAX_CACHE_BYTES,
+  MAX_CACHE_ENTRIES,
+  MAX_ENTRY_BYTES,
+  revalidateSkinCss,
+  SKIN_CACHE_PREFIX,
+  SKIN_CACHE_RUNTIME_MARKERS,
+  SKIN_CACHE_VERSION,
+  skinCacheRuntimeScript,
+} from './skinCache';
 export type { UseSkinResult } from './useSkin';
 export { useSkin } from './useSkin';

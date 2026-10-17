@@ -21,6 +21,8 @@
             "mode": "auto"
         }
     ],
+    "enableTerminalSandbox": true,
+    "toolPermission": "proceed-in-sandbox",
     "editor.minimap.enabled": false,
     "editor.smoothScrolling": false,
     "editor.cursorBlinking": "solid",

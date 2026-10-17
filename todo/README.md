@@ -39,6 +39,9 @@ One file per task. `progress.md` (repo root) is the live tracker: `in_progress` 
 | `09-components-master-backlog.md` | **FULL** component wishlist (categories A–L) as batches 19–136, incl. ✅ rows for kit items already shipped and traced ⛔ deferrals |
 | `10-themes-skins-master-backlog.md` | **FULL** themes/skins wishlist as batches 137–192: skin candidates (fast-path, one per session), token/axis features, traced deferrals |
 | `11-mobile-small-device-optimization.md` | **Small-device (phone) engine/UI crash + perf optimization** (slab-engine mobile crash, 2D fail-safe, small-viewport audit, system perf). **DONE** (gate green, 2026-10-14) |
+| `12-physical-engine.md` | **Physics kernel** for 2D games (DESIGN.md Part VIII §43–§51): rng, fixed timestep, AABB/CCD, motion, distance, spawn, state machine. **DONE** (gate green, 2026-10-17) |
+| `13-lane-runner-2d-game.md` | **Lane Runner** — reference 2D car game on the kernel (`/game`, static). **DONE** (gate green, 2026-10-17) |
+| `14-perf-and-skin-cache.md` | **Perf enforcement (§28.6) + local skin cache (§38.5) + skin manager UI**. **DONE** (gate green, 2026-10-17) |
 
 ## Test stack (packages/ui/test/)
 
@@ -50,6 +53,10 @@ One file per task. `progress.md` (repo root) is the live tracker: `in_progress` 
 - `useSkin.test.tsx` / `blurGovernor.test.ts` — happy-dom hook behavior (see `test/_dom.ts`)
 - `slider.test.tsx` — component DOM behavior (uses `render()` / `fire()` from `_dom.ts`)
 - `fast-path.test.ts` — `mat-*` / `--m-*` contract + design-picker completeness (02-E)
+- `physics.test.ts` — kernel laws: rng, timestep, AABB/CCD, motion, distance, spawn, FSM (12)
+- `skinCache.test.ts` — local skin cache: LRU caps, quota/corrupt tolerance (14)
+- `perf-frameMonitor.test.ts` — frame-budget monitor + budget table (14)
+- `perf-budget.test.ts` — static anti-pattern guard (non-passive scroll, timer/rAF leaks, stray `getContext`) (14)
 
 Run from repo root: `bun test` (runs every workspace). Single file:
 `bun test packages/ui/test/skin.test.ts`.

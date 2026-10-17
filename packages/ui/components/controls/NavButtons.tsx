@@ -44,6 +44,10 @@ export interface ArrowButtonProps extends ButtonHTMLAttributes<HTMLButtonElement
   label?: string;
   variant?: Variant;
   size?: Size;
+  /** Optional custom width (e.g., "2rem" or 32). */
+  width?: string | number;
+  /** Optional custom height (e.g., "2rem" or 32). */
+  height?: string | number;
 }
 
 export function ArrowButton({
@@ -51,6 +55,8 @@ export function ArrowButton({
   label,
   variant = 'secondary',
   size = 'md',
+  width,
+  height,
   className,
   ...rest
 }: ArrowButtonProps) {
@@ -60,6 +66,7 @@ export function ArrowButton({
       type="button"
       aria-label={label ?? `Scroll ${direction}`}
       className={cn(BASE, VARIANT[variant], SIZE[size], focusRing(), className)}
+      style={(width !== undefined || height !== undefined) ? { width, height } : undefined}
       {...rest}
     >
       <Icon className="size-4" aria-hidden />

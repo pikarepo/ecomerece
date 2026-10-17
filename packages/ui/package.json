@@ -11,7 +11,8 @@
     },
     "./tokens.css": "./styles/tokens.css",
     "./engine.css": "./styles/engine.css",
-    "./skin": "./lib/skin/index.ts"
+    "./skin": "./lib/skin/index.ts",
+    "./physics": "./lib/physics/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

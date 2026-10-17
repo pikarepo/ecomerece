@@ -136,6 +136,13 @@ export function useSkin(
         try {
           localStorage.setItem('skin', next);
         } catch {}
+        // §38.5 — warm the local cache so the next visit paints with no request.
+        // The runtime is installed by the head bootstrap; absent in tests/SSR.
+        try {
+          (
+            window as unknown as { __skinCacheRevalidate__?: (id: string) => void }
+          ).__skinCacheRevalidate__?.(next);
+        } catch {}
         setSkinState(next);
       };
       // A 404/network failure must not leave the UI in a half-applied state:

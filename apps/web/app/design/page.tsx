@@ -234,6 +234,11 @@ import {
   SyncStatus,
   TabChip,
   skinRegistry,
+  SkinManager,
+  type SkinManagerItem,
+  browserSkinCache,
+  revalidateSkinCss,
+  MAX_CACHE_BYTES,
   supportsBackdropFilter,
   supportsWebgl2,
   Table,
@@ -460,7 +465,7 @@ import {
   User,
   Youtube,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -654,13 +659,20 @@ const DEMO_SYNCED_AT = '2026-10-14T09:41:07.000Z';
 
 /* ─────────────────────────── grid demo data ─────────────────────────── */
 
+/* Deterministic prices (no Math.random in render/module scope — AGENTS.md):
+   a stable LCG seeded by row index keeps SSR and client hydration identical. */
+function seededPrice(i: number): number {
+  const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+  return Math.round((x - Math.floor(x)) * 120 + 4) * 100 / 100;
+}
+
 const gridRows = Array.from({ length: 6000 }, (_, i) => {
   const status = (['active', 'pending', 'archived'] as const)[i % 3];
   return {
     id: `row-${i}`,
     name: `Item ${i + 1}`,
-    sku: `SKU-${String(i + 1).padStart(5, '0')}`,
-    price: Math.round((Math.random() * 120 + 4) * 100) / 100,
+    sku: `SKU-${String(i + 1).padStart(4, '0')}`,
+    price: seededPrice(i),
     status,
     created: new Date(2024, 0, 1 + (i % 365)).toISOString().slice(0, 10),
   };
@@ -796,6 +808,24 @@ function LineChart({ series, labels }: { series: LineDatum['values'][]; labels: 
   );
 }
 
+/* Ticker demo (batch 16) — owns its own state so a 1 Hz interval re-renders
+   ONLY this card, never the whole 7k-line page (todo/14 perf audit). */
+function HookTicker() {
+  const [hookOn, toggleHookOn] = useToggle(false);
+  const [hookTicks, setHookTicks] = useState(0);
+  const prevHookOn = usePrevious(hookOn);
+  useInterval(() => setHookTicks((t) => t + 1), hookOn ? 1000 : null);
+  return (
+    <HStack gap={4} className="items-center">
+      <Button variant={hookOn ? 'primary' : 'secondary'} onClick={toggleHookOn}>
+        {hookOn ? 'Stop ticker' : 'Start ticker'}
+      </Button>
+      <span className="font-mono text-sm tabular-nums">ticks: {hookTicks}</span>
+      <span className="text-sm text-ink-3">previous toggle state: {String(prevHookOn)}</span>
+    </HStack>
+  );
+}
+
 /* ─────────────────────────── page ─────────────────────────── */
 
 export default function DesignQaPage() {
@@ -810,11 +840,6 @@ export default function DesignQaPage() {
 
   const [page2, setPage2] = useState(5);
   const [pageSize2, setPageSize2] = useState(25);
-
-  const [hookOn, toggleHookOn] = useToggle(false);
-  const [hookTicks, setHookTicks] = useState(0);
-  const prevHookOn = usePrevious(hookOn);
-  useInterval(() => setHookTicks((t) => t + 1), hookOn ? 1000 : null);
 
   const [tableSel, setTableSel] = useState<Array<string | number>>([]);
   const [tableSort, setTableSort] = useState<{ key: string; direction: 'asc' | 'desc' }>({
@@ -887,6 +912,59 @@ export default function DesignQaPage() {
 
   const { push } = useToast();
 
+  // ── local skin cache (§38.5) ────────────────────────────────────────────
+  const [cacheList, setCacheList] = useState<Array<{ id: string; bytes: number }>>([]);
+  const [busySkin, setBusySkin] = useState<string | null>(null);
+  const refreshCacheList = useCallback(() => {
+    const cache = browserSkinCache();
+    setCacheList(cache ? cache.list().map((e) => ({ id: e.id, bytes: e.bytes })) : []);
+  }, []);
+  useEffect(() => {
+    refreshCacheList();
+  }, [refreshCacheList]);
+
+  const installSkin = useCallback(
+    async (id: string) => {
+      setBusySkin(id);
+      const ok = await revalidateSkinCss(`${SKIN_PICKER_BASE}${id}.css`, id);
+      setBusySkin(null);
+      refreshCacheList();
+      if (!ok) push({ message: `Could not cache ${id} — is the server running?`, tone: 'danger' });
+    },
+    [push, refreshCacheList],
+  );
+
+  const removeSkin = useCallback(
+    (id: string) => {
+      browserSkinCache()?.remove(id);
+      refreshCacheList();
+    },
+    [refreshCacheList],
+  );
+
+  const clearSkins = useCallback(() => {
+    browserSkinCache()?.clear();
+    refreshCacheList();
+  }, [refreshCacheList]);
+
+  const managerItems: SkinManagerItem[] = useMemo(() => {
+    const bytesById = new Map(cacheList.map((c) => [c.id, c.bytes]));
+    return skinEntries.map((e) => ({
+      id: e.id,
+      label: e.label,
+      swatch: e.swatch,
+      dimension: e.dimension === '3d' ? ('3d' as const) : ('2d' as const),
+      cost: e.cost,
+      status:
+        e.id === skin
+          ? ('active' as const)
+          : bytesById.has(e.id)
+            ? ('cached' as const)
+            : ('remote' as const),
+      bytes: bytesById.get(e.id),
+    }));
+  }, [cacheList, skin]);
+
   const activeFormatLabel =
     [toolbar1.bold && 'Bold', toolbar1.italic && 'Italic', toolbar1.underline && 'Underline']
       .filter(Boolean)
@@ -951,7 +1029,7 @@ export default function DesignQaPage() {
         {/* ═══════════════ AXES ═══════════════ */}
         <Card
           title="Axes — Skin × Theme × Fidelity"
-          description="Markup never knows which combination is active"
+          description="Markup never knows which combination is active. Installed skins are cached locally (§38.5) so repeat visits paint without a stylesheet request."
           className="mt-6"
         >
           <div className="flex flex-col gap-5">
@@ -1036,6 +1114,19 @@ export default function DesignQaPage() {
                 />
               </div>
             </div>
+
+            <Separator />
+
+            <SkinManager
+              items={managerItems}
+              totalBytes={cacheList.reduce((sum, c) => sum + c.bytes, 0)}
+              maxBytes={MAX_CACHE_BYTES}
+              busyId={busySkin}
+              onInstall={installSkin}
+              onRefresh={installSkin}
+              onRemove={removeSkin}
+              onClearAll={clearSkins}
+            />
           </div>
         </Card>
 
@@ -2198,15 +2289,7 @@ export default function DesignQaPage() {
             subtitle="useToggle · usePrevious · useInterval · useTimeout · useClickAway"
           >
             <Card>
-              <HStack gap={4} className="items-center">
-                <Button variant={hookOn ? 'primary' : 'secondary'} onClick={toggleHookOn}>
-                  {hookOn ? 'Stop ticker' : 'Start ticker'}
-                </Button>
-                <span className="font-mono text-sm tabular-nums">ticks: {hookTicks}</span>
-                <span className="text-sm text-ink-3">
-                  previous toggle state: {String(prevHookOn)}
-                </span>
-              </HStack>
+              <HookTicker />
             </Card>
           </Section>
         )}
