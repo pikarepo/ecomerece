@@ -28,6 +28,7 @@ if(t==='dark'||t==='light')d.setAttribute('data-theme',t);
     if(css){
       var st=document.createElement('style');
       st.id='skin-css';
+      st.setAttribute('data-skin-sheet','');
       st.textContent=css;
       document.head.appendChild(st);
       // Touch cache to keep this entry recently used (LRU).
@@ -37,6 +38,7 @@ if(t==='dark'||t==='light')d.setAttribute('data-theme',t);
       sk.rel='stylesheet';
       sk.href=window.__SKIN_BASE__+s+'.css';
       sk.id='skin-css';
+      sk.setAttribute('data-skin-sheet','');
       document.write(sk.outerHTML);
     }
   }

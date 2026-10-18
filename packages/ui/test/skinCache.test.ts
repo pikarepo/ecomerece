@@ -7,6 +7,7 @@ import {
   evictionsFor,
   MAX_CACHE_BYTES,
   MAX_CACHE_ENTRIES,
+  revalidateSkinCss,
   SKIN_CACHE_PREFIX,
   SKIN_CACHE_VERSION,
 } from '../lib/skin/skinCache';
@@ -38,6 +39,31 @@ class FakeStorage implements CacheStorage {
 }
 
 describe('skinCache', () => {
+  test('revalidateSkinCss refuses invalid ids — no /skins/undefined.css', async () => {
+    const calls: string[] = [];
+    const original = globalThis.fetch;
+    globalThis.fetch = ((input: RequestInfo | URL) => {
+      calls.push(String(input));
+      return Promise.resolve({
+        ok: true,
+        text: () => Promise.resolve('.x{}'),
+      }) as Promise<Response>;
+    }) as typeof fetch;
+    const cache = createSkinCache(new FakeStorage());
+
+    try {
+      expect(await revalidateSkinCss('/skins/undefined.css', undefined as never, cache)).toBe(
+        false,
+      );
+      expect(await revalidateSkinCss('/skins/undefined.css', '', cache)).toBe(false);
+      expect(await revalidateSkinCss('/skins/x/../.css', '../', cache)).toBe(false);
+      expect(calls).toEqual([]);
+      expect(cache.list()).toEqual([]);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
   test('cacheKey uses version prefix', () => {
     expect(cacheKey('clay')).toBe(`${SKIN_CACHE_PREFIX}clay`);
     expect(SKIN_CACHE_PREFIX).toBe(`skincache.v${SKIN_CACHE_VERSION}.`);

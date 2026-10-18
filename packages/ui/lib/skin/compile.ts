@@ -39,6 +39,36 @@ export const contrast = (aHex: string, bHex: string): number => {
   return (hi + 0.05) / (lo + 0.05);
 };
 
+const SINGLE_HEX = /^#[0-9a-fA-F]{6}$/;
+const VAR_FILL = /^rgb\(\s*var\(--([a-z0-9-]+)\)\s*(?:\/\s*([.\d]+))?\s*\)$/;
+
+/**
+ * Resolve a single-colour token to a `#rrggbb` hex — the same maths the
+ * validator and the picker swatch derivation share, so nothing hand-mirrors
+ * the theme table. Accepts a bare hex or `rgb(var(--x))` / `rgb(var(--k-x) / .4)`
+ * (alpha blended over the mode's canvas, i.e. over the page base the fill sits
+ * on). Returns `null` for anything that is not a plain colour (gradients,
+ * var-chains, layered composites) — callers must treat that as "unverifiable".
+ */
+export function resolveHex(
+  value: string | undefined,
+  palette: Record<string, string> = {},
+  mode: 'light' | 'dark' = 'light',
+): string | null {
+  if (!value) return null;
+  if (SINGLE_HEX.test(value)) return value.toLowerCase();
+  const m = value.match(VAR_FILL);
+  if (!m) return null;
+  // Palette names are emitted as `--k-<key>`; theme tokens keep their name.
+  const name = m[1].replace(/^k-/, '');
+  const table = THEME[mode] as Readonly<Record<string, string>>;
+  const hex = table[name] ?? palette[name];
+  if (!hex || !SINGLE_HEX.test(hex)) return null;
+  if (m[2] === undefined) return hex.toLowerCase();
+  const alpha = Number(m[2]);
+  return blendOver(hex.toLowerCase(), alpha, THEME[mode].canvas);
+}
+
 /** Parse 'rgb(var(--x) / .5)' style references against a palette — approximated
  *  by blending a hex channel at that alpha over a worst-case backdrop. */
 function blendOver(hex: string, alpha: number, backdropHex: string): string {
@@ -82,9 +112,12 @@ function hexChannels(hex: string): string {
   return `${(n >> 16) & 255} ${(n >> 8) & 255} ${n & 255}`;
 }
 
-/* ────────────────────────── theme constants (§3.1) ───────────────────── */
-
-const THEME = {
+/* ────────────────────────── theme constants (§3.1) ─────────────────────
+ *
+ * Exported (`#rrggbb`) so the picker's swatch derivation (`skins/swatch.ts`)
+ * resolves inherited theme tokens without re-declaring this table.
+ */
+export const THEME = {
   light: {
     canvas: '#F1F5F9',
     'surface-1': '#F8FAFC',

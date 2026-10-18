@@ -30,6 +30,34 @@ const nextConfig: NextConfig = {
       destination: `${apiBase}/:path*`,
     },
   ],
+  // Caching (perf audit): `/skins/*.css` was served with no Cache-Control, so
+  // the render-blocking active-skin stylesheet revalidated on every visit
+  // (worst on phones). Skin filenames are stable across builds, so the first
+  // paint may reuse bytes briefly — BUT the window is kept SHORT and the
+  // runtime revalidates with `cache: 'no-cache'` on every load, so a newly
+  // deployed skin replaces the old one on the next visit instead of sticking
+  // around for a day (the old SWR=86400 did exactly that).
+  headers: async () => [
+    {
+      source: '/skins/:path*',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=300, stale-while-revalidate=3600',
+        },
+      ],
+    },
+    {
+      // Static public assets (svgs, favicons, fonts) are content-stable.
+      source: '/:file((?:[^/]+)\\.(?:png|jpg|jpeg|gif|webp|avif|svg|ico|woff2|woff|ttf|otf))',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=86400, stale-while-revalidate=604800',
+        },
+      ],
+    },
+  ],
 };
 
 export default nextConfig;

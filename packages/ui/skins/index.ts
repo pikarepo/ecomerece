@@ -17,6 +17,7 @@ import { neumorph } from './neumorph';
 import { retro } from './retro';
 import { skeuo } from './skeuo';
 import { soft } from './soft';
+import { swatchFor } from './swatch';
 import { system } from './system';
 import { y2k } from './y2k';
 
@@ -44,40 +45,36 @@ export interface SkinEntry {
   note?: string;
 }
 
-export const registry = {
+const core = {
   // Everyday
-  system: { skin: system, swatch: ['#F8FAFC', '#2563EB'], group: 'everyday' as const },
-  soft: { skin: soft, swatch: ['#F8FAFC', '#2563EB'], group: 'everyday' as const },
-  minimal: { skin: minimal, swatch: ['#F8F9FB', '#0B0D12'], group: 'everyday' as const },
-  flat: { skin: flat, swatch: ['#EAF7F4', '#0E7C6B'], group: 'everyday' as const },
+  system: { skin: system, group: 'everyday' as const },
+  soft: { skin: soft, group: 'everyday' as const },
+  minimal: { skin: minimal, group: 'everyday' as const },
+  flat: { skin: flat, group: 'everyday' as const },
   material: {
     skin: material,
-    swatch: ['#F8FAFC', '#2563EB'],
     group: 'everyday' as const,
     note: 'Best for dense views and tables',
   },
-  editorial: { skin: editorial, swatch: ['#FBF8F1', '#0B0D12'], group: 'everyday' as const },
+  editorial: { skin: editorial, group: 'everyday' as const },
 
   // Expressive
   maximal: {
     skin: maximal,
-    swatch: ['#FFF4F9', '#D6217F'],
     group: 'expressive' as const,
     note: 'Avoid dense tables',
   },
-  'neo-brutal': { skin: neoBrutal, swatch: ['#FFF3B8', '#0B0D12'], group: 'expressive' as const },
-  brutal: { skin: brutal, swatch: ['#FFFFFF', '#0B0D12'], group: 'expressive' as const },
-  retro: { skin: retro, swatch: ['#FFF6E5', '#C2410C'], group: 'expressive' as const },
+  'neo-brutal': { skin: neoBrutal, group: 'expressive' as const },
+  brutal: { skin: brutal, group: 'expressive' as const },
+  retro: { skin: retro, group: 'expressive' as const },
   y2k: {
     skin: y2k,
-    swatch: ['#EAF6FF', '#D6217F'],
     group: 'expressive' as const,
     note: 'Blur + glow — avoid dense tables',
   },
-  bento: { skin: bento, swatch: ['#F3F6FF', '#FFF4EC'], group: 'expressive' as const },
+  bento: { skin: bento, group: 'expressive' as const },
   blue: {
     skin: blue,
-    swatch: ['#F0F7FD', '#00A0E9'],
     group: 'expressive' as const,
     note: 'Bright & playful — pill controls, yellow/red accents',
   },
@@ -85,27 +82,23 @@ export const registry = {
   // Dimensional
   glass: {
     skin: glass,
-    swatch: ['#BFD6FF', '#FFFFFF'],
     group: 'dimensional' as const,
     note: 'Needs backdrop-filter — avoid dense tables',
   },
-  clay: { skin: clay, swatch: ['#F1F2F5', '#E1E3E9'], group: 'dimensional' as const },
+  clay: { skin: clay, group: 'dimensional' as const },
   neumorph: {
     skin: neumorph,
-    swatch: ['#E9EAEE', '#D2D4DB'],
     group: 'dimensional' as const,
     note: 'Soft emboss — lower contrast',
   },
-  skeuo: { skin: skeuo, swatch: ['#F4F5F7', '#9AA0AA'], group: 'dimensional' as const },
+  skeuo: { skin: skeuo, group: 'dimensional' as const },
   cyber: {
     skin: cyber,
-    swatch: ['#070B14', '#22E5FF'],
     group: 'dimensional' as const,
     note: 'Best in dark; dense-table caution',
   },
   depth: {
     skin: depth,
-    swatch: ['#F8FAFC', '#2563EB'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — slab engine',
   },
@@ -121,7 +114,6 @@ export const registry = {
         raised: { thickness: 16, bevel: 5, clearcoat: 0.5, roughness: 0.35 },
       },
     }),
-    swatch: ['#F4F5F7', '#9AA0AA'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — glossy slabs',
   },
@@ -136,7 +128,6 @@ export const registry = {
         primary: { thickness: 8, bevel: 0, roughness: 0.95 },
       },
     }),
-    swatch: ['#FFF3B8', '#0B0D12'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — hard-edge slabs',
   },
@@ -159,7 +150,6 @@ export const registry = {
         control: { front: 'k-tint-b', thickness: 8, bevel: 2, metalness: 0.2, roughness: 0.35 },
       },
     }),
-    swatch: ['#070B14', '#22E5FF'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — 3D hologram stack, dark-first',
   },
@@ -171,7 +161,6 @@ export const registry = {
         raised: { thickness: 12, bevel: 3, clearcoat: 0.3, roughness: 0.5 },
       },
     }),
-    swatch: ['#F3F6FF', '#FFF4EC'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — bento tiles',
   },
@@ -188,7 +177,6 @@ export const registry = {
         primary: { thickness: 8, bevel: 4, roughness: 0.95 },
       },
     }),
-    swatch: ['#F1F2F5', '#E1E3E9'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — puffy clay slabs',
   },
@@ -203,7 +191,6 @@ export const registry = {
         primary: { thickness: 8, bevel: 2, clearcoat: 1, roughness: 0.2 },
       },
     }),
-    swatch: ['#EAF6FF', '#D6217F'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — floating gloss panes',
   },
@@ -222,7 +209,6 @@ export const registry = {
         primary: { front: 'accent', side: 'accent', thickness: 8, bevel: 2, roughness: 0.3 },
       },
     }),
-    swatch: ['#BFD6FF', '#FFFFFF'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — acrylic slabs',
   },
@@ -234,16 +220,33 @@ export const registry = {
         raised: { thickness: 14, bevel: 5, roughness: 0.5 },
       },
     }),
-    swatch: ['#FFF4F9', '#D6217F'],
     group: 'dimensional' as const,
     note: 'Requires WebGL — layered collage',
   },
-} satisfies Record<string, SkinEntry>;
+} satisfies Record<string, Omit<SkinEntry, 'swatch'>>;
 
-export type SkinId = keyof typeof registry;
+export type SkinId = keyof typeof core;
+
+const coreSkins: Skin[] = Object.values(core).map((e) => e.skin);
+const coreLookup = (id: string): Skin | undefined => coreSkins.find((s) => s.id === id);
+
+/**
+ * Picker chips are DERIVED from each skin's own resolved tokens (task 16) —
+ * `skins/swatch.ts` documents the BASE/MARK rules. Hand-written pairs drifted
+ * and several were unreadable (bento 1.00:1, clay 1.15:1, neumorph 1.23:1,
+ * glass 1.47:1, skeuo 2.41:1, blue 2.70:1 — all below the 3:1 a two-tone chip
+ * needs, plus four skins sharing one identical pair).
+ */
+type DerivedSwatch = { swatch: [string, string] };
+export const registry = Object.fromEntries(
+  Object.entries(core).map(([id, entry]) => [
+    id,
+    { ...entry, swatch: swatchFor(entry.skin, coreLookup) } satisfies SkinEntry & DerivedSwatch,
+  ]),
+) as { [K in keyof typeof core]: (typeof core)[K] & DerivedSwatch };
 
 /** Compile-time full list; the compiler iterates this. */
-export const bundledSkins: Skin[] = Object.values(registry).map((e) => e.skin);
+export const bundledSkins: Skin[] = coreSkins;
 
 export {
   bento,

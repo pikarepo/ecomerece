@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supportsBackdropFilter, supportsWebgl2 } from './capabilities';
+import { cacheKey } from './skinCache';
 import type { Capability, Dimension } from './types';
 
 export interface RegistryEntry {
@@ -57,6 +58,39 @@ function documentFidelity(fallback: 'auto' | 'high' | 'low'): 'auto' | 'high' | 
 }
 
 /**
+ * Remove EVERY active skin sheet (both `#skin-css` and the `data-skin-sheet`
+ * marker the bootstrap/install paths add). Id-based `getElementById` only drops
+ * the FIRST node when a duplicate id ever exists — which is exactly how an old
+ * skin can survive a switch to a new one.
+ */
+function clearActiveSkinSheets(): void {
+  if (typeof document === 'undefined') return;
+  for (const node of document.querySelectorAll('#skin-css, [data-skin-sheet]')) {
+    node.remove();
+  }
+}
+
+/**
+ * §38.5 — synchronous read of a locally cached skin's CSS.
+ *
+ * Returns `null` when the copy is absent or malformed. A hit lets `setSkin`
+ * apply the sheet in the same tick as the click/tap (no network round-trip,
+ * no `onload` wait) — the difference a phone feels when switching skins.
+ */
+function cachedSkinCss(id: string): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(cacheKey(id));
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw) as { css?: unknown };
+    if (typeof parsed.css !== 'string' || parsed.css.length === 0) return null;
+    return parsed.css;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * §38.4 — skin + fidelity runtime.
  *
  * Hydration rule: the FIRST render must equal the server HTML — the bootstrap
@@ -100,7 +134,7 @@ export function useSkin(
         root.removeAttribute('data-dimension');
         // A2 — the per-skin accent lives only while a skin is active.
         root.removeAttribute('data-accent');
-        document.getElementById('skin-css')?.remove();
+        clearActiveSkinSheets();
         try {
           localStorage.setItem('skin', 'system');
         } catch {}
@@ -115,6 +149,46 @@ export function useSkin(
         return;
       }
 
+      // Both paths converge here: attributes first (so the change is visible
+      // the frame the CSS lands), then persistence + cache warm-up.
+      const commit = (): void => {
+        root.setAttribute('data-skin', next);
+        root.setAttribute('data-dimension', entry?.dimension ?? 'layered');
+        // A2 — activate the skin's accentHint (compiled under
+        // [data-skin="…"][data-accent="skin"]); inert for skins without one.
+        root.setAttribute('data-accent', 'skin');
+        try {
+          localStorage.setItem('skin', next);
+        } catch {}
+        // §38.5 — refresh the local cache so the next visit paints with no
+        // request. The runtime is installed by the head bootstrap; absent in
+        // tests/SSR.
+        try {
+          (
+            window as unknown as { __skinCacheRevalidate__?: (id: string) => void }
+          ).__skinCacheRevalidate__?.(next);
+        } catch {}
+        setSkinState(next);
+      };
+
+      // FAST PATH — a locally cached copy (§38.5) applies synchronously: no
+      // network, no `onload` wait. The <style> carries its CSS at insertion,
+      // so the very next paint already uses the new skin. A background
+      // revalidate (inside `commit`) keeps the entry honest.
+      const cached = cachedSkinCss(next);
+      if (cached !== null) {
+        clearActiveSkinSheets();
+        const style = document.createElement('style');
+        style.id = 'skin-css';
+        style.setAttribute('data-skin-sheet', '');
+        style.textContent = cached;
+        document.head.appendChild(style);
+        commit();
+        return;
+      }
+
+      // SLOW PATH — nothing cached yet: load the sheet and swap only after it
+      // parsed, so there is never an unstyled frame.
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.href = `${skinBase}${next}.css`;
@@ -126,24 +200,10 @@ export function useSkin(
           return;
         }
         // swap only after the new CSS is parsed → no unstyled frame
-        document.getElementById('skin-css')?.remove();
+        clearActiveSkinSheets();
         link.id = 'skin-css';
-        root.setAttribute('data-skin', next);
-        root.setAttribute('data-dimension', entry?.dimension ?? 'layered');
-        // A2 — activate the skin's accentHint (compiled under
-        // [data-skin="…"][data-accent="skin"]); inert for skins without one.
-        root.setAttribute('data-accent', 'skin');
-        try {
-          localStorage.setItem('skin', next);
-        } catch {}
-        // §38.5 — warm the local cache so the next visit paints with no request.
-        // The runtime is installed by the head bootstrap; absent in tests/SSR.
-        try {
-          (
-            window as unknown as { __skinCacheRevalidate__?: (id: string) => void }
-          ).__skinCacheRevalidate__?.(next);
-        } catch {}
-        setSkinState(next);
+        link.setAttribute('data-skin-sheet', '');
+        commit();
       };
       // A 404/network failure must not leave the UI in a half-applied state:
       // keep the current skin and abort the swap.
@@ -152,6 +212,9 @@ export function useSkin(
         link.remove();
       };
       document.head.appendChild(link);
+      // Cache miss ⇒ the sheet is on the wire now; `commit`'s revalidate (plus
+      // the new Cache-Control on /skins) stores it, so the NEXT switch of this
+      // skin takes the fast path instead of another network round-trip.
     },
     [registry, skinBase],
   );

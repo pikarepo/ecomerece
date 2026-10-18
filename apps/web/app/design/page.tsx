@@ -466,6 +466,7 @@ import {
   Youtube,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Section } from './Section';
 
 /* ─────────────────────────── helpers ─────────────────────────── */
 
@@ -499,29 +500,6 @@ function useThemeControl() {
 }
 
 /* ─────────────────────────── layout primitives ─────────────────────────── */
-
-function Section({
-  title,
-  note,
-  subtitle,
-  children,
-  className,
-}: {
-  title: string;
-  note?: string;
-  subtitle?: string;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  const sub = subtitle ?? note;
-  return (
-    <section className={cn('mt-10', className)}>
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      {sub && <p className="mt-0.5 text-sm text-ink-2">{sub}</p>}
-      <div className="mt-4">{children}</div>
-    </section>
-  );
-}
 
 function SubSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -666,32 +644,61 @@ function seededPrice(i: number): number {
   return Math.round((x - Math.floor(x)) * 120 + 4) * 100 / 100;
 }
 
-const gridRows = Array.from({ length: 6000 }, (_, i) => {
-  const status = (['active', 'pending', 'archived'] as const)[i % 3];
-  return {
-    id: `row-${i}`,
-    name: `Item ${i + 1}`,
-    sku: `SKU-${String(i + 1).padStart(4, '0')}`,
-    price: seededPrice(i),
-    status,
-    created: new Date(2024, 0, 1 + (i % 365)).toISOString().slice(0, 10),
-  };
-});
+type GridRow = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  status: 'active' | 'pending' | 'archived';
+  created: string;
+};
 
-const gridColumns = [
-  { key: 'name', header: 'Name', cell: (r: (typeof gridRows)[number]) => r.name, sortable: true },
-  { key: 'sku', header: 'SKU', cell: (r: (typeof gridRows)[number]) => r.sku, sortable: true },
+/*
+ * Built LAZILY on first mount of the DataGrid demo (perf audit): the old
+ * module-scope `Array.from({ length: 6000 })` cost ~19 ms of eager evaluation
+ * on BOTH the server (prerender) and the client (before hydration starts) for
+ * a demo most visitors never scroll to.
+ */
+let gridRowsCache: GridRow[] | null = null;
+
+function buildGridRows(): GridRow[] {
+  if (gridRowsCache) return gridRowsCache;
+  gridRowsCache = Array.from({ length: 6000 }, (_, i): GridRow => {
+    const status = (['active', 'pending', 'archived'] as const)[i % 3];
+    return {
+      id: `row-${i}`,
+      name: `Item ${i + 1}`,
+      sku: `SKU-${String(i + 1).padStart(4, '0')}`,
+      price: seededPrice(i),
+      status,
+      created: new Date(2024, 0, 1 + (i % 365)).toISOString().slice(0, 10),
+    };
+  });
+  return gridRowsCache;
+}
+
+/* Columns close over the row type, not the row array, so they are safe to
+   hoist — they no longer force the 6,000 rows to be built at module eval. */
+const gridColumns: Array<{
+  key: string;
+  header: string;
+  cell: (r: GridRow) => React.ReactNode;
+  align?: 'right';
+  sortable?: boolean;
+}> = [
+  { key: 'name', header: 'Name', cell: (r) => r.name, sortable: true },
+  { key: 'sku', header: 'SKU', cell: (r) => r.sku, sortable: true },
   {
     key: 'price',
     header: 'Price',
-    cell: (r: (typeof gridRows)[number]) => `£${(r.price).toFixed(2)}`,
-    align: 'right' as const,
+    cell: (r) => `£${(r.price).toFixed(2)}`,
+    align: 'right',
     sortable: true,
   },
   {
     key: 'status',
     header: 'Status',
-    cell: (r: (typeof gridRows)[number]) => (
+    cell: (r) => (
       <StatusDot
         tone={r.status === 'active' ? 'success' : r.status === 'pending' ? 'warning' : 'danger'}
         label={r.status}
@@ -702,10 +709,55 @@ const gridColumns = [
   {
     key: 'created',
     header: 'Created',
-    cell: (r: (typeof gridRows)[number]) => r.created,
+    cell: (r) => r.created,
     sortable: true,
   },
 ];
+
+/**
+ * DataGrid demo — owns its rows AND its sort/density state so the 6,000-row
+ * array is built only once this section actually mounts (perf audit), and so
+ * a sort/density change re-renders this card instead of the whole page.
+ */
+function GridDemo() {
+  const [rows] = useState(buildGridRows);
+  const [sortColumn, setSortColumn] = useState<string | undefined>('created');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable');
+  return (
+    <>
+      <DataGrid
+        rows={rows}
+        columns={gridColumns}
+        getRowId={(row) => row.id}
+        sortColumn={sortColumn}
+        sortDirection={sortDirection}
+        onSort={(columnKey, direction) => {
+          setSortColumn(columnKey);
+          setSortDirection(direction);
+        }}
+        density={density}
+        className="max-w-2xl"
+      />
+      <div className="mt-2 flex flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-ink-3">Density</span>
+          <SegmentedControl
+            value={density}
+            onChange={(v) => setDensity(v as 'comfortable' | 'compact')}
+            options={[
+              { label: 'Comfortable', value: 'comfortable' },
+              { label: 'Compact', value: 'compact' },
+            ]}
+          />
+        </div>
+        <div className="text-xs text-ink-3">
+          Sort: <strong>{sortColumn ?? 'none'}</strong> · {sortDirection}
+        </div>
+      </div>
+    </>
+  );
+}
 
 /* ─────────────────────────── chart data (bar demo) ─────────────────────────── */
 
@@ -906,10 +958,6 @@ export default function DesignQaPage() {
   );
 
   // Grid demo state
-  const [gridSortColumn, setGridSortColumn] = useState<string | undefined>('created');
-  const [gridSortDirection, setGridSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [gridDensity, setGridDensity] = useState<'comfortable' | 'compact'>('comfortable');
-
   const { push } = useToast();
 
   // ── local skin cache (§38.5) ────────────────────────────────────────────
@@ -2107,35 +2155,7 @@ export default function DesignQaPage() {
         {/* ═══════════════ DATA GRID ═══════════════ */}
         {show('data') && (
           <Section title="DataGrid" note="Virtualized, sortable, density toggle.">
-            <DataGrid
-              rows={gridRows}
-              columns={gridColumns}
-              getRowId={(row) => row.id}
-              sortColumn={gridSortColumn}
-              sortDirection={gridSortDirection}
-              onSort={(columnKey, direction) => {
-                setGridSortColumn(columnKey);
-                setGridSortDirection(direction);
-              }}
-              density={gridDensity}
-              className="max-w-2xl"
-            />
-            <div className="mt-2 flex flex-wrap gap-3">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-ink-3">Density</span>
-                <SegmentedControl
-                  value={gridDensity}
-                  onChange={(v) => setGridDensity(v as 'comfortable' | 'compact')}
-                  options={[
-                    { label: 'Comfortable', value: 'comfortable' },
-                    { label: 'Compact', value: 'compact' },
-                  ]}
-                />
-              </div>
-              <div className="text-xs text-ink-3">
-                Sort: <strong>{gridSortColumn ?? 'none'}</strong> · {gridSortDirection}
-              </div>
-            </div>
+            <GridDemo />
           </Section>
         )}
 

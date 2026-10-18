@@ -42,6 +42,8 @@ One file per task. `progress.md` (repo root) is the live tracker: `in_progress` 
 | `12-physical-engine.md` | **Physics kernel** for 2D games (DESIGN.md Part VIII §43–§51): rng, fixed timestep, AABB/CCD, motion, distance, spawn, state machine. **DONE** (gate green, 2026-10-17) |
 | `13-lane-runner-2d-game.md` | **Lane Runner** — reference 2D car game on the kernel (`/game`, static). **DONE** (gate green, 2026-10-17) |
 | `14-perf-and-skin-cache.md` | **Perf enforcement (§28.6) + local skin cache (§38.5) + skin manager UI**. **DONE** (gate green, 2026-10-17) |
+| `15-perf-caching-skin-audit.md` | **Deep audit: static runtime, cache headers (were ABSENT), cache-first skin switching, `/design` 935 KB → 115 KB deferred sections** + follow-up `/skins/undefined.css` root cause. **DONE** (gate green, 2026-10-18) |
+| `16-skin-colour-choice-audit.md` | **Skin colour choices: 10 of 27 picker chips were unreadable (<3:1) / lying — swatches now DERIVED from each skin's own tokens** (`skins/swatch.ts`), collision whitelist proven by test. **DONE** (gate green, 2026-10-18) |
 
 ## Test stack (packages/ui/test/)
 

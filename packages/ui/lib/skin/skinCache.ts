@@ -70,8 +70,14 @@ export function cacheKey(id: string): string {
   return `${SKIN_CACHE_PREFIX}${id}`;
 }
 
-export function isValidSkinId(id: string): boolean {
-  return SKIN_ID_PATTERN.test(id);
+/**
+ * NOTE the `typeof` guard: `RegExp.test(undefined)` coerces to the STRING
+ * "undefined", which itself matches `^[a-z0-9-]{1,32}$` — so a bare pattern
+ * check happily accepted a missing id and produced `GET /skins/undefined.css`
+ * on every default-skin visit (reported at localhost:3000/skins/undefined.css).
+ */
+export function isValidSkinId(id: unknown): boolean {
+  return typeof id === 'string' && SKIN_ID_PATTERN.test(id);
 }
 
 /** Byte length of a string without pulling in a TextEncoder dependency. */
@@ -200,20 +206,59 @@ export function browserSkinCache(): SkinCache | null {
 }
 
 /**
+ * Replace the LIVE sheet of the active skin so a freshly-installed/fetched CSS
+ * is visible immediately (no reload). `revalidateSkinCss` used to only write
+ * localStorage — the Install/Reinstall/Refresh buttons updated the cache while
+ * the screen kept showing the OLD skin. Handles both sheet shapes: the cached
+ * `<style>` (text swap) and the first-visit `<link>` (replaced by an inline
+ * `<style>` so no second request is needed).
+ */
+export function hotSwapActiveSheet(id: string, css: string): boolean {
+  if (typeof document === 'undefined') return false;
+  const root = document.documentElement;
+  if (!isValidSkinId(id) || root.getAttribute('data-skin') !== id) return false;
+  const current = document.getElementById('skin-css');
+  if (current?.tagName === 'STYLE') {
+    if (current.textContent !== css) current.textContent = css;
+    return true;
+  }
+  const style = document.createElement('style');
+  style.id = 'skin-css';
+  style.setAttribute('data-skin-sheet', '');
+  style.textContent = css;
+  // add BEFORE removing: there is never a frame with no active sheet
+  document.head.appendChild(style);
+  current?.remove();
+  return true;
+}
+
+/**
  * Fetch a skin's CSS and store it (§38.5). Used by the design-page manager's
- * Install/Reinstall actions. Never throws — the boolean reports success.
+ * Install/Reinstall actions and by freshening. Never throws — the boolean
+ * reports success. If the skin is the ACTIVE one, the live sheet is hot-swapped
+ * so the old skin cannot survive an install.
  */
 export async function revalidateSkinCss(
   url: string,
   id: string,
   cache: SkinCache | null = browserSkinCache(),
 ): Promise<boolean> {
+  // Never request `/skins/undefined.css` (or anything else unvalidated): the
+  // caller may have no active id (`__skinCacheActive__` is only set when a
+  // non-system skin is applied — perf/caching audit, todo/15).
   if (!cache || typeof fetch !== 'function') return false;
+  if (!isValidSkinId(id)) return false;
   try {
-    const response = await fetch(url, { credentials: 'same-origin' });
+    // `no-cache` = ALWAYS revalidate with the server (ETag/304, no body on a
+    // hit). Without it this fetch goes through the same warm HTTP cache whose
+    // purpose is a fast FIRST PAINT — after a deploy it happily re-stores the
+    // OLD bytes, `prev.css === txt` never trips, and the old skin sticks.
+    const response = await fetch(url, { credentials: 'same-origin', cache: 'no-cache' });
     if (!response.ok) return false;
     const css = await response.text();
-    return cache.put(id, css);
+    const stored = cache.put(id, css);
+    if (stored) hotSwapActiveSheet(id, css);
+    return stored;
   } catch {
     return false;
   }
@@ -227,23 +272,45 @@ export async function revalidateSkinCss(
  */
 export function skinCacheRuntimeScript(prefix = SKIN_CACHE_PREFIX): string {
   return `window.__skinCachePrefix__=${JSON.stringify(prefix)};(function(){
-function store(id,txt){try{localStorage.setItem(window.__skinCachePrefix__+id,JSON.stringify({css:txt,ts:Date.now()}));}catch(e){}}
+var VALID=/^[a-z0-9-]{1,32}$/;
+function store(id,txt){
+  if(!id||!VALID.test(id))return;
+  try{localStorage.setItem(window.__skinCachePrefix__+id,JSON.stringify({css:txt,ts:Date.now()}));}catch(e){}}
 window.__skinCacheStore__=store;
 window.__skinCacheRevalidate__=function(id){
   try{
+    // Guard: bootstrap sets __skinCacheActive__ ONLY for a non-system skin, so
+    // id can be undefined — without this, EVERY default visit requested
+    // /skins/undefined.css.
+    if(!id||!VALID.test(id))return;
     if(!window.fetch)return;
-    fetch(window.__SKIN_BASE__+id+'.css',{credentials:'same-origin'}).then(function(r){return r.ok?r.text():null;}).then(function(txt){
+    // cache:'no-cache' → ask the server even when the HTTP cache is warm, so a
+    // freshly deployed skin replaces the old bytes (ETag/304 keeps it cheap).
+    fetch(window.__SKIN_BASE__+id+'.css',{credentials:'same-origin',cache:'no-cache'}).then(function(r){return r.ok?r.text():null;}).then(function(txt){
       if(!txt)return;
       var prev=null;try{var raw=localStorage.getItem(window.__skinCachePrefix__+id);prev=raw?JSON.parse(raw):null;}catch(e){}
       if(prev&&prev.css===txt){return;}
       store(id,txt);
       var el=document.getElementById('skin-css');
-      if(el&&document.documentElement.getAttribute('data-skin')===id&&el.tagName==='STYLE'&&el.textContent!==txt){el.textContent=txt;}
+      if(document.documentElement.getAttribute('data-skin')!==id||!el)return;
+      if(el.tagName==='STYLE'){
+        if(el.textContent!==txt){el.textContent=txt;}
+      }else{
+        // first-visit <link> → inline fresh CSS so the OLD skin cannot outlive
+        // an install; add before removing, never a frame without a sheet.
+        var st=document.createElement('style');st.id='skin-css';st.setAttribute('data-skin-sheet','');st.textContent=txt;
+        document.head.appendChild(st);el.remove();
+      }
     }).catch(function(){});
   }catch(e){}
 };
-if(document.readyState==='complete'){setTimeout(function(){window.__skinCacheRevalidate__(window.__skinCacheActive__);},0);}
-else{window.addEventListener('load',function(){setTimeout(function(){window.__skinCacheRevalidate__(window.__skinCacheActive__);},0);});}
+// Post-load refresh only matters while a non-system skin is active — the
+// bootstrap leaves __skinCacheActive__ undefined otherwise (it used to fetch
+// /skins/undefined.css on every default visit).
+if(window.__skinCacheActive__){
+  if(document.readyState==='complete'){setTimeout(function(){window.__skinCacheRevalidate__(window.__skinCacheActive__);},0);}
+  else{window.addEventListener('load',function(){setTimeout(function(){window.__skinCacheRevalidate__(window.__skinCacheActive__);},0);});}
+}
 })();`;
 }
 

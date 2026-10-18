@@ -66,7 +66,7 @@ export function ArrowButton({
       type="button"
       aria-label={label ?? `Scroll ${direction}`}
       className={cn(BASE, VARIANT[variant], SIZE[size], focusRing(), className)}
-      style={(width !== undefined || height !== undefined) ? { width, height } : undefined}
+      style={width !== undefined || height !== undefined ? { width, height } : undefined}
       {...rest}
     >
       <Icon className="size-4" aria-hidden />

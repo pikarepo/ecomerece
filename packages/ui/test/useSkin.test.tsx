@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from 'bun:test';
+import { cacheKey } from '../lib/skin/skinCache';
 import type { RegistryEntry } from '../lib/skin/useSkin';
 import { useSkin } from '../lib/skin/useSkin';
 import { act, dispatchDomEvent, registerDom, renderHook, restoreDom } from './_dom';
@@ -220,6 +221,87 @@ describe('useSkin', () => {
     expect(h.latest().ready).toBe(true);
     expect(h.latest().skin).toBe('system');
     expect(document.documentElement.getAttribute('data-skin')).toBeNull();
+    h.unmount();
+  });
+
+  test("switching skins never leaves two sheets — the old skin can't survive", () => {
+    const sheetCount = (): number =>
+      document.querySelectorAll('#skin-css, [data-skin-sheet]').length;
+    const h = renderHook(() => useSkin(REG));
+
+    // fast path (cached): exactly one sheet, marked
+    localStorage.setItem(cacheKey('clay'), JSON.stringify({ css: '.clay{}', ts: Date.now() }));
+    act(() => h.latest().setSkin('clay'));
+    expect(sheetCount()).toBe(1);
+    expect(document.documentElement.getAttribute('data-skin')).toBe('clay');
+
+    // slow path: pending link is NOT a sheet yet; committing swaps atomically
+    act(() => h.latest().setSkin('glass'));
+    expect(sheetCount()).toBe(1); // the clay style is the only ACTIVE sheet
+    act(() => dispatchDomEvent(pendingLink(), 'load'));
+    expect(sheetCount()).toBe(1); // clay dropped, glass link is the only sheet
+    expect(document.getElementById('skin-css')?.getAttribute('href')).toContain('glass.css');
+
+    // back to a cached skin: link replaced, never coexisting
+    act(() => h.latest().setSkin('clay'));
+    expect(sheetCount()).toBe(1);
+    expect(document.getElementById('skin-css')?.tagName).toBe('STYLE');
+
+    // system: every skin sheet is gone
+    act(() => h.latest().setSkin('system'));
+    expect(sheetCount()).toBe(0);
+    expect(document.documentElement.getAttribute('data-skin')).toBeNull();
+
+    localStorage.removeItem(cacheKey('clay'));
+    h.unmount();
+  });
+
+  test('a locally cached skin applies synchronously — no link, no network wait', () => {
+    // Isolate: no active sheet, so the fast path is the only way to apply.
+    document.documentElement.removeAttribute('data-skin');
+    document.getElementById('skin-css')?.remove();
+    document.getElementById('skin-css-next')?.remove();
+    localStorage.setItem(cacheKey('clay'), JSON.stringify({ css: '.clay{}', ts: Date.now() }));
+
+    const h = renderHook(() => useSkin(REG));
+    act(() => h.latest().setSkin('clay'));
+
+    // No pending <link> — the swap never waits on a request.
+    expect(document.getElementById('skin-css-next')).toBeNull();
+    const style = document.getElementById('skin-css');
+    expect(style?.tagName).toBe('STYLE');
+    expect(style?.textContent).toBe('.clay{}');
+    expect(document.documentElement.getAttribute('data-skin')).toBe('clay');
+    expect(document.documentElement.getAttribute('data-accent')).toBe('skin');
+    expect(h.latest().skin).toBe('clay');
+    expect(localStorage.getItem('skin')).toBe('clay');
+
+    // …and re-selecting it stays a no-op against the injected <style>.
+    act(() => h.latest().setSkin('clay'));
+    expect(document.getElementById('skin-css-next')).toBeNull();
+    expect(document.getElementById('skin-css')?.textContent).toBe('.clay{}');
+
+    localStorage.removeItem(cacheKey('clay'));
+    h.unmount();
+  });
+
+  test('a corrupt cache entry falls back to the network path (no crash)', () => {
+    document.documentElement.removeAttribute('data-skin');
+    document.getElementById('skin-css')?.remove();
+    localStorage.setItem(cacheKey('neo'), '{not json');
+
+    const h = renderHook(() => useSkin(REG));
+    act(() => h.latest().setSkin('neo'));
+
+    const link = document.getElementById('skin-css-next');
+    expect(link).not.toBeNull(); // slow path — a real <link> was appended
+    expect(document.documentElement.getAttribute('data-skin')).toBeNull();
+
+    act(() => dispatchDomEvent(link as HTMLLinkElement, 'load'));
+    expect(document.documentElement.getAttribute('data-skin')).toBe('neo');
+    expect((document.getElementById('skin-css') as HTMLElement).tagName).toBe('LINK');
+
+    localStorage.removeItem(cacheKey('neo'));
     h.unmount();
   });
 });
