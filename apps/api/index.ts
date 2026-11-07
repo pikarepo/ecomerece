@@ -41,7 +41,7 @@ app.use(
   '*',
   ...requestGuards({
     maxUrlLength: 200,
-    maxQueryLength: 100,
+    maxQueryLength: 200,
     maxParamLength: 20,
     maxBodyBytes: 7_000_000,
     maxJsonDepth: 5,

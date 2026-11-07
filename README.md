@@ -57,10 +57,10 @@ The platform is being built to deliver a complete, production-grade commerce exp
 | Database | **MongoDB** (Mongoose 8, replica set for transactions) |
 | Cache / rate limiting | **Redis** (sliding token bucket) |
 | Identity provider | **Supabase Auth** (Admin SDK) · Clerk + Google OAuth (web storefront) |
-| Storefront / admin | **Next.js 16**, React 19, Tailwind CSS v4, HeroUI v3, Zustand, TanStack Query 5 |
+| Storefront / admin | **Next.js 16**, React 19, **Material UI (MUI)** (default component library), Zustand, TanStack Query 5 |
 | Mobile (placeholder) | **React Native / Expo** |
 | Contracts / validation | **Zod v4** schemas + API envelopes in `packages/shared` |
-| Quality gates | TypeScript strict checking, Bun test runner, Biome (format/lint) |
+| Quality gates | TypeScript strict checking, Bun test runner, ESLint (web), Biome (format) |
 
 ---
 
@@ -481,7 +481,7 @@ The **complete endpoint catalog** (method × path × access guard × action) is 
 ## 💻 Frontend & Client SDK
 
 - **`packages/frontend`** is a headless SDK decoupled from any UI framework: cross-platform auth/storage **adapters** (`.web.ts` / `.native.ts`) selected via conditional exports, TanStack React Query hooks per domain module, Zustand navigation stores, and a unified HTTP client with typed error envelopes. The same SDK powers Web and Mobile.
-- **`apps/web`** (Next.js 16 App Router, React 19 Server Components, Tailwind v4, HeroUI):
+- **`apps/web`** (Next.js 16 App Router, React 19 Server Components, Material UI / MUI as the default component library):
   - **Storefront** `/client/home`, `/client/product/[id]` — SSR product discovery.
   - **Account portal** `/account/profile`, `/account/address` — profile stats, danger zone, address management.
   - **Admin dashboard** `/admin/home` — drag-and-drop CMS curation of the home layout.
@@ -533,7 +533,7 @@ bun run dev        # API (:8000) + Web (:3000) concurrently
 ### Quality gates (run in this order)
 
 ```bash
-bun run lint:fix  # auto-fix formatting & lint (Biome) — see note in Roadmap
+bun run lint      # Next.js ESLint (apps/web)
 bun run typecheck # strict TS across all workspaces
 bun test          # test suite (currently 9 passing home-module tests)
 ```
@@ -548,7 +548,7 @@ bun test          # test suite (currently 9 passing home-module tests)
 | `bun run build` | Build the API workspace |
 | `bun run typecheck` | `tsc --noEmit` across all workspaces |
 | `bun test` / `bun run test:watch` | Run the test suite (plain / watch) |
-| `bun run lint` / `bun run lint:fix` / `bun run check` / `bun run format` | Biome lint & format |
+| `bun run lint` / `bun run format` | Next.js ESLint (web) & Biome format |
 | `pm2 start ecosystem.config.js` | Production process manager (Bun, fork mode, port 8000) |
 
 ---
@@ -573,7 +573,7 @@ Build **bottom-up** — never create a file that depends on something you haven'
 2. **Enforce IDs server-side** — `Id.create()` on every create/add path.
 3. **Every mutation raises a domain event** — raise inside the aggregate, drain + publish from the app service.
 4. **Never ship a create endpoint that accepts a client-supplied document ID.**
-5. **Ran the quality gates:** `lint:fix` → `typecheck` → `test` before opening a PR.
+5. **Ran the quality gates:** `lint` → `typecheck` → `test` before opening a PR.
 6. When touching messages files, keep user-facing strings clean and correct — identifiers may intentionally keep historical typos, but visible messages never should.
 
 ---

@@ -5,23 +5,19 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "bun run --filter api dev & bun run --filter web dev",
-    "build": "bun run --filter api build && bun run --filter web build && echo 'All builds completed successfully!'",
-    "start": "bun run --filter api start & bun run --filter web start",
+    "dev": "bun run --filter api dev & bun run --filter @ecomerece/web dev",
+    "build": "bun run --filter api build && bun run --filter @ecomerece/web build && echo 'All builds completed successfully!'",
+    "start": "bun run --filter api start & bun run --filter @ecomerece/web start",
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun test",
     "test:watch": "bun test --watch",
-    "gate": "bun run scripts/gate.ts",
-    "build:skins": "bun run packages/ui/scripts/build-skins.ts",
-    "lint": "biome check packages/ui",
-    "lint:fix": "biome check packages/ui --write",
-    "format": "biome format packages/ui --write",
-    "check": "biome check packages/ui"
+    "lint": "bun run --filter @ecomerece/web lint",
+    "format": "biome format apps/web packages --write"
   },
   "overrides": {
     "lucide-react": "0.468.0",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^3.1.1",
@@ -33,7 +29,7 @@
     "hono": "^4.13.7",
     "jose": "^6.2.12",
     "mongoose": "^8.24.4",
-    "react-dom": "^19.2.8",
+    "react-dom": "^19.3.0",
     "redis": "^6.2.1",
     "uuid": "^14.0.2",
     "zod": "^4.6.2"
@@ -41,12 +37,12 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",
     "@eslint/js": "^10.0.1",
-    "@next/swc-linux-x64-gnu": "16.3.3",
+    "@next/swc-linux-x64-gnu": "16.4.5",
     "@tanstack/react-virtual": "^3.14.18",
     "@types/bun": "^1.4.2",
     "@types/node": "^25.9.6",
     "@types/react": "^19.3.0",
-    "react": "^19.2.8",
+    "react": "^19.3.0",
     "typescript": "^7.0.2",
     "typescript-eslint": "^8.70.0"
   },

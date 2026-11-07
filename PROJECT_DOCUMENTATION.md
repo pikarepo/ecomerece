@@ -2,7 +2,7 @@
 
 Welcome to the definitive architecture and operational documentation for the **E-Commerce Monorepo**. This system is an enterprise-grade, multi-platform e-commerce solution engineered with **Domain-Driven Design (DDD)**, **Clean Architecture / Hexagonal Architecture (Ports & Adapters)**, and **Command-Query Responsibility Segregation (CQRS)**.
 
-This manual unifies the active codebase implementation with the core architectural philosophy and visual mental models established in the system's foundational notes (`Ifra.html`).
+This manual documents the active codebase implementation and the architectural philosophy it follows.
 
 ---
 
@@ -815,7 +815,7 @@ packages/frontend/
 
 ### Next.js 16 Web Storefront & Backoffice (`apps/web`)
 
-The Next.js 16 application employs the App Router, React 19 Server Components, and Tailwind CSS v4:
+The Next.js 16 application employs the App Router, React 19 Server Components, and **Material UI (MUI)** as the default component library:
 - **Public Storefront** (`/client/home`, `/client/product/[id]`): High-performance SSR product discovery.
 - **Account Backoffice** (`/account/profile`, `/account/address`): User self-service portal.
 - **Admin Dashboard** (`/admin/home`): Dynamic CMS homepage curation.
@@ -880,10 +880,8 @@ bun run dev
 # Run TypeScript compilation check across all workspaces
 bun run typecheck
 
-# Lint & format (Biome) — note these are scoped to a single `src` glob
+# Lint (Next.js ESLint) & format (Biome)
 bun run lint
-bun run lint:fix
-bun run check
 bun run format
 
 # Run test suite (plain / watch)
