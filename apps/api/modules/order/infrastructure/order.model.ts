@@ -34,6 +34,12 @@ const OrderModelSchema = new Schema(
       type: String,
       required: true,
     },
+    status: {
+      type: String,
+      required: true,
+      default: 'pending',
+      enum: ['pending', 'confirmed', 'completed', 'returned', 'refunded', 'cancelled'],
+    },
     deleted: {
       type: deletedSchema,
       required: true,
@@ -51,6 +57,7 @@ export interface OrderPersistence {
   buyerId: string;
   totalPrice: number;
   address: string;
+  status: string;
   deleted: {
     deleted: boolean;
     deletedFrom?: Date | null;

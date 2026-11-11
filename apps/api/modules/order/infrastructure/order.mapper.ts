@@ -1,4 +1,4 @@
-import { OrderAggregate, type OrderReadModel } from '@ecomerece/domain';
+import { OrderAggregate, OrderStatusVO, type OrderReadModel } from '@ecomerece/domain';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -17,6 +17,7 @@ export const OrderMapper = {
       Id.create(doc.buyerId),
       Money.rehydrate(doc.totalPrice),
       FullAddressVO.create(doc.address),
+      OrderStatusVO.fromString(doc.status ?? 'pending'),
       DeleteInfoVO.rehydrate(
         doc.deleted.deletedBy ? Id.create(doc.deleted.deletedBy) : null,
         doc.deleted.deleted,
@@ -34,6 +35,7 @@ export const OrderMapper = {
       buyerId: order.buyerId.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
+      status: order.status.value,
       deleted: {
         deleted: order.delete.deleted,
         deletedFrom: order.delete.from?.value ?? null,
@@ -50,6 +52,7 @@ export const OrderMapper = {
       buyerId: order.buyerId.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
+      status: order.status.value,
       deleted: {
         deleted: order.delete.deleted,
         deletedFrom: order.delete.from?.value ?? null,
@@ -66,6 +69,7 @@ export const OrderMapper = {
       totalPrice: doc.totalPrice,
 
       address: doc.address,
+      status: doc.status ?? 'pending',
       deleted: {
         deleted: doc.deleted.deleted,
         deletedFrom: doc.deleted.deletedFrom ?? null,
@@ -82,6 +86,7 @@ export const OrderMapper = {
       buyerId: order.buyerId.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
+      status: order.status.value,
       createdAt: order.createdAt.value,
     };
   },

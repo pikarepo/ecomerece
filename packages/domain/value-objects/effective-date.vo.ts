@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../apps/api/errors/app-error';
+import { BadRequestError } from '../errors/app-error';
 import { DateVO } from './date.vo';
 
 export class EffectiveDate extends DateVO {

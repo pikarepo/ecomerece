@@ -10,8 +10,7 @@ import { ReviewModel, type ReviewPersistence } from './review.model';
 
 export class ReviewRepository
   extends MongoRepository<ReviewPersistence>
-  implements IReviewRepository
-{
+  implements IReviewRepository {
   constructor() {
     super(ReviewModel);
   }
@@ -40,7 +39,7 @@ export class ReviewRepository
     const docs = await super.find({
       productId: productId.value,
       'deleted.deleted': false,
-      'block.blocked': false,
+      'block.blocked': { $ne: true },
     });
     return docs.map((doc) => reviewMapper.persistenceToAggregate(doc));
   }

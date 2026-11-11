@@ -3,13 +3,12 @@ import {
   type IEventHandler,
   VendorStatsForceRefreshRequestedEvent,
 } from '@ecomerece/domain';
-import { eventBus } from '../../../../core/infrastructure/buses/in-memory-event-bus';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { connectDB } from '../../../../lib/mongo';
 import {
   type VendorForceRefreshConsumeResult,
   vendorForceRefreshQuotaService,
 } from '../VendorForceRefreshQuotaService';
-import { vendorStatsRefreshService } from '../vendor-stats-refresh.service';
 
 export interface VendorStatsForceRefreshDeps {
   connectDB: () => Promise<unknown>;
@@ -23,8 +22,7 @@ export interface VendorStatsForceRefreshDeps {
  * of the vendor's monthly force-refresh quota.
  */
 export class VendorStatsForceRefreshHandler
-  implements IEventHandler<{ vendorId: string; force: boolean }>
-{
+  implements IEventHandler<VendorStatsForceRefreshRequestedEvent['payload']> {
   private readonly deps: VendorStatsForceRefreshDeps;
 
   constructor(deps: Partial<VendorStatsForceRefreshDeps> = {}) {
@@ -34,7 +32,9 @@ export class VendorStatsForceRefreshHandler
   private static defaultDeps(): VendorStatsForceRefreshDeps {
     return {
       connectDB,
-      refreshVendorData: (vendorId) => vendorStatsRefreshService.refreshVendorData(vendorId),
+      refreshVendorData: async () => {
+        throw new Error('refreshVendorData dependency is required');
+      },
     };
   }
 
@@ -52,6 +52,7 @@ export class VendorStatsForceRefreshHandler
  */
 export async function requestVendorStatsForceRefresh(
   vendorId: string,
+  eventBus: IEventBus,
 ): Promise<VendorForceRefreshConsumeResult> {
   const result = await vendorForceRefreshQuotaService.consume(vendorId);
   if (!result.accepted) return result;

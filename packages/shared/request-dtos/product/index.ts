@@ -1,4 +1,5 @@
 export * from './block-product.dto';
+export * from './clear-ingredients.dto';
 export * from './create-product.dto';
 export * from './delete-product.dto';
 export * from './product-appereance.dto';
@@ -7,3 +8,5 @@ export * from './product-image.dto';
 export * from './product-ingredients.dto';
 export * from './product-meta.dto';
 export * from './product-query.dto';
+export * from './product-stock.dto';
+export * from './update-disclaimer.dto';

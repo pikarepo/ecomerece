@@ -3,11 +3,12 @@ import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
 import { createStatsAccessGuardMiddleware } from '../../../middleware/statsAccessGuard.middleware';
 import { createStatsViewGuardMiddleware } from '../../../middleware/statsViewGuard.middleware';
-import { CreateStatsModule } from '../stats.module';
+import type { CreateStatsModule } from '../stats.module';
 
-const { statsController } = CreateStatsModule();
+type StatsController = ReturnType<typeof CreateStatsModule>['statsController'];
 
-export const statsRouter = new Hono();
+export function createStatsRoutes(statsController: StatsController) {
+  const statsRouter = new Hono();
 
 statsRouter.post(
   '/products/:productId/view',
@@ -107,3 +108,6 @@ statsRouter.get(
 statsRouter.get('/:entityType/top', statsController.getTopEntities);
 
 statsRouter.get('/_health', statsController.getHealth);
+
+  return statsRouter;
+}

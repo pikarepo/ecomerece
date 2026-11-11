@@ -9,7 +9,7 @@ import {
   ImageStorageError,
   ImageTransform,
 } from '@ecomerece/domain';
-import { AppError } from '../../../../../apps/api/errors/app-error';
+import { AppError } from '../../../errors/app-error';
 
 describe('ImageKey', () => {
   it('builds a normalized key from folder and file name', () => {

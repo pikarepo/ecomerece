@@ -1,7 +1,11 @@
-import { getTimeWindows, type IEvent, type IEventHandler } from '@ecomerece/domain';
+import {
+  getTimeWindows,
+  type IEvent,
+  type IEventHandler,
+  type ProductStatsDenormalizationRequestedEvent,
+} from '@ecomerece/domain';
 import type { Metrics, StatEvent } from '@ecomerece/shared';
 import { connectDB } from '../../../../lib/mongo';
-import { ProductModel } from '../../../product/infrastructure/product.model';
 import { statsRepository } from '../../infrastructure/StatsRepository';
 
 const SERIES_AGGREGATIONS = ['daily', 'weekly', 'monthly'] as const;
@@ -27,7 +31,7 @@ interface CategoryRollupDeps {
  * scheduler tick and the admin "Run data correction" action both refresh
  * category stats. Uses idempotent `$set` writes — re-runs never double count.
  */
-export class CategoryStatsDenormalizationHandler implements IEventHandler<{ force: boolean }> {
+export class CategoryStatsDenormalizationHandler implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
   private readonly deps: CategoryRollupDeps;
 
   constructor(deps: Partial<CategoryRollupDeps> = {}) {
@@ -38,13 +42,7 @@ export class CategoryStatsDenormalizationHandler implements IEventHandler<{ forc
     return {
       connectDB,
       loadProducts: async () => {
-        const docs = await ProductModel.find({ 'deleted.deleted': false })
-          .select('_id categoryId')
-          .lean();
-        return docs.map((d) => ({
-          id: String(d._id),
-          categoryId: String(d.categoryId),
-        }));
+        throw new Error('loadProducts dependency is required');
       },
       getLifetimeMetricsForProducts: (productIds) =>
         statsRepository.getAggregateMetrics('product', 'lifetime', productIds),

@@ -1,897 +1,1466 @@
-# E-Commerce Monorepo — Comprehensive Architecture & DDD Engineering Guide
+# Ecomerece — System Documentation
 
-Welcome to the definitive architecture and operational documentation for the **E-Commerce Monorepo**. This system is an enterprise-grade, multi-platform e-commerce solution engineered with **Domain-Driven Design (DDD)**, **Clean Architecture / Hexagonal Architecture (Ports & Adapters)**, and **Command-Query Responsibility Segregation (CQRS)**.
+This document describes the codebase as it actually behaves, written by reading the source
+(2026-11-08). Every path, route, event name and environment variable below was verified in the
+repository. Where the code and older docs disagree, the code wins; the differences are listed in
+[§22 Known gaps and inconsistencies](#22-known-gaps-and-inconsistencies).
 
-This manual documents the active codebase implementation and the architectural philosophy it follows.
+**Companion playbook:** [`docs/architecture-guide.html`](./docs/architecture-guide.html) is a
+step-by-step, single-file HTML course (open it in a browser) for building a module from scratch in
+this style, including the cross-module chapter. This document describes the system as it is; the
+playbook teaches how to extend it.
 
----
+`ecomerece` is a multi-vendor marketplace with three surfaces in one Next.js app:
 
-## Table of Contents
+| Surface | Path prefix | Audience | Auth |
+|---|---|---|---|
+| Storefront | `/`, `/products`, `/categories`, `/vendors`, `/reviews` | anonymous visitors | none |
+| Buyer account | `/account/**` | signed-in customers | Supabase session |
+| Admin / seller dashboard | `/dashboard/**` | admins (and vendors, partially) | Supabase session + API role checks |
 
-1. [DDD in 2 Minutes — The Core Philosophy](#1-ddd-in-2-minutes--the-core-philosophy)
-   - [The Three Core Ideas](#the-three-core-ideas)
-   - [The Vending Machine Analogy](#the-vending-machine-analogy)
-   - [The Golden Rule of Invariants](#the-golden-rule-of-invariants)
-2. [The 4 Layers of Architecture](#2-the-4-layers-of-architecture)
-   - [The Restaurant Analogy (Waiter, Manager, Chef, Equipment)](#the-restaurant-analogy)
-   - [The 4 Layers Visualized](#the-4-layers-visualized)
-   - [The Iron Law of Dependencies](#the-iron-law-of-dependencies)
-   - [Implementation Order: Foundation Up (Steps 1–17)](#implementation-order-foundation-up-steps-117)
-3. [The Domain Fortress: Aggregates, Value Objects & Events](#3-the-domain-fortress-aggregates-value-objects--events)
-   - [The Aggregate Fortress Pattern](#the-aggregate-fortress-pattern)
-   - [Value Objects: Self-Validating Smart Wrappers](#value-objects-self-validating-smart-wrappers)
-   - [Domain Events Lifecycle](#domain-events-lifecycle)
-   - [Complete Catalog of Project Aggregates & Value Objects](#complete-catalog-of-project-aggregates--value-objects)
-4. [Cross-Module Decoupling: How Modules Communicate](#4-cross-module-decoupling-how-modules-communicate)
-   - [The Spaghetti Problem vs. Central Buses](#the-spaghetti-problem-vs-central-buses)
-   - [Pattern 1: QueryBus (Synchronous Decoupled Reads)](#pattern-1-querybus-synchronous-decoupled-reads)
-   - [Pattern 2: Anti-Corruption Layer / ACL (Type Isolation)](#pattern-2-anti-corruption-layer--acl-type-isolation)
-   - [Pattern 3: Domain Events (Asynchronous Reactive Broadcasts)](#pattern-3-domain-events-asynchronous-reactive-broadcasts)
-   - [Pattern 4: CommandBus (Synchronous Decoupled Writes)](#pattern-4-commandbus-synchronous-decoupled-writes)
-   - [Preventing Race Conditions: Why Not Events for Inventory Reservation?](#preventing-race-conditions-why-not-events-for-inventory-reservation)
-   - [The Three Buses Comparison Table](#the-three-buses-comparison-table)
-   - [Architectural Decision Tree](#architectural-decision-tree)
-5. [The Persistence Layer & Unit of Work](#5-the-persistence-layer--unit-of-work)
-   - [The Translator Pattern: Mappers](#the-translator-pattern-mappers)
-   - [The Repository Port Pattern](#the-repository-port-pattern)
-   - [Unit of Work with AsyncLocalStorage Transactions](#unit-of-work-with-asynclocalstorage-transactions)
-6. [Defensive Middleware & API Gateway (`apps/api`)](#6-defensive-middleware--api-gateway-appsapi)
-   - [Request Guards (DoS, Payload Tree & Buffer Defense)](#request-guards-dos-payload-tree--buffer-defense)
-   - [Redis Sliding Token Bucket Rate Limiting](#redis-sliding-token-bucket-rate-limiting)
-   - [Supabase Identity & Dynamic State Verification](#supabase-identity--dynamic-state-verification)
-   - [Complete API Endpoints Catalog](#complete-api-endpoints-catalog)
-7. [Frontend Architecture & Multi-Platform SDK](#7-frontend-architecture--multi-platform-sdk)
-   - [Headless Client SDK (`packages/frontend`)](#headless-client-sdk-packagesfrontend)
-   - [Cross-Platform Adapters (Web & React Native)](#cross-platform-adapters-web--react-native)
-   - [Next.js 16 Web Storefront & Backoffice (`apps/web`)](#nextjs-16-web-storefront--backoffice-appsweb)
-8. [Developer Cheatsheet: "Which File Do I Touch?"](#8-developer-cheatsheet-which-file-do-i-touch)
-9. [Operational & Environment Reference](#9-operational--environment-reference)
+The backend is a Hono API on Bun, MongoDB for business data, Redis for rate limiting and runtime
+settings, Supabase for identity, Cloudinary for image hosting.
 
 ---
 
-## 1. DDD in 2 Minutes — The Core Philosophy
+## Table of contents
 
-### The Three Core Ideas
-
-```mermaid
-flowchart LR
-    subgraph Problem["1. The Problem ❌"]
-        P1["Business rules scatter across controllers, helpers, and DB scripts"]
-        P2["Change one line → break ten unrelated features"]
-    end
-
-    subgraph Solution["2. The Solution 💡"]
-        S1["Objects enforce their OWN rules (Invariants)"]
-        S2["The User class decides if a user can be banned — not a controller"]
-    end
-
-    subgraph Result["3. The Result 🎯"]
-        R1["Every rule lives in exactly one place"]
-        R2["Impossible to bypass validation; trivial to test"]
-    end
-
-    Problem --> Solution --> Result
-```
-
-### The Vending Machine Analogy
-
-Think of a **vending machine**. You cannot pry open the glass door and grab a chocolate bar. You press button `B3`, the machine internally verifies your payment, checks if item `B3` is in stock, drops the item, and dispenses change. 
-
-**The rules live inside the vending machine.** No external bypass is possible.
-
-```
-Without DDD (Anemic / Spaghetti):
-Controller reads DB document -> Controller checks if paid -> Controller updates DB document
-(Anyone can write a new endpoint that forgets to check if paid!)
-
-With DDD (Rich Aggregate):
-Controller calls machine.dispense(item, payment)
--> Machine checks invariants internally -> Throws if invalid -> Emits SnackDispensedEvent
-(Impossible to ever dispense without payment!)
-```
-
-### The Golden Rule of Invariants
-
-> [!IMPORTANT]
-> **"An object enforces its own invariants."**
-> 
-> An invariant is a business rule that must *always* remain true. Every validation guard, every state restriction, and every permission boundary lives inside the Aggregate Root that owns that state. Nothing external can mutate private state directly.
+1. [What the system does](#1-what-the-system-does)
+2. [Repository map](#2-repository-map)
+3. [Stack](#3-stack)
+4. [Running the project](#4-running-the-project)
+5. [API bootstrap and request pipeline](#5-api-bootstrap-and-request-pipeline)
+6. [Response and error contract](#6-response-and-error-contract)
+7. [Authentication and authorization](#7-authentication-and-authorization)
+8. [Architecture: DDD + CQRS + hexagonal](#8-architecture-ddd--cqrs--hexagonal)
+9. [Domain model catalog](#9-domain-model-catalog)
+10. [Domain events](#10-domain-events)
+11. [Buses and cross-module communication](#11-buses-and-cross-module-communication)
+12. [Persistence layer](#12-persistence-layer)
+13. [API module reference](#13-api-module-reference)
+14. [HTTP endpoint catalog](#14-http-endpoint-catalog)
+15. [Stats subsystem](#15-stats-subsystem)
+16. [packages/shared](#16-packagesshared)
+17. [packages/frontend (headless SDK)](#17-packagesfrontend-headless-sdk)
+18. [apps/web](#18-appsweb)
+19. [Seed scripts](#19-seed-scripts)
+20. [Testing](#20-testing)
+21. [Configuration reference](#21-configuration-reference)
+22. [Known gaps and inconsistencies](#22-known-gaps-and-inconsistencies)
+23. [Where do I change X?](#23-where-do-i-change-x)
+24. [Maintaining this document](#24-maintaining-this-document)
 
 ---
 
-## 2. The 4 Layers of Architecture
+## 1. What the system does
 
-Every file in the codebase belongs to **exactly one layer**. Each layer communicates only with the layer directly adjacent to it.
+A customer browses products (optionally filtered by category or vendor), opens a product page,
+reads reviews and adds items to a cart. Placing an order goes through `POST /order/create/my`,
+which reserves stock through the inventory module, creates order items through the order-items
+module, and records a stats event. Vendors list products and variants, manage stock, see their
+sales stats, and can force-refresh their own stats (rate limited by a quota in Redis). Admins
+moderate users (ban/block), verify or reject vendors, block products, edit the home page layout and
+inspect the stats pipeline.
 
-### The Restaurant Analogy
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 🌐 WAITER (Presentation Layer - controller.ts)              │
-│ Speaks HTTP with customers. Takes orders. Passes IDs down. │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ passes plain IDs
-┌──────────────────────────────▼──────────────────────────────┐
-│ ⚙️ MANAGER (Application Layer - app.service.ts)             │
-│ Orchestrates the workflow: Load -> Command -> Save -> Event.│
-│ Makes ZERO business decisions. It's the project manager.    │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ calls domain commands
-┌──────────────────────────────▼──────────────────────────────┐
-│ 🧠 CHEF (Domain Layer - aggregate.ts) ⭐ THE STAR           │
-│ Owns ALL recipes and business rules. Knows zero HTTP or DB. │
-└──────────────────────────────┬──────────────────────────────┘
-                               │ defines ports (contracts)
-┌──────────────────────────────▼──────────────────────────────┐
-│ 🗄️ EQUIPMENT (Infrastructure Layer - repository.ts, models)  │
-│ MongoDB, Redis, Supabase. Translates data. Easily swappable.│
-└─────────────────────────────────────────────────────────────┘
-```
-
-### The 4 Layers Visualized
-
-```mermaid
-flowchart TD
-    subgraph Presentation["Layer 1: Presentation (apps/api/modules/*/presentation)"]
-        Ctrl["Controllers & Route Handlers"]
-        Req["Reads req.params, req.body, req.user"]
-    end
-
-    subgraph Application["Layer 2: Application (apps/api/modules/*/application)"]
-        AppSvc["Application Services (Workflow Orchestration)"]
-        Handlers["Command Handlers & Query Handlers"]
-    end
-
-    subgraph Domain["Layer 3: Domain (packages/domain) ⭐ THE STAR"]
-        Agg["Aggregate Roots (User, Product, Order)"]
-        VO["Value Objects (Id, Money, Email, Dates)"]
-        Events["Domain Events (OrderCreated, UserBanned)"]
-        Ports["Repository Interfaces (Ports)"]
-    end
-
-    subgraph Infrastructure["Layer 4: Infrastructure (apps/api/modules/*/infrastructure)"]
-        Repo["Repositories (MongoRepository Implementation)"]
-        Models["Mongoose Models & Schemas"]
-        Mappers["Mappers (Domain ↔ Mongoose Document)"]
-    end
-
-    Presentation -->|passes plain IDs| Application
-    Application -->|executes commands| Domain
-    Infrastructure -.->|implements| Ports
-    Application -->|persists via| Ports
-```
-
-### The Iron Law of Dependencies
-
-> [!CAUTION]
-> **Domain NEVER imports from Infrastructure.**
-> **Infrastructure NEVER imports from Presentation.**
-> 
-> The Domain package (`packages/domain`) is completely pure TypeScript with **zero** external runtime dependencies. It knows nothing about MongoDB, Hono, HTTP headers, or JSON payloads.
+Soft-delete and moderation state exist on most aggregates: `deleted` (usually with `deletedBy`,
+`deletedAt`, `reason`) and `block`/`ban` for products and users. Most “delete” endpoints are soft
+deletes followed by a matching recover endpoint; repository helpers also expose hard
+`deleteOne`/`deleteMany`, used by seed scripts and admin moderation code paths.
 
 ---
 
-### Implementation Order: Foundation Up (Steps 1–17)
+## 2. Repository map
 
-When creating a new bounded context or module, **always build from the foundation up**. Never create a file that depends on something you haven't written yet:
+Bun workspaces monorepo:
 
 ```
-module-name/
- ├── domain/                        ← STEP 1: Write FIRST (Zero dependencies)
- │    ├── value-objects/*.vo.ts     ← Step 1: Immutable smart wrappers
- │    ├── events/*.event.ts         ← Step 2: Event definitions
- │    ├── ports/i-*.repository.ts   ← Step 3: Pure interface contract
- │    ├── read-models/*.read-model.ts← Step 4: Safe public view shape
- │    └── *.aggregate.ts            ← Step 5: THE FORTRESS (rules + state)
- │
- ├── infrastructure/                ← STEP 2: Write SECOND (Talks to DB)
- │    ├── *.models.ts               ← Step 6: Mongoose schema definition
- │    ├── *.mapper.ts               ← Step 7: Document ↔ Aggregate translator
- │    └── *.repository.ts           ← Step 8: Implements domain port
- │
- ├── application/                   ← STEP 3: Write THIRD (Orchestration)
- │    ├── queries/*.query.ts        ← Step 9: Query DTO data bags
- │    ├── query-handlers/*.ts       ← Step 10: Query execution handlers
- │    ├── commands/*.command.ts     ← Step 11: Command DTO data bags
- │    ├── command-handlers/*.ts     ← Step 12: Command execution handlers
- │    ├── *.internal.service.ts     ← Step 13: Intra-module API
- │    └── *.app.service.ts          ← Step 14: Load -> Command -> Save -> Events
- │
- └── presentation/                  ← STEP 4: Write LAST (HTTP Interface)
-      ├── *.messages.ts             ← Step 15: Localized message constants
-      ├── *.controller.ts           ← Step 16: HTTP mapping (BaseController)
-      ├── *.routes.ts               ← Step 17: Hono route registrations
-      └── *.module.ts               ← Step 18: Wire DI container & register buses
+.
+├── apps
+│   ├── api                 Hono v4 API on Bun (port 8000)
+│   ├── mobile              placeholder — contains no source files
+│   └── web                 Next.js 16 App Router storefront + admin (MUI)
+├── packages
+│   ├── domain              aggregates, value objects, events, ports, read models
+│   ├── contracts           the only cross-module surface: query classes, ports, actor types
+│   ├── shared              Zod schemas, DTO types, read models, stats types
+│   └── frontend            headless SDK: HTTP client, React Query hooks, Zustand stores
+├── AGENTS.md               contributor instructions
+├── PROJECT_DOCUMENTATION.md this file
+├── README.md               older, partly stale overview (see §22)
+├── biome.json              formatter config (2 spaces, 100 cols, single quotes)
+├── ecosystem.config.js     pm2 config for production (fork mode, bun, port 8000)
+├── package.json            workspace scripts, overrides (react 19.3.0, lucide-react 0.468.0)
+└── tsconfig.json           project references + path aliases
 ```
+
+Path aliases (root `tsconfig.json`):
+
+| Alias | Target |
+|---|---|
+| `@ecomerece/domain` | `packages/domain/index.ts` |
+| `@ecomerece/contracts` | `packages/contracts/index.ts` |
+| `@ecomerece/shared` | `packages/shared/index.ts` |
+| `@ecomerece/frontend` | `packages/frontend/index.ts` |
 
 ---
 
-## 3. The Domain Fortress: Aggregates, Value Objects & Events
+## 3. Stack
 
-### The Aggregate Fortress Pattern
-
-The Aggregate is the fortress protecting your domain rules. The internal state is completely private. The only way to interact with an aggregate is through its **Public Commands (the Gates)**:
-
-```
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                      🏰 THE AGGREGATE FORTRESS                            ║
-║                                                                           ║
-║  ┌─────────────────────────────────┐   ┌───────────────────────────────┐  ║
-║  │ 🔒 PRIVATE STATE & GUARDS       │   │ 🚪 PUBLIC COMMAND GATES       │  ║
-║  │                                 │   │                               │  ║
-║  │  - _id: Id                      │   │  + ban(actorId, days, reason) │  ║
-║  │  - _email: EmailVO              │   │  + block(actorId, reason)     │  ║
-║  │  - _ban: BanInfoVO              │   │  + liftBan(actorId)           │  ║
-║  │  - _block: BlockInfoVO          │   │  + assignRole(role, actorId)  │  ║
-║  │  - _delete: DeleteInfoVO        │   │  + softDelete(actorId)        │  ║
-║  │                                 │   │                               │  ║
-║  │  Internal Guards:               │   │  Each gate:                   │  ║
-║  │  - Cannot ban an Admin          │   │  1. Runs internal guards      │  ║
-║  │  - Cannot ban yourself          │   │  2. Mutates private state     │  ║
-║  │  - Cannot double-ban active ban │   │  3. Raises Domain Event       │  ║
-║  └─────────────────────────────────┘   └───────────────────────────────┘  ║
-║                                                                           ║
-║  ┌─────────────────────────────────────────────────────────────────────┐  ║
-║ │ ⚡ EVENT COLLECTION (raise(event) → pullEvents() → clearEvents())│  ║
-║  └─────────────────────────────────────────────────────────────────────┘  ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-```
-
-#### The Real-World Aggregate Execution Workflow:
-
-The `AggregateRoot` API is `raise()` (protected), `pullEvents()` (public, drains the queue) and `clearEvents()`. Canonical implementation lives in `home.app.service.ts`:
-
-```typescript
-// apps/api/modules/home/application/home.app.service.ts
-private async publishEvents(home: HomeAggregate): Promise<void> {
-    const events = home.pullEvents();        // 1. Drain accumulated domain events
-    if (events.length > 0) {
-        await this.eventBus.publish(events); // 2. Push to decoupled listeners
-    }
-}
-
-async addCategory(data: CreateHomeCategoryDtoType, actorId: string) {
-    const home = await this.getHomeAggregate(); // 1. Load aggregate from repository
-    home.addCategory(CategoryVO.create({ ... })); // 2. Command — aggregate guards rules + raises `HomeCategoryAddedEvent`
-    await this.homeRepo.save(home);              // 3. Save updated state atomically
-    await this.publishEvents(home);              // 4. Push accumulated domain events
-}
-```
+| Concern | Choice |
+|---|---|
+| Runtime / package manager | Bun (runs TypeScript directly, `bun run --watch` in dev) |
+| HTTP API | Hono v4 |
+| Database | MongoDB via Mongoose 8 (transactions need a replica set) |
+| Cache / counters / settings | Redis (`redis` v6 client, `REDIS_URL`) |
+| Identity | Supabase (`@supabase/supabase-js`) — JWT verification + Google OAuth |
+| Validation | Zod 4 (`packages/shared`) |
+| Web | Next.js 16 App Router, React 19.3, Material UI 9 |
+| Client data layer | TanStack React Query 5 + Zustand 5 |
+| Images | Cloudinary (server upload, `IMAGE_STORAGE_PROVIDER`) |
+| Formatting | Biome |
+| Linting | Next.js ESLint config, `apps/web` only |
+| Tests | `bun:test` (78 tests across 13 files) |
 
 ---
 
-### ID Generation Rule — Server-Generated IDs Only
-
-**The API must never accept an ID from the client when creating a document.**
-
-- Every `create*` / `add*` command MUST generate the aggregate/document ID server-side with `Id.create()` (random UUID v7). Client-supplied IDs on create paths are an anti-pattern and are forbidden.
-- Client-supplied IDs are only allowed when they address an **existing** resource — update, delete, remove, reorder, lookup (e.g. `updateCategory(data.id)`, `removeSlide(data.id)`).
-- This applies to the application service layer: the DTOs exposed to the client must never include an `id` field on creation payloads.
-
-```typescript
-// ✅ CORRECT — id is generated by the server:
-const featureId = Id.create();
-home.addFeature(FeatureVO.create({ id: featureId, ... }));
-
-// ❌ FORBIDDEN — never derive the new document's id from client input:
-const featureId = data.id ? Id.create(data.id) : Id.create();
-```
-
----
-
-### Value Objects: Self-Validating Smart Wrappers
-
-A Value Object wraps primitive data (strings, numbers, dates) and guarantees **instant, permanent validity**.
-
-```typescript
-// ❌ WITHOUT VALUE OBJECT:
-const email: string = "not-an-email";
-// Valid TypeScript string, but invalid business email! 
-// Error explodes only when the mailer crashes hours later.
-
-// ✅ WITH VALUE OBJECT:
-const email = EmailVO.create("not-an-email");
-// Throws BadRequestError immediately upon creation!
-// An invalid email can NEVER exist anywhere in memory.
-```
-
-#### Value Objects Implemented in `packages/domain/value-objects`:
-
-| Category | Value Object | Constraints & Invariants |
-| :--- | :--- | :--- |
-| **Identifiers** | `Id`, `IdentifierVO`, `Slug` | Non-empty, format validation, UUID / ObjectId compatibility, URL slug formatting |
-| **Financial & Math** | `Money`, `Quantity`, `Percentage`, `NumberVO` | Non-negative decimals, integer inventory counts, discount limits (0–100%) |
-| **Temporal** | `DateVO`, `EffectiveDate`, `ExpirationDate` | Valid dates, `EffectiveDate.today()`, strictly future timestamps for `ExpirationDate` |
-| **Contact & Personal**| `EmailVO`, `Name`, `PhoneNo` | RFC email regex, formatted full name strings, E.164 phone numbering |
-| **Content & Media** | `Title`, `Description`, `UrlVO`, `ImageVO`, `AltVO`, `ColorVO` | Text length boundaries, valid URL schemas, hex colors, responsive media metadata |
-| **Sanctions & State**| `BanInfoVO`, `BlockInfoVO`, `DeleteInfoVO` | Ban tracking (`until`, `remainingDays`), actor attribution, reasons, soft-deletion |
-| **Catalog Specs** | `AppearanceVO`, `QueryVO`, `EnumVO`, `EnumCollectionVO` | Visibility toggles (`isPublic`), validated search filters, bounded enumerations, bounded enum collections |
-| **Product / Schema** | `StringVO`, `ReasonVO`, `StreetAddressVO` | Generic validated strings, sanction/comment reasons, address line structures |
-
-> [!NOTE]
-> `IconVO` (`packages/domain/value-objects/icon.vo.ts`) and `IconSchema` (`packages/shared/dtos/icon-schema.ts`) are **legacy / unused** — they were removed from the `home` module's categories & features and are exported only via barrel `index.ts` files. Safe to delete when cleaning up.
-
----
-
-### Domain Events Lifecycle
-
-Domain events are defined in the Domain, **raised** by the Aggregate via `this.raise()`, drained with `pullEvents()`, and optionally **pushed** through the singleton `EventBus` (`apps/api/core/infrastructure/buses/in-memory-event-bus.ts`):
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Cmd as App Service (Application)
-    participant Agg as Aggregate (Domain)
-    participant Bus as InMemoryEventBus
-    participant H as Handlers (optional)
-
-    Cmd->>Agg: home.addCategory(new CategoryVO(...))
-    Agg->>Agg: validates invariants, raises event
-    Cmd->>Cmd: await repo.save(home)
-    Cmd->>Agg: home.pullEvents()
-    Cmd->>Bus: eventBus.publish(events)
-    alt handler registered on event.type
-        Bus->>H: handler.handle(event)
-    end
-```
-
-#### Event Catalog by Module
-
-| Module | Aggregate | Events (type strings) | Raise | Publish |
-| :--- | :--- | :--- | :--- | :--- |
-| `user` | `UserAggregate` | `user.signed-in`, `user.logged-in`, `user.role-assigned`, `user.banned`, `user.ban-lifted`, `user.ban-extended`, `user.ban-shortened`, `user.blocked`, `user.block-lifted`, `user.deleted`, `user.delete-lifted` = **11** | ✅ all 11 | ❌ app service does not publish yet |
-| `vendor` | `VendorAggregate` | `vendor.created`, `vendor.verified`, `vendor.rejected`, `vendor.deleted`, `vendor.recovered`, `vendor.image-updated`, `vendor.contact-updated`, `vendor.meta-updated` = **8** | ✅ all 8 | ❌ not published yet |
-| `order` | `OrderAggregate` | `order.created`, `order.confirmed`, `order.completed`, `order.cancelled`, `order.refunded`, `order.returnded` *(sic, code typo)* | ⚠️ only `order.created` | ❌ not published yet |
-| `home` | `HomeAggregate` | `home.category-*` (4), `home.feature-*` (4), `home.slide-*` (4), `home.promo-*` (3), `home.container-*` (4) = **19** | ✅ all 19 | ✅ `pullEvents()` + `publish()` in `home.app.service.ts` |
-| `product` | `ProductAggregate` | `product.created`, `product.pricing-summary-updated`, `product.rating-summary-updated`, `product.recovered`, `product.deleted`, `product.blocked`, `product.unblocked`, `product.made-public`, `product.made-private`, `product.meta-updated`, `product.in-stock-updated`, `product.disclaimer-enabled`, `product.disclaimer-disabled`, `product.disclaimers-added`, `product.disclaimers-removed`, `product.disclaimer-updated`, `product.images-added`, `product.images-removed`, `product.default-image-set`, `product.ingredients-enabled`, `product.ingredients-disabled`, `product.ingredients-added`, `product.ingredients-removed`, `product.ingredients-cleared` = **24** | ✅ all 24 | ❌ not published yet |
-| `product-variant` | `ProductVariantAggregate` | `product-variant.created`, `product-variant.meta-updated`, `product-variant.activated`, `product-variant.deactivated`, `product-variant.price-updated`, `product-variant.deleted`, `product-variant.recovered` = **7** | ✅ all 7 | ❌ not published yet |
-| `inventory` | `InventoryAggregate` | `inventory.created`, `inventory.reserved`, `inventory.completed`, `inventory.bought`, `inventory.low-stock-threshold-updated`, `inventory.stock-removed`, `inventory.deleted` = **7** | ✅ all 7 | ❌ not published yet |
-| `category` | `CategoryAggregate` | `category.created`, `category.meta-updated`, `category.image-updated`, `category.deleted`, `category.recovered`, `category.blocked` = **6** | ✅ all 6 | ❌ not published yet |
-| `address` | `AddressAggregate` | `address.created`, `address.updated`, `address.deleted`, `address.recovered`, `address.set-as-default` = **5** | ✅ all 5 | ❌ not published yet |
-| `order-items` | `OrderItemsAggregate` | `order-item.created` = **1** | ✅ all 1 | ❌ not published yet |
-| `reviews` | `ReviewAggregate` | `review.created`, `review.updated`, `review.vendor-reply-added`, `review.liked`, `review.disliked`, `review.reported`, `review.deleted` = **7** | ✅ all 7 | ❌ not published yet |
-
-Events are raised inside the aggregate command methods, and creation events are raised from the static `create()` factory before the aggregate is returned. The event files live in `packages/domain/modules/<module>/events/` (barrel-exported via `<module>/events/index.ts`, re-exported from `<module>/index.ts`). Home registers **no listeners** — it only creates and pushes events.
-
-> [!NOTE]
-> Current publish gap: modules `user`, `vendor`, `order`, `product`, `product-variant`, `inventory`, `category`, `address`, `order-items` and `reviews` raise domain events but their app services **do not yet call `publish()`** — events accumulate in the aggregate and are drained only if the service calls `pullEvents()`. Only `home.app.service.ts` implements the full Load → Command → Save → Publish loop. The `user` module does register one handler (`UserSignedInHandler` on `user.signed-in`).
-
----
-
-### Complete Catalog of Project Aggregates & Value Objects
-
-Every bounded context maps to exactly one Aggregate Root under `packages/domain/modules/<module>/`, paired with shared value objects in `packages/domain/value-objects/` and module-scoped VOs:
-
-| Module | Aggregate Root | Module-Scoped Value Objects |
-| :--- | :--- | :--- |
-| `user` | `UserAggregate` | `NameInfoVO`, `RoleInfoVO` |
-| `order` | `OrderAggregate` | `OrderItemVO` |
-| `order-items` | `OrderItemsAggregate` | `StatusVO` |
-| `product` | `ProductAggregate` | `DisclaimerVO`, `IngredientsVO`, `ProductImagesVO` |
-| `product-variant` | `ProductVariantAggregate` | — |
-| `inventory` | `InventoryAggregate` | — |
-| `vendor` | `VendorAggregate` | `ContactInfoVO`, `ImageInfoVO`, `StatsInfoVO`, `VerificationInfoVO` |
-| `category` | `CategoryAggregate` | — |
-| `address` | `AddressAggregate` | — |
-| `home` | `HomeAggregate` | `CategoryVO`, `FeatureVO`, `SlideVO`, `PromoVO`, `ProductContainerVO` |
-| `reviews` | `ReviewAggregate` | — |
-
-Shared value objects live in `packages/domain/value-objects/` (see the table above) and are re-exported from `packages/domain/index.ts` under the `@ecomerece/domain` alias.
-
----
-
-## 4. Cross-Module Decoupling: How Modules Communicate
-
-### The Spaghetti Problem vs. Central Buses
-
-When modules import each other directly, renaming one method causes cascade compilation failures throughout the system:
-
-```
-❌ The Spaghetti Problem (Direct Imports):
-OrderModule ─── imports ───> InventoryInternalService
-VendorModule ── imports ───> UserInternalService
-OrderModule ─── imports ───> ProductRepository
-Notification ── imports ───> UserModel
-(Circular dependencies, tangled tests, fragile deployments)
-
-✅ The Decoupled Solution (Bus Contracts):
-OrderModule ─── sends ───> [ CommandBus ] ───> InventoryHandler
-VendorModule ── sends ───> [ QueryBus ]   ───> UserHandler
-UserModule  ─── emits ───> [ EventBus ]   ───> NotificationListener
-(Modules know only tiny, stable contract data bags!)
-```
-
----
-
-### Pattern 1: QueryBus (Synchronous Decoupled Reads)
-
-**The Restaurant Analogy**: You (VendorModule) do not walk into the kitchen to question the Chef (UserInternalService). You write your question on a **ticket** (`GetUserByIdQuery`) and hand it to the **waiter** (`QueryBus`). The waiter brings back the answer (`UserReadModel`). You never touch the kitchen.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Caller as VendorService
-    participant Bus as InMemoryQueryBus
-    participant Handler as GetUserByIdHandler
-    participant Service as UserInternalService
-
-    Caller->>Bus: execute(new GetUserByIdQuery(userId))
-    Note over Bus: Matches query class to registered handler
-    Bus->>Handler: handle(query)
-    Handler->>Service: getById(query.userId)
-    Service-->>Handler: UserReadModel
-    Handler-->>Bus: UserReadModel
-    Bus-->>Caller: UserReadModel
-```
-
-**The 4 Files Needed**:
-1. **Query Class**: `user/application/queries/get-user-by-id.query.ts` (Tiny data bag; the *only* thing other modules import).
-2. **Query Handler**: `user/application/query-handlers/get-user-by-id.handler.ts` (Lives inside User module; calls internal service).
-3. **Registration**: `user.module.ts` (`queryBus.register(GetUserByIdQuery, handler)`).
-4. **Caller Usage**: `vendor.app.service.ts` (`await queryBus.execute(new GetUserByIdQuery(id))`).
-
----
-
-### Pattern 2: Anti-Corruption Layer / ACL (Type Isolation)
-
-**The Currency Exchange Analogy**: You travel to France with British Pounds. You visit a **currency exchange booth** (`UserACL`). The booth converts Pounds to Euros so French merchants can process your transaction without understanding British currency.
-
-The ACL lives in the **consumer module's infrastructure**:
-```typescript
-// vendor/infrastructure/user-acl.ts
-export class UserACL {
-    constructor(private readonly userQueryBus: InMemoryQueryBus) {}
-
-    async getOwnerView(userId: string): Promise<VendorOwnerView | null> {
-        const user = await this.userQueryBus.execute(new GetUserByIdQuery(userId));
-        if (!user) return null;
-        
-        // Translates foreign UserReadModel into local VendorOwnerView
-        return {
-            ownerId: user.id,
-            ownerName: user.name.fullName,
-            isVerified: !user.banned && !user.blocked,
-        };
-    }
-}
-```
-
----
-
-### Pattern 3: Domain Events (Asynchronous Reactive Broadcasts)
-
-**The News Broadcast Analogy**: When a news agency publishes a story, it posts the bulletin. It does not call every citizen on the telephone. Interested parties subscribe to the broadcast and react on their own.
-
-```
-UserAppService (Publisher)
-       │ raises & publishes
-       ▼
-   EventBus  (type: 'user.deleted')
-       ├───► VendorListener: Delete all store listings for user
-       ├───► NotificationListener: Send farewell email
-       └───► AuditListener: Write record to compliance log
-```
-*UserAppService imports ZERO files from Vendor, Notification, or Audit.*
-
----
-
-### Pattern 4: CommandBus (Synchronous Decoupled Writes)
-
-**The CEO Analogy**: The CEO gives an order to the Warehouse Chief: *"Reserve 2 units of SKU-99 right now, and confirm when completed."* The CEO only signs the purchase invoice *after* the warehouse confirms.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Order as OrderAppService
-    participant Bus as InMemoryCommandBus
-    participant Handler as ReserveInventoryHandler
-    participant Inventory as InventoryAggregate
-
-    Order->>Bus: execute(new ReserveInventoryCommand(items, buyerId))
-    Bus->>Handler: handle(command)
-    Handler->>Inventory: reserve(quantity)
-    alt Insufficient Stock
-        Inventory-->>Handler: Throws DomainError('Out of stock')
-        Handler-->>Bus: Re-throws Error
-        Bus-->>Order: Error caught -> ORDER IS NEVER SAVED ❌
-    else Stock Available
-        Inventory->>Inventory: Stock deducted, reserved incremented
-        Handler-->>Bus: Success confirmation
-        Bus-->>Order: Success confirmation
-        Order->>Order: OrderAggregate.create() -> Save to DB ✅
-    end
-```
-
----
-
-### Preventing Race Conditions: Why Not Events for Inventory Reservation?
-
-> [!CAUTION]
-> **Why Domain Events CANNOT be used for Inventory Reservation:**
-> 
-> If you publish an asynchronous `OrderPlacedEvent` and attempt to reserve inventory inside an event listener, you create a fatal race condition:
-> 1. Customer A and Customer B both purchase the last available item simultaneously.
-> 2. Both orders commit to the database successfully.
-> 3. The asynchronous event listener runs for Customer B, discovers 0 stock, and fails.
-> 4. **You have oversold inventory.** You now need complex distributed sagas, cancellation refunds, and customer apology emails.
-> 
-> **With `CommandBus`**: The reservation is synchronous and atomic. Customer A's reservation succeeds; Customer B's reservation throws immediately; Customer B's order is **never created**.
-
----
-
-### The Three Buses Comparison Table
-
-| Property | 🚌 QueryBus | 🚦 CommandBus | ⚡ EventBus |
-| :--- | :--- | :--- | :--- |
-| **Primary Intent** | Read data synchronously | Mutate state synchronously | React to state change asynchronously |
-| **Execution** | `await queryBus.execute()` | `await commandBus.execute()` | `eventBus.publish()` (Fire & forget) |
-| **Return Value** | ReadModel / Data DTO | Confirmation / Result | `void` |
-| **Caller Blocks?** | Yes (Needs data immediately) | Yes (Must succeed before commit) | No (Eventual consistency) |
-| **Module Coupling** | Decoupled (imports Query DTO) | Decoupled (imports Command DTO) | Zero coupling (Listener registers on type) |
-| **Real Example** | `VerifyUserAndGetQuery` | `CreateItemsCommand` | `HomeCategoryAddedEvent`, `UserBannedEvent` |
-
-All three buses are **in-memory singletons** living in `apps/api/core/infrastructure/buses/` (`in-memory-query-bus.ts`, `in-memory-command-bus.ts`, `in-memory-event-bus.ts`). Commands are keyed by `command.constructor.name`; queries by the query class itself; events by their `type` string. They are platform-native and can be swapped for outer adapters (e.g. Kafka/RabbitMQ for the event bus) without touching the domain. The query bus is already used cross-module by the `user` and `order` modules, and the command bus by `order-items`. The event bus has one registered handler today: `UserSignedInHandler` (`user.signed-in`).
-
----
-
-### Architectural Decision Tree
-
-```
-Does Module A need something from Module B?
-│
-├── Is this a reaction to something that already happened?
-│    └── YES ──► Use DOMAIN EVENTS (⚡ EventBus)
-│
-└── NO (I need action or data RIGHT NOW)
-     │
-     ├── Do I need to READ data without altering state?
-     │    └── YES ──► Use QUERYBUS (🚌 QueryBus)
-     │
-     └── Do I need to WRITE / RESERVE state atomically?
-          └── YES ──► Use COMMANDBUS (🚦 CommandBus)
-```
-
----
-
-## 5. The Persistence Layer & Unit of Work
-
-### The Translator Pattern: Mappers
-
-MongoDB stores flat documents. The Domain uses rich aggregate instances. The **Mapper** (`*.mapper.ts`) translates between these two worlds:
-
-```
- MongoDB Document (Flat)               Domain Aggregate (Rich)
-┌────────────────────────┐           ┌────────────────────────┐
-│ _id: string            │   toAgg   │ id: Id                 │
-│ price: number          ├──────────►│ price: Money           │
-│ email: string          │           │ email: EmailVO         │
-│ isBanned: boolean      │◄──────────┤ ban: BanInfoVO         │
-│ banUntil: Date         │   toDoc   │ delete: DeleteInfoVO   │
-└────────────────────────┘           └────────────────────────┘
-```
-
-Each mapper exposes the following methods (naming varies by module — `user.mapper.ts` and `home.mapper.ts` are canonical):
-- `persistenceToAggregate(doc)` / `aggregateToPersistence(aggregate)`: Core document ↔ aggregate translation.
-- Domain- or DTO-specific extras, e.g. `home.mapper.ts` adds `aggregateToReadModel(aggregate)` and `aggregateToResponseDto(aggregate)` for the storefront response.
-
----
-
-### The Repository Port Pattern
-
-Domain defines the interface contract; Infrastructure implements it (note the codified **PascalCase** method names and that repositories extend the generic `MongoRepository<T>`, which wires transactions via `AsyncLocalStorage` sessions):
-```typescript
-// packages/domain/modules/user/ports/i-user-repository.ts (THE CONTRACT)
-export interface IUserRepository {
-    FindById(id: Id): Promise<UserAggregate | null>;
-    FindByEmail(email: EmailVO): Promise<UserAggregate | null>;
-    FindByIdOrThrow(id: Id): Promise<UserAggregate>;
-    FindByIds(id: Id[]): Promise<UserAggregate[]>;
-    FindByEmailOrThrow(email: EmailVO): Promise<UserAggregate>;
-    Save(user: UserAggregate): Promise<void>;
-    Create(add: UserAggregate): Promise<void>;
-    Delete(id: Id): Promise<void>;
-    Exists(id: Id): Promise<boolean>;
-}
-
-// apps/api/modules/user/infrastructure/user.repository.ts (THE IMPLEMENTATION)
-export class UserRepository extends MongoRepository<UserPersistence> implements IUserRepository {
-    // Implements Mongoose persistence
-}
-```
-*Swapping MongoDB for PostgreSQL requires changing exactly one repository file and one line in `user.module.ts`.*
-
----
-
-### Unit of Work with AsyncLocalStorage Transactions
-
-MongoDB transactions require active `ClientSession` instances. Our [`UnitOfWork`](file:///home/abdul-ahad/Desktop/hono_backend/apps/api/core/database/unit-of-work.ts) automatically propagates sessions across all repository calls using Node's `AsyncLocalStorage` without leaking session objects into application code:
-
-```typescript
-export class UnitOfWork {
-    async transaction<T>(callback: () => Promise<T>, retries = 3): Promise<T> {
-        return withRetry(async () => {
-            const session = await mongoose.startSession();
-            try {
-                session.startTransaction();
-                const result = await transactionContext.run({ session }, callback);
-                await session.commitTransaction();
-                return result;
-            } catch (error) {
-                await session.abortTransaction();
-                throw error;
-            } finally {
-                await session.endSession();
-            }
-        }, {
-            retries,
-            shouldRetry: isTransientTransactionError,
-            backoff: (attempt) => Math.min(100 * 2 ** (attempt - 1), 5000),
-        });
-    }
-}
-```
-
----
-
-## 6. Defensive Middleware & API Gateway (`apps/api`)
-
-### Request Guards (DoS, Payload Tree & Buffer Defense)
-
-Before any route handler runs, [`requestguard.middleware.ts`](file:///home/abdul-ahad/Desktop/hono_backend/apps/api/middleware/requestguard.middleware.ts) enforces rigid input constraints:
-- **`urlLengthGuard(200)`**: Prevents buffer and regex evaluation exploits on oversized request paths.
-- **`queryLengthGuard(100)`**: Disallows long query string attacks.
-- **`paramLengthGuard(20)`**: Rejects bloated route parameters.
-- **`bodyLimit(1000)`**: Rejects HTTP payloads larger than 1 KB.
-- **`jsonDepthGuard(5)`**: Defends against nested JSON recursion exploits that cause stack overflows.
-- **`jsonNodesGuard(50)`**: Limits maximum AST node count in incoming JSON payloads.
-
----
-
-### Redis Sliding Token Bucket Rate Limiting
-
-The rate limiter in [`rateLimiter.ts`](file:///home/abdul-ahad/Desktop/hono_backend/apps/api/middleware/rateLimiter.ts) operates directly on Redis:
-- **Bucket Capacity**: 10 tokens.
-- **Refill Rate**: 1 token per second.
-- **Client Keying**: IP extracted from `cf-connecting-ip` or `x-forwarded-for`.
-- **Enforcement**: Throws `TooManyRequestError` (HTTP 429) when exhausted.
-
----
-
-### Supabase Identity & Dynamic State Verification
-
-The auth pipeline in [`auth.ts`](file:///home/abdul-ahad/Desktop/hono_backend/apps/api/middleware/auth.ts) does not rely solely on cryptographic JWT validity:
-1. Verifies Bearer token with Supabase Admin SDK.
-2. Retrieves matching MongoDB `User` document.
-3. **Verifies Live State**:
-   - `user.deleted.deleted` &rarr; Throws `UnauthorizedError('User not found')`
-   - `user.block.blocked` &rarr; Throws `ForbiddenError('User blocked')`
-   - `user.ban.banned` &rarr; Throws `ForbiddenError('User banned')`
-
----
-
-### Complete API Endpoints Catalog
-
-```mermaid
-graph LR
-    API[Hono API Router]
-    API --> Users["/users"]
-    API --> Products["/product"]
-    API --> Variants["/product-variant"]
-    API --> Inventory["/product-inventory"]
-    API --> Orders["/order"]
-    API --> OrderItems["/order-items"]
-    API --> Categories["/category"]
-    API --> Address["/address"]
-    API --> Vendor["/vendor"]
-    API --> Home["/home"]
-```
-
-All routes are registered in `apps/api/routes/index.ts` and mounted to the Hono app root. Guards reflect the middleware stacked on each route (`authMiddleware`, `adminMiddleware`). Seller scoping (e.g. "own product") is enforced inside controllers/app services, not by a separate middleware — `sellerMiddleware` exists but is not yet wired to any route.
-
-| Domain | Route | Method | Access Guard | Action Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **Users** | `/users/init` | POST | InitAuth | Initialize MongoDB user record post signup |
-| | `/users/me` | GET | Auth | Retrieve authenticated profile |
-| | `/users/me/soft` | DELETE | Auth | User self soft-deletion |
-| | `/users/:id` | GET | Auth | Fetch user profile by ID |
-| | `/users/role` | PATCH | Admin | Assign user role (`customer`, `vendor`, `admin`) |
-| | `/users/block` | PATCH | Admin | Impose indefinite account block |
-| | `/users/block/lift` | PATCH | Admin | Lift account block |
-| | `/users/ban` | PATCH | Admin | Ban user for specified number of days |
-| | `/users/ban/extend` | PATCH | Admin | Extend active ban |
-| | `/users/ban/short` | PATCH | Admin | Shorten active ban |
-| | `/users/ban/lift` | PATCH | Admin | Lift active ban |
-| | `/users/recover` | PATCH | Admin | Recover soft-deleted user |
-| | `/users/soft` | DELETE | Admin | Admin soft-delete a user |
-| **Products** | `/product` | GET | Public | Paginated product search & catalog listing |
-| | `/product/:id` | GET | Public | Detailed product view |
-| | `/product/my` | POST | Auth | Vendor creates new product catalog item |
-| | `/product/my/soft` | DELETE | Auth | Soft-delete product |
-| | `/product/my/recover`| PATCH | Auth | Recover soft-deleted product |
-| | `/product/state/my/public` | PATCH | Auth | Publish product to storefront |
-| | `/product/state/my/private`| PATCH | Auth | Hide product from storefront |
-| | `/product/my/meta` | PATCH | Auth | Update title & description |
-| | `/product/my/disclaimer/toggle` | PATCH | Auth | Toggle a product disclaimer |
-| | `/product/my/disclaimer/add`| PATCH | Auth | Add product disclaimers |
-| | `/product/my/disclaimer/remove`| PATCH | Auth | Remove product disclaimers |
-| | `/product/my/images/add` | PATCH | Auth | Append media URLs to gallery |
-| | `/product/my/images/remove` | PATCH | Auth | Remove a media URL from gallery |
-| | `/product/my/images/default`| PATCH | Auth | Set default hero image |
-| | `/product/my/ingredients/toggle`| PATCH| Auth | Toggle ingredients list |
-| | `/product/my/ingredients/add`| PATCH| Auth | Add product ingredients list |
-| | `/product/my/ingredients/remove`| PATCH| Auth | Remove product ingredients |
-| | `/product/block` | POST | Admin | Moderation block product |
-| | `/product/block/lift` | POST | Admin | Unblock product |
-| **Variants** | `/product-variant/:id` | GET | Public | Get all variants for a product ID |
-| | `/product-variant/my` | POST | Auth | Create SKU variant (color, size, price) |
-| | `/product-variant/my/price`| PATCH | Auth | Update variant pricing |
-| | `/product-variant/my/meta` | PATCH | Auth | Update variant metadata |
-| | `/product-variant/my/appereance/toggle`| PATCH | Auth | Toggle variant appearance (`appereance` typo in code) |
-| | `/product-variant/my/delete/soft`| DELETE | Auth | Soft-delete variant |
-| | `/product-variant/recover/:id`| PATCH | Admin | Recover soft-deleted variant |
-| **Inventory** | `/product-inventory/:id` | GET | Public | Check stock availability for variant |
-| | `/product-inventory/my/create` | POST | Auth | Initialize stock tracking record |
-| | `/product-inventory/my/:id/purchase` | PATCH | Auth | Restock inventory replenishment |
-| | `/product-inventory/my/:id/threshold` | PATCH | Auth | Configure low-stock notification limit |
-| | `/product-inventory/:id/remove` | PATCH | Auth | Remove stock record |
-| **Orders** | `/order/create/my` | POST | Auth | Multi-item atomic checkout pipeline |
-| **Order Items**| `/order-items` | — | — | Mounted in the router; defines no HTTP routes — only registers the `CreateItemsCommand` handler |
-| **Categories**| `/category` | GET | Public | List hierarchical categories |
-| | `/category/:id` | GET | Public | Category details |
-| | `/category/create` | POST | Admin | Create category |
-| | `/category` | DELETE | Admin | Delete category |
-| **Address** | `/address/my` | GET | Auth | List delivery addresses |
-| | `/address/my` | POST | Auth | Add shipping address |
-| | `/address/my/:id/default`| PATCH | Auth | Mark address as default |
-| | `/address/my/:id/update` | PATCH | Auth | Update address details |
-| | `/address/my/:id/recover`| PATCH | Admin | Recover soft-deleted address |
-| | `/address/my/:id` | DELETE | Auth | Soft-delete address |
-| **Vendor** | `/vendor/my` | POST | Auth | Register seller storefront |
-| | `/vendor/my` | DELETE | Auth | Delete own vendor profile |
-| | `/vendor/:id` | GET | Public | Retrieve vendor public profile |
-| | `/vendor/soft` | DELETE | Admin | Soft-delete vendor (moderation) |
-| | `/vendor/recover` | PATCH | Admin | Recover soft-deleted vendor |
-| | `/vendor/verify` | PATCH | Admin | Approve vendor KYC registration |
-| | `/vendor/reject` | PATCH | Admin | Reject vendor verification |
-| **Home CMS** | `/home` | GET | Public | Fetch storefront layout configuration |
-| | `/home/categories` | POST | Admin | Add a category chip to the home layout |
-| | `/home/categories` | PATCH | Admin | Update a home category |
-| | `/home/categories` | DELETE | Admin | Remove a home category |
-| | `/home/categories/reorder` | PATCH | Admin | Reorder category chips |
-| | `/home/features` | POST | Admin | Add a feature blob |
-| | `/home/features` | PUT | Admin | Replace the entire feature set |
-| | `/home/features` | PATCH | Admin | Update a feature blob |
-| | `/home/features` | DELETE | Admin | Remove a feature blob |
-| | `/home/slides` | POST | Admin | Add hero banner slide |
-| | `/home/slides` | PATCH | Admin | Update hero banner slide |
-| | `/home/slides` | DELETE | Admin | Remove hero banner slide |
-| | `/home/slides/reorder` | PATCH | Admin | Reorder hero slides ranking |
-| | `/home/promos` | POST | Admin | Add promo banner |
-| | `/home/promos` | PATCH | Admin | Update promo banner |
-| | `/home/promos` | DELETE | Admin | Remove promo banner |
-| | `/home/containers` | POST | Admin | Add dynamic product showcase shelf |
-| | `/home/containers` | PATCH | Admin | Update product showcase shelf |
-| | `/home/containers` | DELETE | Admin | Remove product showcase shelf |
-| | `/home/containers/reorder` | PATCH | Admin | Reorder showcase shelf layout |
-
-> [!NOTE]
-> The **reviews** module (`apps/api/modules/reviews`) has a full 4-layer scaffold + domain aggregate (`ReviewAggregate`), but its controller/routes are **not yet wired** — it exposes no HTTP endpoints and is not mounted in `routes/index.ts`.
-
----
-
-## 7. Frontend Architecture & Multi-Platform SDK
-
-### Headless Client SDK (`packages/frontend`)
-
-The frontend business logic is decoupled from React UI via `@ecomerece/frontend`:
-
-```
-packages/frontend/
- ├── adapters/
- │    ├── auth/               ← Platform conditional exports
- │    │    ├── auth-adapter.interface.ts
- │    │    ├── auth-adapter.web.ts      (Supabase Browser/SSR)
- │    │    └── auth-adapter.native.ts   (AsyncStorage / Keychain)
- │    ├── storage/
- │    │    ├── storage-adapter.interface.ts
- │    │    ├── storage-adapter.web.ts   (LocalStorage)
- │    │    └── storage-adapter.native.ts(AsyncStorage)
- │    └── navigation/         ← Zustand Cross-Platform Stores
- │         ├── shell.store.ts
- │         ├── tabs.store.ts
- │         ├── wizard.store.ts
- │         ├── page meta.store.ts
- │         ├── command palette.store.ts
- │         └── history stack.store.ts
- ├── modules/                 ← TanStack React Query Hooks & Services
- │    ├── user/  product/  order/  inventory/  address/
- │    └── category/  product-variant/  home/  vendor/
- ├── services/                ← supabaseClient, parseModalError, theme
- └── lib/
-      ├── http-client.ts      ← Unified fetch wrapper with AppError parsing
-      ├── http-error.ts / server-http.ts
-      └── query-client.ts     ← React Query cache defaults
-```
-
-### Next.js 16 Web Storefront & Backoffice (`apps/web`)
-
-The Next.js 16 application employs the App Router, React 19 Server Components, and **Material UI (MUI)** as the default component library:
-- **Public Storefront** (`/client/home`, `/client/product/[id]`): High-performance SSR product discovery.
-- **Account Backoffice** (`/account/profile`, `/account/address`): User self-service portal.
-- **Admin Dashboard** (`/admin/home`): Dynamic CMS homepage curation.
-
----
-
-## 8. Developer Cheatsheet: "Which File Do I Touch?"
-
-| Goal / Task | Files to Create or Modify |
-| :--- | :--- |
-| **Add a new business rule to an existing entity** | 1. Open `packages/domain/modules/<module>/<module>.aggregate.ts`<br>2. Add invariant check inside the target command method.<br>3. Zero other files change! 🎉 |
-| **Add a new field to MongoDB document** | 1. `apps/api/modules/<module>/infrastructure/<module>.models.ts` (Mongoose Schema)<br>2. `apps/api/modules/<module>/infrastructure/<module>.mapper.ts` (update `persistenceToAggregate` + `aggregateToPersistence`)<br>3. `packages/domain/modules/<module>/<module>.aggregate.ts` (Add private prop & getter) |
-| **Dispatch a new Domain Event (raise + push)** | 1. Create `packages/domain/modules/<module>/events/<name>.event.ts` (implements `IEvent<T>`, stable `type` string)<br>2. In aggregate: call `this.raise(new Event(...))`<br>3. In app service after `save()`: drain with `home.pullEvents()` then `await this.eventBus.publish(events)`<br>4. *(Optional)* Add a listener in `application/event-handlers/<name>.handler.ts` and `eventBus.register('<type>', handler)` in `<module>.module.ts` |
-| **Query data from another module** | 1. Create query DTO in target module: `<target>/application/queries/<name>.query.ts`<br>2. Create handler in target module: `<target>/application/query-handlers/<name>.handler.ts`<br>3. Register on `queryBus` in `<target>.module.ts`<br>4. In caller module: call `await queryBus.execute(new Query(...))` |
-| **Execute a synchronous write across modules** | 1. Create command DTO in target module: `<target>/application/commands/<name>.command.ts`<br>2. Create handler in target module: `<target>/application/command-handlers/<name>.handler.ts`<br>3. Register on `commandBus` in `<target>.module.ts`<br>4. In caller module: call `await commandBus.execute(new Command(...))` |
-| **Swap MongoDB for PostgreSQL / Prisma** | 1. Create new repository class implementing domain port `I<Module>Repository`<br>2. Swap instance in `<module>.module.ts`<br>3. Zero domain, application, or presentation files change! 🎉 |
-| **Swap In-Memory EventBus for RabbitMQ / Kafka** | 1. Create class implementing `IEventBus`<br>2. Swap bus instance in `<module>.module.ts` |
-
----
-
-## 9. Operational & Environment Reference
-
-### Environment Variables
-
-#### Backend (`apps/api/.env`)
-```bash
-MONGO_URI=mongodb://root:password@127.0.0.1:27017/ecommerce?replicaSet=rs0&authSource=admin
-REDIS_URL=redis://localhost:6379                 # consumed by apps/api/lib/redis.ts
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SECRET_KEY=eyJhbGciOi...                # Supabase service-role key (apps/api/lib/supabase.ts)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...    # Clerk publishable key
-CLERK_SECRET_KEY=sk_test_...                     # Clerk secret key
-GOOGLE_CLIENT_ID=...googleusercontent.com        # Google OAuth
-GOOGLE_CLIENT_SECRET=...
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
-JWT_SECRET=super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
-```
-
-> [!NOTE]
-> The API **port is hardcoded to `8000`** in `apps/api/index.ts` (not env-driven). MongoDB write transactions require the `?replicaSet=rs0` query param. Auth is verified server-side with the **Supabase Admin SDK** (`apps/api/lib/supabase.ts`); Clerk/Google keys are used by the web storefront auth flows.
-
-#### Web Frontend (`apps/web/.env.local`)
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...      # Public anon key
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...    # Clerk publishable key
-CLERK_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
-GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
-FRONTEND_URL=http://localhost:3000
-```
-
-### Essential CLI Commands
+## 4. Running the project
 
 ```bash
-# Run API (8000) and Web (3000) in watch mode concurrently
-bun run dev
-
-# Run TypeScript compilation check across all workspaces
-bun run typecheck
-
-# Lint (Next.js ESLint) & format (Biome)
-bun run lint
-bun run format
-
-# Run test suite (plain / watch)
-bun test
-bun run test:watch
-
-# Production Process Management with PM2
-pm2 start ecosystem.config.js
+bun install              # install workspace deps
+bun run dev              # API on :8000 and web on :3000 concurrently
+bun run typecheck        # tsc --noEmit in api + web
+bun run lint             # Next.js ESLint (apps/web only)
+bun run format           # biome format apps/web packages (write)
+bun test                 # bun:test suite
+bun run test:watch       # watch mode
+bun run build            # build api (bun build) then next build
 ```
 
-> [!WARNING]
-> `bun run lint:imports` is **broken** — it references the missing script `scripts/check-imports.ts`, so the architectural import-boundary validator is not currently runnable.
-Avoid adding unnecessary abstractions or changing the architecture merely to hide the problem. 
+Validator order used by this repo: `bun run lint` → `bun run typecheck` → `bun test` →
+`next build`.
+
+**Ports and proxying.** The API always listens on `8000` (`apps/api/index.ts`, `port: 8000`,
+hardcoded). Next dev runs on `3000`. The browser never calls the API directly in development:
+`apps/web/next.config.ts` rewrites `/api/:path*` to
+`API_PROXY_TARGET || NEXT_PUBLIC_API_URL || http://localhost:8000` with `:path*` preserved. The SDK
+HTTP client defaults its base URL to `NEXT_PUBLIC_API_URL || '/api'`, so same-origin `/api/...`
+requests are proxied by Next.
+
+**Production.** `pm2 start ecosystem.config.js` runs `bun apps/api/index.ts` in fork mode
+(port 8000). The web app is a normal `next build` / `next start` deployment. CORS is configured
+from `CORS_ORIGIN` (comma separated list), so a separately hosted web app must be listed there if
+it calls the API cross-origin.
+
+**Background work started by the API process** (no separate worker):
+`StatsBufferService.startBackgroundFlushing(5000)` and
+`ProductStatsSyncScheduler.start(60_000)`. SIGTERM/SIGINT stop the scheduler and flush the stats
+buffer before exit.
+
+---
+
+## 5. API bootstrap and request pipeline
+
+`apps/api/index.ts` builds the Hono app from `apps/api/app.ts`, then adds middleware in this exact
+order:
+
+```ts
+app.use(logger());
+app.use('*', secureHeaders({
+  contentSecurityPolicy: { defaultSrc: ["'self'"], scriptSrc: ["'self'"] },
+  xFrameOptions: 'DENY', xContentTypeOptions: 'nosniff', referrerPolicy: 'no-referrer',
+}));
+app.use('*', cors({
+  origin: corsOrigins, credentials: true,
+  allowMethods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowHeaders: ['Content-Type','Authorization'],
+}));
+app.use('*', ...requestGuards({
+  maxUrlLength: 200, maxQueryLength: 200, maxParamLength: 20,
+  maxBodyBytes: 7_000_000, maxJsonDepth: 5, maxJsonNodes: 50,
+}));
+app.use('*', rateLimiter);
+app.use('*', dbMiddleware);
+app.options('*', (c) => c.text(''));   // CORS preflight
+app.route('/', routes);
+registerErrorHandler(app);             // onError + notFound
+```
+
+| Middleware | File | Behaviour |
+|---|---|---|
+| `logger` | hono/logger | one line per request |
+| `secureHeaders` | hono/secure-headers | CSP (default/script/style `self`, img allows `data:`/`blob:`/https), `X-Frame-Options: DENY`, nosniff, no-referrer |
+| `cors` | hono/cors | origin list from `CORS_ORIGIN`, credentials enabled, methods `GET/POST/PUT/PATCH/DELETE/OPTIONS`, headers `Content-Type`/`Authorization` |
+| `requestGuards` | `middleware/requestguard.middleware.ts` | rejects long URL/query/param with `414 URI_TOO_LONG` / `QUERY_TOO_LONG` / `PARAM_TOO_LONG`, bodies over the byte cap with `413 PAYLOAD_TOO_LARGE`, and JSON deeper than 5 levels or > 50 nodes with `413 JSON_TOO_DEEP` / `JSON_TOO_LARGE`; all use the standard error envelope |
+| `rateLimiter` | `middleware/rateLimiter.ts` | Redis sliding-window Lua script, keyed on `cf-connecting-ip` → first `x-forwarded-for` hop → `unknown`; defaults 60 requests / 60 s, overridable with `RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` |
+| `dbMiddleware` | `middleware/db.middleware.ts` | connects Mongoose once per process; requests fail with a 503 envelope if MongoDB is unavailable |
+
+**Health check.** `GET /health` is registered in `app.ts` *before* the middleware above, so it
+bypasses logging, rate limiting, guards and the database check (verified against Hono's
+registration-order semantics). It returns `{ success: true, message: 'OK' }`. Use it for liveness
+probes; use `GET /stats/_health` for stats pipeline depth.
+
+**Route mounting.** `apps/api/index.ts` calls `createApplication()` from
+`apps/api/composition-root.ts` once, then `createRoutes(application)` mounts twelve prefixes and hands
+each route factory the controller the composition root already built:
+
+```ts
+/product  /product-variant  /review  /product-inventory  /order  /order-items
+/category /address          /users   /vendor             /home   /stats
+```
+
+Route modules no longer construct anything: they only receive a controller (or, for `order-items`,
+nothing) and declare HTTP handlers. `/order-items` exposes no endpoints — the module is internal and
+its writer is injected into the order module as `IOrderItemsWriter`.
+
+**Shutdown.** SIGTERM/SIGINT: `statsBufferService.shutdown()` (final flush), then
+`productStatsSyncScheduler.stop()`, then `process.exit(0)`. There is no explicit Mongo/Redis
+disconnect; whatever the clients flush on exit is best-effort.
+
+---
+
+## 6. Response and error contract
+
+Every response is JSON. Success is `{ success: true, data }` (201/202 use the same shape; 204 is an
+empty body). List endpoints usually return their page object *inside* `data`, so the wire shape is
+`{ success: true, data: { data: [...], meta: { ... } } }` — the SDK unwraps one level and hands the
+page object to the hook.
+
+Error (from `registerErrorHandler`, `apps/api/errors/error-handler.ts`):
+
+```json
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "…", "issues": [] } }
+```
+
+`code`/`message` live inside `error`; `issues` (array of `{ field, message }`) and `stack` are
+optional. Handled cases, in order:
+
+| Thrown | Status | `error.code` |
+|---|---|---|
+| `ZodError` | 400 | `VALIDATION_ERROR` (+ mapped `issues`) |
+| `AppError` subclass (`BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`, …) | `sanitizeStatus(err.status)` | the error's `code` |
+| Mongo duplicate key `11000` | 409 | `CONFLICT` (message names the duplicated field) |
+| Mongoose `ValidationError` | 400 | `VALIDATION_ERROR` |
+| Mongoose `CastError` | 400 | `INVALID_ID` |
+| anything else | 500 | `INTERNAL_ERROR`; `message`/`stack` only when `NODE_ENV !== 'production'` |
+| unmatched route (`notFound`) | 404 | `NOT_FOUND` |
+
+`sanitizeStatus` keeps only `101` or `200–599`; anything else becomes 500.
+
+Controllers extend `BaseController` (`apps/api/core/controller/base.controller.ts`), which owns the
+envelope helpers `ok`, `created`, `accepted`, `noContent`, `paginated`, `redirect`, `badRequest`,
+`unauthorized`, `forbidden`, `notFound`, `conflict`, `unprocessable`, plus a strict `PaginationMeta`
+type (`page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage` — offset pagination only;
+see §12.3).
+
+The web SDK (`packages/frontend/lib/http-client.ts`) sends `Authorization: Bearer <token>` when the
+auth adapter has one, maps failures to `HttpError(status, code, message, issues)`, returns `null` for
+204/205 and tolerates empty bodies. Note it branches on a **top-level** `payload.meta` and unwraps
+`payload.data`; since the API nests `meta` inside `data`, hooks receive `{ data, meta }` and index
+accordingly.
+
+---
+
+## 7. Authentication and authorization
+
+Identity is Supabase; **all** authorization decisions about the user (banned, blocked, deleted,
+role) are re-checked against MongoDB on every request.
+
+### 7.1 Token verification
+
+`middleware/auth.ts`:
+
+1. Reads the `Authorization: Bearer <token>` header, rejects with 401 if missing.
+2. Calls Supabase admin `auth.getUser(token)` using `SUPABASE_URL` + `SUPABASE_SECRET_KEY`.
+3. Loads the user snapshot through `IAuthUserLookup` (implemented by
+   `modules/user/infrastructure/user-auth-lookup.adapter.ts`, wired in the composition root with
+   `configureAuthUserLookup`), so auth middleware never imports another module's Mongoose model.
+4. Rejects if not found or soft-deleted (401), if `block.blocked` (403) or `ban.banned` (403).
+5. Sets context: `user` (the snapshot), `userId` (string `_id`), `email`, `role`.
+
+Controllers receive that snapshot typed as `AuthActor` (from `@ecomerece/contracts`) and use
+`actor._id` as the actor id.
+
+`middleware/init-auth.ts` is a lighter variant for `POST /users/init`: it verifies the token and
+sets `email` + `userId` only (the user row may not exist yet).
+
+`middleware/admin.ts` requires `c.get('role') === 'admin'`, else 403. Compose as
+`auth, admin` — order matters.
+
+`middleware/seller.ts` exists but reads `c.get('profile')`, a variable nothing sets. It is not
+mounted anywhere; do not use it as-is.
+
+### 7.2 Guard matrix
+
+| Guard chain | Meaning |
+|---|---|
+| *(none)* | public |
+| `auth` | any signed-in, non-blocked, non-banned, non-deleted user |
+| `initAuth` | valid Supabase token, user row not required |
+| `auth, admin` | role must be `admin` |
+| `statsAccessGuard('throw')` / `statsAccessGuard('mask')` | entity-level stats access (see §15.6) |
+| `statsViewGuard` | write-path bot/dedupe/rate filtering (see §15.5) |
+
+Roles come from the user document: `customer`, `vendor`, `admin`. `POST /users/role` is the only
+place that assigns them (admin only), and vendor lifecycle events also promote/demote
+automatically (§11.3).
+
+### 7.3 Web-side auth
+
+`packages/frontend/adapters/auth/auth-adapter.web.ts` wraps `supabase-js`
+(`signInWithOAuth` with Google → `/auth/callback`, `signOut`, session listener). `apps/web`'s
+`AuthProvider` keeps `{ token, profile, me }`, loads the profile with `useGetMe`, and exposes
+`refresh()`, `signIn()`, `signOut()`. `RequireAuth` redirects unauthenticated users to
+`/auth?next=…`; `SiteHeader` shows the dashboard link for `admin` and `vendor` roles. The web app
+does **not** enforce admin role on `/dashboard` pages — only the API does (see §22).
+
+---
+
+## 8. Architecture: DDD + CQRS + hexagonal
+
+> For a guided, example-driven version of this section — including a 12-step build of a synthetic
+> module and the cross-module decision table — see
+> [`docs/architecture-guide.html`](./docs/architecture-guide.html).
+
+### 8.1 Layers
+
+Per module (workspace bottom-up):
+
+```
+packages/domain/modules/<name>/       aggregate, value objects, events, ports, read models (pure)
+packages/contracts/modules/<name>/    query classes other modules may execute, cross-module ports
+apps/api/modules/<name>/
+  infrastructure/                     Mongoose model + mapper + repository implementation
+  application/                        DTO types, query classes + handlers, internal service,
+                                      app service (load → mutate → save → publish events)
+  presentation/                       messages, controller (extends BaseController), routes
+  <name>.module.ts                    module factory: builds the graph, registers handlers
+```
+
+Cross-module calls go through `IQueryBus` / `IEventBus` or through a port declared in
+`packages/contracts`; a module never imports another module's infrastructure, application or
+presentation. There is no `CommandBus` any more: the three former command paths (reserve inventory,
+write order items, update product price) are typed ports implemented by adapters
+(`IInventoryReservation`, `IOrderItemsWriter`, `IProductPricingUpdater`).
+
+**Dependency reality check.** `packages/domain` no longer imports `apps/api`: `AppError` and friends
+live in `packages/domain/errors/app-error.ts` and `apps/api/errors/app-error.ts` just re-exports them.
+The domain package still imports five files' worth of *types* from `@ecomerece/shared`
+(`StatEvent`, `Metrics` in the stats helpers and the vendor read model/port, all `import type`), and
+`packages/domain/package.json` still declares `@ecomerece/shared` as a dependency. See §22.
+
+`bun run arch` (`scripts/arch-check.ts`, zero dependencies) enforces these rules: no cross-module
+internal imports, no domain → apps/api imports, no middleware → module imports, and no `export … from`
+re-export laundering. It exits non-zero on the first violation.
+
+### 8.2 Aggregate pattern
+
+`packages/domain/core/aggregate-root.ts` provides `raise(event)` plus `pullEvents()`/
+`clearEvents()`. Aggregates are constructed through `static create(...)` (new id) or
+`static rehydrate(...)` (from persistence), keep private state with getters, and expose intention
+methods (`makePublic`, `block`, `reserve`, `verify`, …). ID generation is always server-side:
+`Id.create()` produces a UUID v7; `Id.create(value)` rehydrates an existing id, and ids are
+validated to 5–40 characters. Never accept an id from the client on a create path.
+
+### 8.3 Application service pattern
+
+Each app service takes dependencies (repositories, buses, mappers) via constructor, and each use case
+does:
+
+1. load aggregate(s) with `FindByIdOrThrow` / `FindBy…`,
+2. call a domain method (which raises events),
+3. `Save` / `Create`,
+4. publish `aggregate.pullEvents()` on the injected `eventBus`,
+5. return a message object built from `presentation/messages`.
+
+Every module (`address`, `category`, `home`, `inventory`, `order`, `order-items`, `product`,
+`product-variant`, `reviews`, `user`, `vendor`) publishes events this way. The one exception is
+`OrderApplicationService.createMyOrder`: it runs inside `UnitOfWork.transaction` and publishes the
+item + order events **after** the transaction resolves, so consumers never see events for a write
+that rolled back (covered by `order-create-commit.test.ts`).
+
+### 8.4 Module wiring
+
+Each `<name>.module.ts` exports a factory that takes a deps object and returns the module's
+controller plus anything other modules need (an adapter, a projector, a scheduler, a stats-access
+port). The factory is where the graph is built — repository → mapper → internal service → app
+service → controller — and where handlers are registered
+(`queryBus.register(SomeQuery, new SomeQueryHandler(svc))`,
+`eventBus.register('order-item.created', handler)`).
+
+`apps/api/composition-root.ts` is the **single composition root**. `createApplication()` creates one
+`InMemoryQueryBus`, one `InMemoryEventBus`, the `UnitOfWork`, and the image-storage adapter, then
+calls every module factory in dependency order and returns `{ buses, unitOfWork, modules }`. Nothing
+is wired as an import side effect, so a module factory can be instantiated in isolation by passing
+fakes for its deps. Cross-module adapters (auth lookup, stats access, stats view guard) are
+configured here too, via the middleware `configure*` functions.
+
+### 8.5 Code comment conventions
+
+Comments explain intent, not mechanics. If a good name or type already says what the code does, a
+comment adds nothing and will drift out of date.
+
+Use:
+
+- `/** ... */` on exported classes, ports, public app-service methods, and non-obvious types — the
+  contract a caller needs to know.
+- `// ...` inside a method for *why*: invariants, ordering constraints, cross-module side effects,
+  workarounds, and failure modes.
+- Name the invariant or consequence directly ("publish after commit so consumers never see
+  rolled-back orders") instead of narrating the line ("publish events").
+- Mark side effects and ordering: "raises `order.created`", "reserved stock is held until expiry",
+  "checked inside the transaction to close the race".
+- Keep the comment next to the code it explains. When the code changes, update or delete the comment
+  in the same change.
+
+Avoid:
+
+- Restating types or assignments (`// set the id`, `// loop over items`).
+- Commented-out code and stale `TODO`/`FIXME` blocks — track work in the issue tracker instead.
+- Decorative banners and section dividers; use small private methods instead.
+- Comments that duplicate this document; link to the relevant section instead.
+
+```ts
+// Bad: narrates the syntax.
+// create the order
+const order = OrderAggregate.create({ ... });
+
+// Good: explains a decision the type system cannot express.
+// Total is derived from reserved lines only, never from unreserved stock.
+const order = OrderAggregate.create({
+  totalPrice: Money.create(orderItems.reduce((sum, i) => sum + i.quantity.value * i.price, 0)),
+  ...
+});
+```
+
+`OrderApplicationService.createMyOrder` in
+`apps/api/modules/order/application/order.app.service.ts` is the reference example: the class JSDoc
+states the cross-module flow, the method JSDoc lists the steps, and inline comments only cover
+transaction and event-ordering rules.
+
+---
+
+## 9. Domain model catalog
+
+`packages/domain` contains 11 aggregates (stats has none by design), 30 value objects, 110 event
+classes and 12 port interfaces.
+
+| Module area | Aggregate | Notable state | Port(s) | Read models |
+|---|---|---|---|---|
+| address | `AddressAggregate` | ownerId, street/city/state/postal/country, default flag, delete info | `IAddressRepository` | address read models |
+| category | `CategoryAggregate` | name, slug, description, image, delete info | `ICategoryRepository` | category read models |
+| home | `HomeAggregate` | slides, promos, categories, features, containers (ordered), version | `IHomeRepository` | home layout |
+| image-storage | — (only port + errors) | — | `IImageStorage` | upload result |
+| inventory | `InventoryAggregate` | variantId, productId, vendorId, quantity, reserved, available, threshold | `IInventoryRepository` | inventory read model |
+| order | `OrderAggregate` | buyerId, totalPrice, full address, idempotent key, version | `IOrderRepository` | order read models |
+| order-items | `OrderItemAggregate` | orderId, product/variant/vendor ids, quantity, price, status | `IOrderItemRepository` | order item read models |
+| product | `ProductAggregate` | vendor/category ids, name, description, price, images, default image, disclaimers, ingredients, inStock, block, delete info, rating/pricing summaries | `IProductRepository` | product read models |
+| product-variant | `ProductVariantAggregate` | productId, vendorId, name, price, appearance, delete info | `IProductVariantRepository` | variant read models |
+| reviews | `ReviewAggregate` | product/author/order ids, rating, title, comment, images, likes, dislikes, reports, vendor reply, verified purchase | `IReviewRepository` | review read models |
+| stats | — (behavior lives in `FanOut.ts`, `StatKey.ts`, `TimeWindows.ts`) | — | — (repository is infrastructure-only) | stat read models in `packages/shared` |
+| user | `UserAggregate` | name, email, image, role, ban, block, delete info, version | `IUserRepository` | user read models |
+| vendor | `VendorAggregate` | ownerId, name, description, contact, image, verification, stats info, delete info | `IVendorRepository` | vendor read models |
+
+Value objects (`packages/domain/value-objects`): `alt`, `appearance`, `ban-info`, `block-info`,
+`color`, `date`, `delete-info`, `description`, `effective-date`, `email`, `enum`,
+`enum-collection`, `expiration-date`, `icon`, `identifier`, `id`, `image`, `money`, `name`,
+`number`, `percentage`, `phone-no`, `quantity`, `query`, `reason`, `slug`, `street-address`,
+`string`, `title`, `url`. Module-local VOs add domain specifics: `Disclaimer`, `Ingredients`,
+`ProductImages`, `StatsInfo`, `VerificationInfo`, `Status` (order items).
+
+Shared helpers in `packages/domain` worth knowing:
+
+| File | Purpose |
+|---|---|
+| `aggregate-root.ts` | event raising/pulling |
+| `modules/stats/StatKey.ts` (`buildMongoFilter`) | builds the stat-slot identity filter from an event (used by both upsert flavours) |
+| `modules/stats/TimeWindows.ts` | UTC window computation per aggregation |
+| `modules/stats/FanOut.ts` | `expandToStatEvents` — one tracked action → hourly/daily/weekly/monthly/lifetime events |
+| `modules/stats/StatKey.ts` | canonical slot key used by the buffer |
+
+---
+
+## 10. Domain events
+
+110 event classes live in `packages/domain/modules/<module>/events/`. Every event is
+`{ type, payload, occurredOn }` (`IEvent`); the type is a string constant on the class and carries
+the module name as prefix. Full list as declared:
+
+| Module | Event types |
+|---|---|
+| address (5) | `address.created`, `address.deleted`, `address.recovered`, `address.set-as-default`, `address.updated` |
+| category (6) | `category.blocked`, `category.created`, `category.deleted`, `category.image-updated`, `category.meta-updated`, `category.recovered` |
+| home (19) | `home.slides-reordered`, `home.categories-reordered`, `home.containers-reordered`, `home.{slide,category,promo,feature,container}-{added,removed,updated}`, `home.features-set` |
+| inventory (7) | `inventory.bought`, `inventory.completed`, `inventory.created`, `inventory.deleted`, `inventory.low-stock-threshold-updated`, `inventory.reserved`, `inventory.stock-removed` |
+| order (6) | `order.cancelled`, `order.completed`, `order.confirmed`, `order.created`, `order.refunded`, `order.returnded` *(sic)* |
+| order-items (7) | `order-item.cancelled`, `order-item.completed`, `order-item.confirmed`, `order-item.created`, `order-item.refunded`, `order-item.returned`, `order-item.updated` |
+| product (24) | `product.blocked`, `product.created`, `product.default-image-set`, `product.deleted`, `product.disclaimer-{disabled,enabled,updated}`, `product.disclaimers-{added,removed}`, `product.images-{added,removed}`, `product.ingredients-{added,cleared,disabled,enabled,removed}`, `product.in-stock-updated`, `product.made-private`, `product.made-public`, `product.meta-updated`, `product.pricing-summary-updated`, `product.rating-summary-updated`, `product.recovered`, `product.unblocked` |
+| product-variant (7) | `product-variant.activated`, `product-variant.created`, `product-variant.deactivated`, `product-variant.deleted`, `product-variant.meta-updated`, `product-variant.price-updated`, `product-variant.recovered` |
+| reviews (7) | `review.created`, `review.deleted`, `review.disliked`, `review.liked`, `review.reported`, `review.updated`, `review.vendor-reply-added` |
+| stats (2) | `stats.product-denormalization-requested`, `stats.vendor-force-refresh-requested` |
+| user (11) | `user.ban-extended`, `user.ban-lifted`, `user.banned`, `user.ban-shortened`, `user.blocked`, `user.block-lifted`, `user.deleted`, `user.delete-lifted`, `user.logged-in`, `user.role-assigned`, `user.signed-in` |
+| vendor (9) | `vendor.contact-updated`, `vendor.created`, `vendor.deleted`, `vendor.image-updated`, `vendor.meta-updated`, `vendor.recovered`, `vendor.rejected`, `vendor.stats-refresh-toggled`, `vendor.verified` |
+
+Notes:
+
+- Not every declared event is raised yet. Example: `OrderAggregate` only raises `order.created`; the
+  cancel/confirm/complete/refund/return events are declared but have no producing method.
+  `OrderItemsAggregate` is complete: `create`, `confirm`, `complete`, `cancel`, `returnItem`,
+  `refund` and `update` each raise the matching event. The order-items cancel/update service
+  methods return those events to the caller for post-commit publishing.
+- `order.returnded` is misspelled in the source (and in its class). Renaming it is a breaking change
+  for any handler fan-out; keep it until handlers are migrated.
+- Events whose handlers do not exist are dropped silently by the event bus (no handler → `continue`).
+
+---
+
+## 11. Buses and cross-module communication
+
+There are exactly four ways one module reaches another, and every one of them is wired in
+`apps/api/composition-root.ts`. A module never imports another module's files — `bun run arch`
+fails the build if it does.
+
+```
+consumer module                 packages/contracts                 provider module
+───────────────                 ──────────────────                 ───────────────
+order                     contracts/modules/inventory/…             inventory
+   │                                 │                                  │
+   │ 1. queryBus.execute(VerifyInventoriesItemsGetQuery)                │
+   ├──────────────────────────────► QueryBus ────────────────────────► handler → repo
+   │                                 │                                  │
+   │ 2. reservation.reserve(...)     │                                  │
+   ├───────────────────────► IInventoryReservation ───────────────────► adapter → aggregate
+   │                                 │                                  │
+   │ 3. transaction commits ─────────┴──────────────────────────────────┘
+   │ 4. eventBus.publish([...events]) (after commit)
+   └──────────────────────────────► EventBus ─────────► stats / user handlers
+```
+
+| Need | Channel | Keyed by | Implemented by | Wired where |
+|---|---|---|---|---|
+| Read another module's data | contract `IQuery` class executed on `QueryBus` | the class object (`query.constructor`) | provider's query handler | provider factory registers; consumer executes |
+| Perform an action owned by another module | port interface from `contracts`, called on an injected adapter | the injected object | provider's `infrastructure/*.adapter.ts` | `createApplication()` passes `provider.xxx` into the consumer factory |
+| React to something that happened | event `type` string on `EventBus` | the string; many handlers per type | consumer's event handler | consumer factory `eventBus.register(...)` |
+| Guard / middleware needs | port configured at startup | the configured function/object | provider adapter | `configureAuthUserLookup()`, `configureStatsAccess()`, `configureStatsViewGuard()` |
+
+The port-shaped calls (rows 2 and 4) are direct in-process calls, not bus dispatches: there is no
+`CommandBus`, so a missing dependency is a TypeScript error at the module factory instead of a
+runtime "no handler registered".
+
+### 11.1 Contracts
+
+| Bus | File (domain) | Implementation | Keying |
+|---|---|---|---|
+| Query | `packages/domain/query/query-bus.interface.ts` | `apps/api/core/infrastructure/buses/in-memory-query-bus.ts` | query **class** |
+| Event | `packages/domain/events/event-bus.interface.ts` | `.../in-memory-event-bus.ts` | event `type` string, many handlers per type |
+
+There is no command bus.
+
+Behaviour worth knowing:
+
+- Both buses are constructed once in `createApplication()` and handed to module factories as part of
+  their deps object; there are no module-level bus singletons and no registration by import side
+  effect.
+- `QueryBus.execute(queryInstance)` finds the handler by the instance's constructor. An unregistered
+  query throws (never returns `undefined`); registering the same class twice throws
+  `Handler already registered for <Name>`.
+- Cross-module query classes live in `packages/contracts/modules/<module>` and the provider's own
+  `application/queries/*.ts` file is a one-line re-export of that class
+  (`export { VerifyProductAndGetQuery } from '@ecomerece/contracts/modules/product'`). Re-declaring a
+  local copy would register a *different* class and the handler would never be found.
+- `EventBus.publish` accepts one event or an array. Handlers run with `Promise.allSettled`, so one
+  failing handler no longer blocks the others; each rejection is logged with the event type. Unknown
+  event types are ignored, and handlers are stored in a `Set`, so duplicate registration is a no-op.
+
+### 11.2 Registrations and ports (source of truth)
+
+| Registered in | Queries | Events |
+|---|---|---|
+| `address.module.ts` | `EnsureActiveAddressGetByIdQuery`, `GetAddressByIdQuery`, `GetAddressesByOwnerIdQuery`, `GetAdminPaginatedAddressesQuery` | — |
+| `category.module.ts` | `VerifyCategoryAndGetQuery`, `GetCategoryByIdQuery`, `GetPaginatedCategoriesQuery`, `GetAdminPaginatedCategoriesQuery` | — |
+| `home.module.ts` | `GetHomeQuery` | — |
+| `inventory.module.ts` | `VerifyInventoriesItemsGetQuery`, `GetInventoryByIdQuery`, `GetInventoryByVariantIdQuery`, `GetAdminPaginatedInventoryQuery` | — |
+| `order.module.ts` | `EnsureActiveOrderGetByIdQuery`, `GetOrderByIdQuery`, `GetMyOrdersQuery`, `GetAdminPaginatedOrdersQuery` | — |
+| `order-items.module.ts` | `GetOrderItemByIdQuery` | — |
+| `product.module.ts` | `EnsureActiveProductGetByIdQuery`, `VerifyProductAndGetQuery`, `GetProductByIdQuery`, `GetMyPaginatedProductsQuery`, `GetPublicPaginatedProductsQuery`, `GetAdminPaginatedProductsQuery` | — |
+| `product-variant.module.ts` | `EnsureActiveVariantGetByIdQuery`, `VerifyVariantsAndGetQuery`, `GetVariantByIdQuery`, `GetVariantsByProductIdQuery`, `GetAdminPaginatedVariantsQuery` | — |
+| `reviews.module.ts` | `GetReviewByIdQuery`, `GetPaginatedReviewsQuery`, `GetReviewsByProductIdQuery`, `GetAdminPaginatedReviewsQuery` | — |
+| `user.module.ts` | `EnsureActiveQuery`, `EnsureActiveUserGetByIdQuery`, `VerifyUserAndGetQuery`, `GetUserByIdQuery`, `GetUserByEmailQuery`, `GetPaginatedUsersQuery`, `GetAdminPaginatedUsersQuery` | `user.signed-in`, `vendor.verified`, `vendor.deleted`, `vendor.rejected` |
+| `vendor.module.ts` | `EnsureActiveVendorGetByIdQuery`, `VerifyVendorAndGetQuery`, `EnsureActiveVendorQuery`, `GetVendorByUserIdQuery`, `GetVendorByIdQuery`, `GetMyVendorQuery`, `GetPaginatedVendorsQuery`, `GetAdminPaginatedVendorsQuery` | — |
+| `stats.module.ts` | `GetEntityStatsOverviewQuery`, `GetPaginatedStatsQuery` | `order-item.created`, `stats.product-denormalization-requested` (3 handlers), `stats.vendor-force-refresh-requested` |
+
+The **contract** queries (the 14 classes in `packages/contracts/modules/*/index.ts`) are the only
+ones other modules execute: `EnsureActiveAddressGetByIdQuery`, `VerifyCategoryAndGetQuery`,
+`EnsureActiveUserGetByIdQuery`, `VerifyUserAndGetQuery`, `EnsureActiveQuery`,
+`EnsureActiveOrderGetByIdQuery`, `VerifyInventoriesItemsGetQuery`,
+`EnsureActiveProductGetByIdQuery`, `VerifyProductAndGetQuery`,
+`EnsureActiveVariantGetByIdQuery`, `VerifyVariantsAndGetQuery`,
+`EnsureActiveVendorGetByIdQuery`, `VerifyVendorAndGetQuery`, `GetVendorByUserIdQuery`.
+
+#### Cross-module ports
+
+All eight ports live in `packages/contracts/modules/*/index.ts`, are implemented by the **owner**
+module's infrastructure, and are passed in through the consumer's deps:
+
+| Port | Owner (contract file) | Adapter | Injected into | Purpose |
+|---|---|---|---|---|
+| `IInventoryReservation` | inventory | `inventory/infrastructure/inventory-reservation.adapter.ts` | order | reserve stock inside the caller's unit of work; returns per-variant results |
+| `IOrderItemsWriter` | order-items | `order-items/infrastructure/order-items-writer.adapter.ts` | order | write order lines and return their `order-item.created` events |
+| `IProductPricingUpdater` | product | `product/infrastructure/product-pricing.adapter.ts` | product-variant | recompute the product's pricing summary after a variant price change |
+| `IProductStatsProjector` | product | `product/infrastructure/product-stats-projector.adapter.ts` | stats | enumerate products / category pairs and apply denormalized metrics |
+| `IVendorStatsProjector` | vendor | `vendor/infrastructure/vendor-stats-projector.adapter.ts` | stats | vendor roll-ups and force-refresh lookups |
+| `IStatsAccessPort` | stats | `ProductStatsAccessAdapter#getProductVendorId` + `VendorStatsAccessAdapter#getVendorIdByOwnerId`, composed in the root | `statsAccessGuard` | owner/admin check for stats reads |
+| `IEntityExistsPort` | stats | `ProductStatsAccessAdapter` (product), `CategoryStatsAccessAdapter` (category) | `statsViewGuard` | silently ignore views for unknown entities |
+| `IAuthUserLookup` | user | `user/infrastructure/user-auth-lookup.adapter.ts` | `middleware/auth.ts` | live ban/block/delete/role snapshot for every request |
+
+Two of these are *composed* rather than injected as a single class: `IStatsAccessPort` is an object
+literal built in `createApplication()` from the product-side and vendor-side adapters, and
+`IEntityExistsPort` is satisfied by whichever module's stats-access adapter the guard is configured
+with. The `AuthActor` / `AuthUserSnapshot` types travel with `IAuthUserLookup` so controllers and
+middleware agree on the actor shape.
+
+### 11.3 Flows that cross module boundaries
+
+**Create a product** (`POST /product/my`)
+
+1. `ProductApplicationService` resolves the caller's vendor via `GetVendorByUserIdQuery`.
+2. It validates the category with `VerifyCategoryAndGetQuery`.
+3. Uploads images through `IImageStorage` (Cloudinary adapter).
+4. Saves the aggregate and publishes `product.created`.
+
+**Change a variant price** (`PATCH /product-variant/my/price`)
+
+1. Variant aggregate raises `product-variant.price-updated` and is saved.
+2. The service calls the injected `IProductPricingUpdater` port
+   (`ProductPricingAdapter` → product module) instead of dispatching a command.
+3. `ProductInternelService` recalcs the product's pricing summary and raises
+   `product.pricing-summary-updated`.
+
+**Place an order** (`POST /order/create/my`)
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+
+
+1. Inside `UnitOfWork.transaction`: `EnsureUniqueImpodentKey`, then `verifyReport` runs
+   `EnsureActiveAddressGetByIdQuery`, `EnsureActiveUserGetByIdQuery`,
+   `VerifyVariantsAndGetQuery`, `VerifyProductAndGetQuery`, `VerifyVendorAndGetQuery`,
+   `VerifyUserAndGetQuery` and `VerifyInventoriesItemsGetQuery` (all contract queries), builds the
+   per-line valid/invalid report, and reserves stock through `IInventoryReservation`.
+2. The order aggregate is created/saved and the lines are written through `IOrderItemsWriter`
+   (order-items module), which returns the `order-item.created` events.
+3. The transaction commits; only then does the service publish the item + order events on the event
+   bus (`order.created`). A rolled-back transaction publishes nothing.
+
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+
+**Vendor lifecycle changes a user's role**
+
+`vendor.verified` → `VendorVerifiedHandler` → `UserInternalService.promoteToVendor(ownerId)`;
+`vendor.rejected` and `vendor.deleted` → `demoteToCustomer(ownerId)`. The user module therefore
+never imports the vendor module.
+
+**Stats fan-in**: `order-item.created` is the only business event wired to stats. Product view /
+click and page / category views are tracked directly by HTTP endpoints, not by domain events.
+
+---
+
+## 12. Persistence layer
+
+### 12.1 Database plumbing
+
+- `apps/api/middleware/db.middleware.ts` connects Mongoose once per process and short-circuits
+  with a 503 envelope when the connection is unusable
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+.
+- `apps/api/core/repository/base.repository.ts` declares the repository contract;
+  `apps/api/core/repository/mongo.repository.ts` implements generic helpers:
+  `create`, `find`, `findOne`, `findById`, `findByIdAndUpdate`, `findOneAndUpdate`, `updateOne`,
+  `updateMany`, `deleteOne`, `deleteMany`, `findByIdAndDelete`, `count`, `exists`, `paginate`,
+  `paginateByCursor`, `upsert`, `bulkWrite`, `bulkCreate`.
+- Module repositories extend that base and add aggregate-aware methods (`FindByIdOrThrow`,
+  `FindByOwnerId`, `FindByVariantIds`, `Save`, `SaveMany`, `Create`), which map through the module
+  mapper before touching Mongoose.
+- Transactions: `apps/api/core/database/transaction-context.ts` stores the Mongo session in
+  `AsyncLocalStorage`; `UnitOfWork.transaction(callback)` opens a session, calls `startTransaction`,
+  runs the callback inside the context, commits, and 
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+aborts on error. It retries up to 3 times only
+  on `TransientTransactionError`, with exponential backoff (100 ms → 5 s). Nested calls reuse the
+  ambient session. `MongoRepository` reads `getCurrentSession()` and attaches it to every read/write,
+  so any repository used inside the callback joins the transaction. `OrderApplicationService`
+  `createMyOrder` is the only transactional use case today (order + order-items + inventory writes).
+
+### 12.2 Models and mappers
+
+One Mongoose model per module, named `<Module>Model` (`UserModel`, `ProductModel`,
+`ProductVariantModel`, `InventoryModel`, `OrderModel`, `OrderItemModel`, `CategoryModel`,
+`AddressModel`, `VendorModel`, `HomeModel`, `ReviewModel`, `StatsModel`), living in each
+`infrastructure/` folder. Documents mirror the aggregate shape (`_id` string, nested `deleted`,
+`ban`, `block`, `version`, timestamps) rather than the aggregate's private field names.
+
+Mappers expose **`persistenceToAggregate`** and **`aggregateToPersistence`**, plus module-specific
+helpers such as `aggregateToReadModel`, `aggregateToResponseReadModel` and
+`fromDocuments`/`toUpdatePayload`. (Root `AGENTS.md` still describes `toDocument` / `fromDocument`;
+those names do not exist.)
+
+### 12.3 Pagination shapes
+
+Two conventions are in use, both returned inside `data` as `{ data: [...], meta: {...} }`:
+
+| Style | Where | Shape |
+|---|---|---|
+| Cursor | most lists (`my`, `admin/all`, products, stats paginated) | `nextCursor`, `prevCursor`, `hasMore`; cursors are base64url of `{ v, id }` (stats, products) or the last `_id` |
+| Offset | a few admin lists | `page`, `limit`, `total`, `totalPages`, `hasNextPage`, `hasPrevPage` |
+
+Cursor encoding/decoding lives in each module repository (`parseCursor` / `encodeCursor`), not in a
+shared helper. `BaseController.paginated()` exists for the offset shape but no controller calls it
+today. Client code must tolerate partially filled `meta`; the web `useCursorPagination` hook assumes
+cursor fields, while admin tables that use offset meta read `page`/`totalPages`.
+
+---
+
+## 13. API module reference
+
+Every module follows the same folder layout and wiring described in §8.4; below is what is specific
+to each.
+
+### 13.1 address
+
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+
+- Owns buyer shipping addresses. `AddressAggregate` keeps owner id, five address VOs, a default
+  flag and delete info.
+- Rules: a user may hold at most **four** addresses (checked in `createMyAddress`); edits require
+  ownership (`canEditAddress`); deleting uses a placeholder reason (`"Address deletion not hold
+  reason"`) and is a soft delete; `recover` is admin-only.
+- Consumers: the order module queries `EnsureActiveAddressGetByIdQuery` before creating an order.
+
+### 13.2 category
+
+- Admin-managed taxonomy: create, update, soft delete, list (public + admin), get by id.
+- Images go through `IImageStorage`; the app service uploads before saving and publishes
+  `category.created` / `category.image-updated` / `category.meta-updated` / `category.deleted` /
+  `category.blocked` / `category.recovered`.
+- `VerifyCategoryAndGetQuery` is used by products to 
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+validate their category id.
+
+### 13.3 home
+
+- One document holds the whole storefront home layout: ordered `slides`, `promos`, `categories`,
+  `features`, and `containers` (shelves of products).
+- Admin endpoints add/update/remove each collection; slides, categories and containers have
+  `/reorder` endpoints, and `PUT /home/features` replaces the whole feature set (`PATCH` updates one).
+- `HomeAggregate` raises granular events (`home.slide-added`, …) and bumps `version`.
+- The storefront reads it with `useGetHomeLayout()`; the dashboard edits it with the same hooks plus
+  mutations.
+
+### 13.4 image-storage
+
+- No HTTP routes and no aggregate: a port (`IImageStorage`) plus a Cloudinary adapter and domain
+  error types. `createImageStorageModule()` is instantiated by category, vendor and product modules.
+- Controlled by `IMAGE_STORAGE_PROVIDER` and the `CLOUDINARY_*` variables. Uploads return the URL
+  stored on the aggregate.
+
+### 13.5 inventory
+
+- One document per variant (`variantId`, `productId`, `vendorId`), tracking quantity, reserved,
+  available and a low-stock threshold.
+- Vendor endpoints: create stock (`POST /product-inventory/my/create`), buy more stock
+  (`…/my/:id/purchase`), change threshold (`…/my/:id/threshold`), remove stock (`…/:id/remove`).
+- The order-facing reservation path is the `IInventoryReservation` port (`InventoryReservationAdapter`
+  in `infrastructure/`), not a command bus. It loads by variant ids, filters deleted rows, calls
+  `aggregate.reserve(quantity, actorId)` and saves the batch.
+- `VerifyInventoriesItemsGetQuery` lives in `packages/contracts/modules/inventory` and the module's
+  query file re-exports it; the handler returns `VerifyInventoriesItemsResult`
+  (`validIds`, `notFoundIds`, `deletedIds`, `availableStockIds`, `buyableIds`, read models).
+- ⚠️ The reservation loop indexes the filtered `buyableInventories` array with the position from the
+  *input* array (`inventoryItems[i]`) — if a line is missing or deleted, quantities can be applied
+  to the wrong variant. See §22.
+
+### 13.6 order
+
+- `OrderAggregate` stores buyer, total price, the full shipping address snapshot, an idempotent key,
+  version and delete info; creation is the only state transition implemented.
+- `createOrder` runs the cross-module verification + reservation + item-creation pipeline from §11.3
+  inside `UnitOfWork.transaction`, saves, and publishes `order.created` only after the commit.
+- Buyers read their own orders with cursor pagination; admins read all orders.
+
+### 13.7 order-items
+
+- No routes. Exists to own line items and expose them through two contracts:
+  `GetOrderItemByIdQuery` and the `IOrderItemsWriter` port (`OrderItemsWriterAdapter`), whose `create`
+  writes every line inside the caller's unit of work and returns the `order-item.created` events
+  (the order module publishes them post-commit; stats consumes them).
+- The module itself does not open transactions — the order use case does (§12.1).
+
+### 13.8 product
+
+- The richest aggregate: vendor/category, name/description/price, image gallery + default image,
+  disclaimers, ingredients, in-stock flag, visibility (public/private), moderation block, delete
+  info, plus `ratingSummary` and `pricingSummary` maintained by events and commands.
+- Vendor surface: create, edit meta, toggle disclaimers, add/remove images, set default image,
+  add/remove ingredients, toggle ingredients, make public/private, soft delete, recover.
+- Admin surface: list all (including deleted/blocked), block, unblock.
+- Public surface: paginated listing and single product.
+- A price change reaches this module through the `IProductPricingUpdater` port
+  (`ProductPricingAdapter`), which recomputes the pricing summary.
+
+### 13.9 product-variant
+
+- Variant of a product owned by the same vendor: name, price, appearance (color), delete info.
+- Endpoints: create under a product, update price, update meta, toggle appearance/activation, soft
+  delete, admin recover, admin list. A price change triggers the product pricing-summary update.
+- The file names in this module consistently misspell “variant” (`product-varaint.routes.ts`,
+  `createProductVaraintModule`); imports work because they use the same typo.
+
+### 13.10 reviews
+
+- `ReviewAggregate` stores product/author/order ids, author snapshot (name, avatar), rating, title,
+  comment, images, likes/dislikes, report count + reasons, vendor reply and verified-purchase flag.
+- Wired endpoints are read + create only: list (paginated), list by product, get by id, create my
+  review, admin list. Like/dislike/report/vendor-reply/update/delete exist on the aggregate and emit
+  events, but no HTTP route calls them.
+- `createReview` marks the review verified when the supplied `orderId` is an active order owned by
+  the caller (`EnsureActiveOrderGetByIdQuery`).
+
+### 13.11 stats
+
+See §15 for the full subsystem. This module is the exception to the layering rules: the controller
+uses `StatsQueryService` + `StatsRepository` (+ `StatsModel` for entity lookups) instead of an
+aggregate and app service.
+
+### 13.12 user
+
+- Mirrors Supabase identities into MongoDB. `POST /users/init` (guarded by `initAuth`) creates the
+  row from the token + profile; `GET /users/me` returns the current user.
+- Admin moderation: block/unblock, ban (short/long), extend ban, lift ban, soft delete, recover,
+  assign role.
+- Self service: `DELETE /users/me/soft`.
+- Internal: `promoteToVendor` / `demoteToCustomer` driven by vendor events.
+- Role values: `customer`, `vendor`, `admin`.
+
+### 13.13 vendor
+
+- Store profile: owner id, name, description, contact, image, verification state, stats settings,
+  delete info.
+- Vendor surface: create my vendor, read my vendor, update meta/contact/image, toggle stats refresh,
+  soft delete.
+- Admin surface: verify, reject, recover, soft delete, list all.
+- Public surface: paginated list and vendor page.
+- Verification/rejection events drive user role changes (§11.3).
+
+---
+
+## 14. HTTP endpoint catalog
+
+Access column: **Public** (no guard), **Auth** (`auth`), **Admin** (`auth, admin`), **Init**
+(`initAuth`), **View** (`statsViewGuard`), **Access:mask / Access:throw** (`statsAccessGuard`).
+All paths below are the effective paths after mounting; `:param` denotes a path parameter.
+
+### Product — `/product` (21)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/product` | Public | paginated catalogue (filter by category/vendor/search) |
+| GET | `/product/admin/all` | Admin | paginated including blocked/deleted |
+| GET | `/product/my` | Auth | the caller's vendor products |
+| GET | `/product/:id` | Public | single product |
+| POST | `/product/my` | Auth | create product (uploads images) |
+| DELETE | `/product/my/soft` | Auth | soft delete |
+| PATCH | `/product/my/recover` | Auth | recover own product |
+| POST | `/product/block` | Admin | block product |
+| POST | `/product/block/lift` | Admin | unblock product |
+| PATCH | `/product/state/my/public` | Auth | make public |
+| PATCH | `/product/state/my/private` | Auth | make private |
+| PATCH | `/product/my/meta` | Auth | name/description/category/price |
+| PATCH | `/product/my/disclaimer/toggle` | Auth | enable/disable disclaimers |
+| PATCH | `/product/my/disclaimer/add` | Auth | add disclaimers |
+| PATCH | `/product/my/disclaimer/remove` | Auth | remove disclaimers |
+| PATCH | `/product/my/images/add` | Auth | add gallery images |
+| PATCH | `/product/my/images/remove` | Auth | remove gallery images |
+| PATCH | `/product/my/images/default` | Auth | set default image |
+| PATCH | `/product/my/ingredients/toggle` | Auth | enable/disable ingredients |
+| PATCH | `/product/my/ingredients/add` | Auth | add ingredients |
+| PATCH | `/product/my/ingredients/remove` | Auth | remove ingredients |
+
+### Product variant — `/product-variant` (8)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/product-variant/:id` | Public | single variant |
+| GET | `/product-variant/admin/all` | Admin | paginated variants |
+| POST | `/product-variant/my` | Auth | create variant under a product |
+| PATCH | `/product-variant/my/price` | Auth | change price (cascades pricing summary) |
+| PATCH | `/product-variant/my/meta` | Auth | name/meta update |
+| PATCH | `/product-variant/my/appereance/toggle` | Auth | toggle appearance *(path typo is in source)* |
+| DELETE | `/product-variant/my/delete/soft` | Auth | soft delete |
+| PATCH | `/product-variant/recover/:id` | Admin | recover variant |
+
+### Inventory — `/product-inventory` (6)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/product-inventory/admin/all` | Admin | paginated inventory |
+| GET | `/product-inventory/:id` | Public | inventory by id |
+| POST | `/product-inventory/my/create` | Auth | create stock row for a variant |
+| PATCH | `/product-inventory/my/:id/purchase` | Auth | buy/add stock |
+| PATCH | `/product-inventory/my/:id/threshold` | Auth | set low-stock threshold |
+| PATCH | `/product-inventory/:id/remove` | Auth | remove stock |
+
+### Order — `/order` (3)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/order/create/my` | Auth | full checkout pipeline |
+| GET | `/order/my` | Auth | caller's orders (cursor paginated) |
+| GET | `/order/admin/all` | Admin | all orders |
+
+`/order-items` mounts no routes — it is an internal module (query + writer port). The empty router is
+still mounted in `routes/index.ts`; see §22.
+
+### Category — `/category` (6)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/category` | Public | list categories |
+| GET | `/category/admin/all` | Admin | paginated categories |
+| GET | `/category/:id` | Public | single category |
+| POST | `/category/create` | Admin | create (image upload) |
+| PATCH | `/category/update` | Admin | update |
+| DELETE | `/category` | Admin | soft delete (id in body/query) |
+
+### Address — `/address` (7)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/address/my` | Auth | caller's addresses |
+| GET | `/address/admin/all` | Admin | paginated addresses |
+| POST | `/address/my` | Auth | create (max 4 per user) |
+| PATCH | `/address/my/:id/update` | Auth | update |
+| PATCH | `/address/my/:id/default` | Auth | set default |
+| DELETE | `/address/my/:id` | Auth | soft delete |
+| PATCH | `/address/my/:id/recover` | Admin | recover |
+
+### Users — `/users` (15)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/users/init` | Init | create/lookup Mongo 
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+user from Supabase identity |
+| GET | `/users/me` | Auth | current user |
+| DELETE | `/users/me/soft` | Auth | delete own account |
+| GET | `/users` | Auth | paginated users |
+| GET | `/users/admin/all` | Admin | paginated users (admin view) |
+| GET | `/users/:id` | Auth | single user |
+| DELETE | `/users/soft` | Admin | soft delete user |
+| PATCH | `/users/block` | Admin | block |
+| PATCH | `/users/block/lift` | Admin | unblock |
+| PATCH | `/users/ban` | Admin | ban |
+| PATCH | `/users/ban/short` | Admin | short ban |
+| PATCH | `/users/ban/extend` | Admin | extend ban |
+| PATCH | `/users/ban/lift` | Admin | lift ban |
+| PATCH | `/users/role` | Admin | assign role |
+| PATCH | `/users/recover` | Admin | recover deleted user |
+
+### Vendor — `/vendor` (14)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/vendor` | Public | list vendors |
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+
+| GET | `/vendor/admin/all` | Admin | paginated vendors |
+| GET | `/vendor/:id` | Public | vendor page |
+| POST | `/vendor/my` | Auth | create my vendor |
+| GET | `/vendor/my` | Auth | my vendor |
+| PATCH | `/vendor/my/meta` | Auth | name/description |
+| PATCH | `/vendor/my/contact` | Auth | contact info |
+| PATCH | `/vendor/my/image` | Auth | image upload |
+| PATCH | `/vendor/my/stats-refresh` | Auth | toggle stats auto-refresh |
+| DELETE | `/vendor/my` | Auth | soft delete my vendor |
+| DELETE | `/vendor/soft` | Admin | soft delete any vendor |
+| PATCH | `/vendor/recover` | Admin | recover |
+| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
+| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+
+### Home — `/home` (20, all Admin except the read)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/home` | Public | full home layout |
+| POST / PATCH / DELETE | `/home/categories` | Admin | add / update / remove a home category |
+| PATCH | `/home/categories/reorder` | Admin | reorder |
+| POST / PATCH / DELETE | `/home/slides` | Admin | slides |
+| PATCH | `/home/slides/reorder` | Admin | reorder |
+| POST / PATCH / DELETE | `/home/promos` | Admin | promos |
+| POST / PUT / PATCH / DELETE | `/home/features` | Admin | add / set-all / update / remove features |
+| POST / PATCH / DELETE | `/home/containers` | Admin | product shelves |
+| PATCH | `/home/containers/reorder` | Admin | reorder shelves |
+
+### Reviews — `/review` (5)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/review` | Public | paginated reviews |
+| GET | `/review/product/:id` | Public | reviews for a product |
+| GET | `/review/:id` | Public | single review |
+| POST | `/review/my` | Auth | create review (verified-purchase check) |
+| GET | `/review/admin/all` | Admin | paginated reviews for moderation |
+
+### Stats — `/stats` (19)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/stats/products/:productId/view` | View | record product view |
+| POST | `/stats/products/:productId/click` | Public | record product click |
+| POST | `/stats/categories/:categoryId/view` | View | record category view |
+| POST | `/stats/pages/:pageKey/view` | View | record page view |
+| GET | `/stats/settings` | Admin | read sync settings |
+| PATCH | `/stats/settings` | Admin | update sync settings |
+| POST | `/stats/denormalize` | Admin | request product/category/vendor denormalization |
+| GET | `/stats/:entityType/aggregate/timeseries` | Admin | aggregated series across entities |
+| GET | `/stats/:entityType/aggregate` | Admin | aggregated totals across entities |
+| GET | `/stats/:entityType/paginated` | Auth | paginated stat rows by metric |
+| GET | `/stats/product/:entityId/overview` | Auth + Access:throw | product overview (owner check) |
+| GET | `/stats/category/:entityId/overview` | Admin | category overview |
+| GET | `/stats/vendor/:entityId/overview` | Auth + Access:mask | vendor overview |
+| GET | `/stats/vendor/force-update/usage` | Auth | remaining force-refresh quota |
+| POST | `/stats/vendor/force-update` | Auth | force-refresh own vendor stats |
+| GET | `/stats/:entityType/:entityId/lifetime` | Access:mask (no auth) | lifetime totals |
+| GET | `/stats/:entityType/:entityId/timeseries` | Access:mask (no auth) | series for one entity |
+| GET | `/stats/:entityType/top` | Public | leaderboard by metric |
+| GET | `/stats/_health` | Public | buffer depth / pipeline health |
+
+Route order matters: `/stats/vendor/force-update/usage`, `/stats/product|category|vendor/:entityId/overview`
+and `/stats/_health` are registered so the literal segments win before the generic
+`/:entityType/...` patterns.
+
+### Misc
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/health` | Public | liveness, bypasses all middleware (§5) |
+
+---
+
+## 15. Stats subsystem
+
+Stats are stored as **pre-aggregated slots**: one document per
+`(entity.type, entity.id, aggregation, dimensions…)` with a metrics object.
+
+### 15.1 Vocabulary (`packages/shared/types/StatTypes.ts`)
+
+| Concept | Values |
+|---|---|
+| Entity types | `product`, `category`, `vendor`, `user`, `order`, `coupon`, `page` |
+| Aggregation | `hourly`, `daily`, `weekly`, `monthly`, `lifetime` |
+| Metrics (`METRIC_FIELDS`) | `views`, `clicks`, `purchases`, `revenue`, `quantity`, `addToCart`, `wishlist`, `refunds`, `refundAmount` |
+| Dimensions | `date`, `hour`, `week`, `month`, `country`, `platform`, `source` |
+
+`StatsModel` has a unique compound index `uniq_stat_slot` over the slot identity, which is what makes
+upserts idempotent.
+
+### 15.2 Write path
+
+1. An HTTP endpoint (`/view`, `/click`) or the `order-item.created` handler calls the tracking
+   facade with `{ entity, metric(s), dimensions }`.
+2. `expandToStatEvents` (`packages/domain/modules/stats/FanOut.ts`) fans one action into up to five
+   events — hourly, daily, weekly, monthly and lifetime — computing UTC windows with `TimeWindows`.
+3. `StatKey.buildMongoFilter` derives the slot identity used by both the buffer and the repository.
+
+So a single view increments five documents; a purchase increments `purchases`, `revenue` and
+`quantity` on each level.
+
+### 15.3 Buffer
+
+`StatsBufferService`:
+
+- accumulates events in memory keyed by slot (`StatKey`), summed;
+- flushes every **5 s** (`startBackgroundFlushing(5000)` in `index.ts`) or early at **50 000**
+  pending slots;
+- swaps the map before writing, calls `StatsRepository.bulkUpsert` (`$inc` per metric,
+  `$setOnInsert` for identity, `ordered: false`), and re-queues the batch if the write fails;
+- on `SIGTERM`/`SIGINT` the process flushes before disconnecting;
+- exposes `pendingCount` for `GET /stats/_health`.
+
+`bulkUpsert` **increments**; `bulkSet` **overwrites** the whole metric set (used by denormalization so
+replays never double count).
+
+### 15.4 Read paths
+
+| Need | Method |
+|---|---|
+| one slot | `getEntityStats(type, id, aggregation, filter)` |
+| series | `getTimeSeries(...)` on `dimensions.date` (hourly/daily) or `dimensions.week` / `.month`, ascending |
+| leaderboard | `getTopEntities(type, aggregation, metric, limit)` sorting `metrics.<metric>` desc |
+| paginated table | `getPaginatedByMetric(...)` with a base64url cursor of `{v, id}` and a tie-break on `entity.id` |
+
+### 15.5 `statsViewGuard` (write endpoints)
+
+Applied to product/category/page `view` routes (not to clicks). It exists to keep bot traffic and
+refresh loops out of the counters:
+
+- known bot user-agents → silently ignored;
+- entity existence check (unknown id → ignored);
+- per-visitor dedupe per entity per day via Redis keys;
+- rate caps: 1 000 events / identity / hour, 20 000 / entity / hour, 200 000 / entity / day;
+- ignored requests still get a success response so clients cannot probe the filter.
+
+### 15.6 `statsAccessGuard` (read endpoints)
+
+Two modes, passed at mount time:
+
+| Mode | Used by | Behaviour |
+|---|---|---|
+| `throw` | product overview | 403 unless the caller owns the vendor/product or is admin |
+| `mask` | vendor overview, lifetime, timeseries | serves the row but zeroes financial metrics (revenue/refund amounts) for non-owners |
+
+The `mask` routes are mounted without `authMiddleware`: an anonymous caller gets the masked view,
+an authenticated owner gets the full one. Masking is why `GET /stats/vendor/:id/overview` can be
+called by any authenticated user without leaking revenue; the same is not true of the
+paginated/aggregate/top endpoints (§22).
+
+### 15.7 Denormalization pipeline￼
+ ZeroGPT
+Products
+Pricing
+API
+FAQ
+￼✨ Remove Background
+Popular
+en
+￼Get Started
+Register
+Login
+
+
+`POST /stats/denormalize` (admin) publishes `stats.product-denormalization-requested`; three
+handlers run in registration order:
+
+1. `ProductStatsDenormalizationHandler` — recomputes product slots from source collections and
+   `bulkSet`s them.
+2. `CategoryStatsDenormalizationHandler` — rolls product stats up to categories.
+3. `VendorStatsDenormalizationHandler` — rolls product stats up to vendors.
+￼
+ ZeroGPT
+Products
+Pricing
+API
+FAQ
+￼✨ Remove Background
+Popular
+en
+￼Get Started
+Register
+Login
+
+All three handlers run **concurrently** (`Promise.allSettled`), and a failure in one is logged without
+blocking the others. The trade-off is that (2) and ￼
+ ZeroGPT
+Products
+Pricing
+API
+FAQ
+￼✨ Remove Background
+Popular
+en
+￼Get Started
+Register
+Login
+(3) can read product stats while (1) is still
+writing them; a rerun or the next scheduled refresh reconciles it (see §22).
+
+### 15.8 Scheduler, settings and quota
+
+- `StatsSyncSettingsService` stores settings in Redis; defaults: refresh interval **6 h**, staleness
+  **24 h**, vendor force-refresh quota **5**.
+- `ProductStatsSyncScheduler.start(60_000)` ticks every minute, finds vendors due for refresh
+  (interval/staleness), and runs the same vendor refresh path.
+- `VendorForceRefreshQuotaService` enforces the per-vendor daily quota for
+  `POST /stats/vendor/force-update`; `GET /stats/vendor/force-update/usage` reports what is left.
+- Settings are admin-editable through `GET|PATCH /stats/settings` and surfaced in the dashboard
+  `SyncSettingsPanel`.
+
+---
+
+## 16. packages/shared
+
+Pure TypeScript + Zod, no runtime dependencies other than `zod ^4`. Barrel: `export * from './dtos'`, `'./request-dtos'`, `'./types'`.
+
+| Folder | Contents |
+|---|---|
+| `dtos/` | primitive Zod schemas reused by request DTOs: `id-schema`, `name-schema`, `email-schema`, `money-schema`, `rating-schema`, `image-schema`, `phone-schema`, `url-schema`, `boolean-schema`, … (plus a leftover `clerk-id-schema.ts` from the pre-Supabase era) |
+| `request-dtos/<module>/` | request body/query schemas and inferred DTO types per module (address, category, home, inventory, order, product, product-variant, review, stats, user, vendor) |
+| `types/StatTypes.ts` | `EntityType`, `AggregationLevel`, `MetricName`, `METRIC_FIELDS`, `Metrics`, `StatEvent`, `emptyMetrics()` |
+| `types/api-response.types.ts` | success/error envelope types |
+| `types/responses-read-models/` | response read models for address, category, home, inventory, order, order-items, product, product-variant, review, user, vendor |
+| `types/cloudnary-image.type.ts` | Cloudinary upload result type (typo in filename) |
+| `types/disclaimer-type.ts` | disclaimer shapes |
+
+Controllers validate with these schemas; the web forms reuse them via `zodResolver`, so a rule change
+in `packages/shared` changes both sides at once.
+
+---
+
+## 17. packages/frontend (headless SDK)
+
+Framework-agnostic client shared by web (and intended for mobile). Subpath exports (`package.json`):
+
+| Import | Contents |
+|---|---|
+| `@ecomerece/frontend` | root barrel |
+| `/auth` | `auth-adapter.web.ts` (Supabase) / `.native.ts`, chosen by the `react-native` export condition |
+| `/storage` | `storage-adapter.web.ts` (localStorage with an availability probe) / `.native.ts` |
+| `/theme` | Zustand dark-mode store, persists through the storage adapter |
+| `/app-settings` | app settings store |
+| `/error` | `parseModalError` helper |
+| `/supabase` | Supabase client factory |
+| `/user`, `/home`, `/category`, `/product`, `/vendor`, `/order`, `/review`, `/inventory`, `/product-variant`, `/address`, `/stats` | per-module hooks + services |
+
+Each module folder has a `*.service.ts` (plain fetch functions using `http`) and a
+`use*.ts`/hooks file with React Query `useQuery`/`useMutation` wrappers. Hook counts as of this
+writing: product 23, home 20, user 17, vendor 15, stats 15, address 8, product-variant 8, category 7,
+inventory 6, review 5, order 3 — 127 total.
+
+`lib/http-client.ts`:
+
+- base URL `NEXT_PUBLIC_API_URL || '/api'`;
+- calls `authAdapter.ensureReady()` then attaches the Supabase access token;
+- sets `Content-Type` only when a body exists;
+- 204/205 → `null`; empty non-OK → `HttpError`; unparseable JSON → `INVALID_JSON`;
+- non-2xx or `success:false` → `HttpError` built from `error.code/message/issues`;
+- `payload.meta` present → returns `{ data, meta }`, else `payload.data ?? payload`.
+
+Other lib files: `http-error.ts` (error class, 976 bytes) and an **empty** `server-http.ts`
+(0 bytes) that is safe to delete or implement.
+
+Navigation (`adapters/navigation/`) is a set of Zustand stores — shell, tabs, wizard, page meta,
+command palette, history stack — re-exported from one index so the split stays internal.
+`services/` also holds the Supabase client and theme/settings stores. There is no SDK-level
+pagination hook; the web app ships `useCursorPagination` itself.
+
+---
+
+## 18. apps/web
+
+Next.js 16 App Router, Material UI 9, all data through `@ecomerece/frontend`. Every page component
+is a client component (`'use client'`) — there is no server-side data fetching; the only server code
+is layout/metadata.
+
+### 18.1 Routes (27 pages)
+
+| Route | Surface | Data |
+|---|---|---|
+| `/` | storefront | `useGetHomeLayout`, product hooks |
+| `/products`, `/products/[id]` | storefront | product list / detail + reviews |
+| `/categories`, `/categories/[id]` | storefront | categories + filtered products |
+| `/vendors`, `/vendors/[id]` | storefront | vendors + their products |
+| `/reviews`, `/reviews/[id]` | storefront | review list / detail |
+| `/auth`, `/auth/callback` | auth | Supabase OAuth start / code exchange → `POST /users/init` |
+| `/account` | buyer | profile, addresses, theme, delete-account |
+| `/account/orders`, `/account/orders/new` | buyer | order list / checkout |
+| `/account/products` | vendor | my products + variants |
+| `/account/vendor` | vendor | store profile, verification state, stats panel |
+| `/dashboard` | admin | home layout editor (overview, slides, promos, categories, features, shelves, raw JSON) |
+| `/dashboard/orders`, `/products`, `/categories`, `/inventory`, `/variants`, `/vendors`, `/users`, `/addresses`, `/reviews` | admin | moderation tables |
+| `/dashboard/stats` | admin | leaderboards, series, sync settings, denormalize button |
+
+### 18.2 Shell and providers
+
+- `app/layout.tsx` mounts `Providers` (MUI theme + CssBaseline + React Query + `AuthProvider`), then
+  `PageShell`/`SiteHeader`.
+- `app/components/require-auth.tsx` redirects unauthenticated users to `/auth?next=<path>`; used by
+  every `/account/**` and `/dashboard/**` page.
+- `app/components/page-shell.tsx`, `site-header.tsx`, `dashboard-nav.tsx`, `query-state.tsx`,
+  `cursor-pager.tsx` provide layout/loading/error/paging primitives.
+- Conventions: dialogs are controlled by a single state object and **remounted with `key`** when the
+  target row changes (fixes stale MUI form state); forms validate with the shared Zod schemas;
+  mutations invalidate the relevant query keys; long tables use cursor pagination, admin tables use
+  server-side page/pageSize where the endpoint supports it.
+- Dynamic routes that need `useSearchParams` are wrapped in `<Suspense>` at the page boundary
+  (`/auth`, `/account/orders/new`, product filters), otherwise `next build` fails prerendering.
+
+Role handling: `SiteHeader` shows the dashboard entry for `admin`/`vendor`, but no page checks the
+role before rendering dashboard UI. Unauthorized mutations fail at the API with 403.
+
+---
+
+## 19. Seed scripts
+
+Run with Bun from the repo root, e.g. `bun run apps/api/scripts/seed-all.ts`. They connect to the
+same `MONGO_URI` and need Cloudinary credentials for image uploads.
+
+| Script | What it does |
+|---|---|
+| `seed-all.ts` | end-to-end demo dataset: categories → vendors/users → products + variants + inventory → home layout |
+| `seed-base-data.ts` | reference data only (categories, baseline users) |
+| `seed-home-layout.ts` | home page slides/promos/features/containers |
+| `seed-test-data.ts` | small fixture set for manual testing |
+
+They are idempotent-ish by clearing or upserting known collections; read each script before running
+against a database you care about, and never point them at production.
+
+---
+
+## 20. Testing
+
+`bun test` runs 13 test files (78 tests at the last verified run, all passing) using `bun:test`.
+They concentrate on pure domain behaviour (value objects, aggregates, `FanOut`/`TimeWindows` stat
+expansion, image-storage errors, stats denormalization handlers) plus the order-create
+post-commit event ordering (`apps/api/modules/order/application/__tests__/order-create-commit.test.ts`)
+rather than HTTP integration; there is no test database harness (the order transaction smoke needs a
+MongoDB replica set).
+
+```bash
+bun test                         # all
+bun test packages/domain         # one area
+bun test apps/api/modules/stats  # one module path
+bun test --watch
+```
+
+Because buses are created by `createApplication()` in `apps/api/composition-root.ts`, an integration
+test can instantiate the whole graph (passing stub env vars) or call a single module factory with
+fake deps; importing routes is no longer needed to register handlers.
+
+---
+
+## 21. Configuration reference
+
+### 21.1 API environment
+
+| Variable | Used by | Default / notes |
+|---|---|---|
+| `MONGO_URI` | `dbMiddleware` | required; use `?replicaSet=rs0` if you need transactions |
+| `REDIS_URL` | rate limiter, stats settings, quota | required at runtime |
+| `SUPABASE_URL` | auth middleware | required |
+| `SUPABASE_SECRET_KEY` | auth middleware (admin `getUser`) | service-role key, server only |
+| `JWT_SECRET` | present in env checks | legacy from the pre-Supabase auth; not used for request verification |
+| `CORS_ORIGIN` | CORS | comma-separated; default `http://localhost:3000` |
+| `RATE_LIMIT_WINDOW_MS` | rate limiter | default `60000` |
+| `RATE_LIMIT_MAX` | rate limiter | default `60` |
+| `IMAGE_STORAGE_PROVIDER` | image-storage module | selects Cloudinary adapter |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Cloudinary adapter | required for uploads |
+| `CLOUDINARY_SECURE`, `CLOUDINARY_FOLDER` | Cloudinary adapter | optional behaviour/folder |
+| `NODE_ENV` | error handler | `production` hides messages/stacks |
+
+There is no `.env.example` in the repo; document new variables here and in the deploy config.
+
+### 21.2 Web environment
+
+| Variable | Used by | Default |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | SDK base URL + Next rewrite | `/api` (same origin) |
+| `API_PROXY_TARGET` | `next.config.ts` rewrite target | falls back to `NEXT_PUBLIC_API_URL` then `http://localhost:8000` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase client | required |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client | required |
+
+### 21.3 Ports
+
+API `8000` (hardcoded in `index.ts`), web dev `3000`, pm2 fork mode for production.
+
+---
+
+## 22. Known gaps and inconsistencies
+
+These are real issues observed in the code, not TODOs invented for this document.
+
+**Architecture**
+
+1. `packages/domain` still declares `@ecomerece/shared` as a package dependency and imports types from
+   it in five files (`StatEvent`, `Metrics` in `modules/stats/FanOut.ts`, `metrics.ts`, `StatKey.ts`,
+   the vendor read model and `IVendorRepository`). The imports are `import type` and erased at
+   compile time, so `bun run arch` allows them, but the package.json coupling remains.
+2. Stats bypasses the DDD layering (controller → `StatsQueryService`/`StatsRepository`/`StatsModel`,
+   no domain aggregate or port), and `stats.module.ts` still injects `connectDB` into its handlers
+   instead of a storage port.
+3. `routes/index.ts` mounts `/order-items`, but the module is internal and the router is empty — a
+   dead mount with no endpoints.
+4. There is no transactional outbox (P8 deferred): order events are published after the commit, so a
+   crash between `commitTransaction` and `eventBus.publish` loses them.
+5. `InMemoryEventBus` runs handlers for one event concurrently (`Promise.allSettled`). The three
+   `stats.product-denormalization-requested` handlers no longer have a defined order, so category and
+   vendor roll-ups can read product stats mid-refresh.
+6. The order transaction has unit-test coverage for publish ordering, but no runtime smoke against a
+   real replica set was run in this environment.
+
+**Behaviour / security**
+
+7. `GET /stats/:entityType/top` is **public** and returns raw `revenue`/`refundAmount` metrics;
+   `GET /stats/:entityType/paginated` requires only a login. Only `vendor/overview`, `lifetime` and
+   `timeseries` mask financial metrics.
+8. `GET /users` is available to any authenticated user and returns paginated user documents.
+9. The web dashboard renders for any signed-in user; role enforcement is API-only.
+10. `middleware/seller.ts` reads `c.get('profile')`, which nothing sets, and is not mounted.
+11. `POST /stats/products/:id/click` has no bot/dedupe guard, unlike `/view`.
+12. The inventory reservation loop pairs requested quantities with a *filtered* inventory array by
+    index (`inventoryItems[i]` over `buyableInventories`); a missing/deleted line can apply the wrong
+    quantity to the wrong variant.
+
+**Incomplete features**
+
+13. Review like/dislike/report/vendor-reply/update/delete exist on the aggregate and emit events but
+    have no HTTP route.
+14. `OrderAggregate` only raises `order.created`; cancel/confirm/complete/refund/return methods and
+    events are unused, and `order.returnded` is misspelled.
+15. `apps/mobile` contains no files.
+16. `packages/frontend/lib/server-http.ts` is empty (0 bytes).
+17. Seed scripts and home layout assume image storage credentials are present.
+
+**Naming / housekeeping**
+
+18. `AGENTS.md` documents mapper methods `toDocument`/`updatePayload`/`fromDocument`; the code uses
+    `persistenceToAggregate`/`aggregateToPersistence`/`aggregateToReadModel`.
+19. The root `README.md` describes an older state of the system (including a “900-line” doc and
+    claims about unwired reviews/stats). This file supersedes it.
+20. Product `my/...` routes are registered without a leading slash; Hono normalises them when mounted
+    under `/product`, but do not copy that style.
+21. Persistent typos in API surface and filenames: `product-varaint.routes.ts`,
+    `/product-variant/my/appereance/toggle`, `cloudnary-image.type.ts`, `order.returnded`,
+    `user.logged-in` vs `user.signed-in`, and the placeholder address deletion reason.
+22. `apps/api/dist/` exists as a local build artifact; do not edit or review it as source.
+
+---
+
+## 23. Where do I change X?
+
+| Goal | Files |
+|---|---|
+| Add a rule to a business concept | `packages/domain/modules/<m>/<m>.aggregate.ts` (+ event if other modules care) |
+| Add a field to a product / vendor / user | aggregate + `infrastructure/<m>.mapper.ts` + Mongoose model + `request-dtos` + web form |
+| Add an endpoint | controller method → route file → `request-dtos` schema → SDK service/hook → page |
+| Add a cross-module read | define the Query class in `packages/contracts/modules/<owner>` + re-export it from the owner's `application/queries` + register its handler in the owner module factory; consumers import it from `@ecomerece/contracts` |
+| Add a cross-module write/port | define the port interface in `packages/contracts/modules/<owner>` + implement an adapter in the owner's `infrastructure/` + expose it from the owner module factory + inject it via `createApplication()` |
+| Make another module react to a change | raise an event in the aggregate + `eventBus.register('<type>', handler)` in the consumer module factory |
+| Add a stat metric | `packages/shared/types/StatTypes.ts` (`METRIC_FIELDS`, `Metrics`, `emptyMetrics`) + producers |
+| Change stats refresh cadence | defaults in `StatsSyncSettingsService` + `ProductStatsSyncScheduler` + dashboard `SyncSettingsPanel` |
+| Tune rate limiting / body limits | `apps/api/index.ts` (`requestGuards`, `rateLimiter`), `middleware/rateLimiter.ts` |
+| Add a dashboard screen | `apps/web/app/dashboard/<name>/page.tsx` + nav entry in `components/dashboard-nav.tsx` |
+| Change the home page | `apps/api/modules/home/**` (write) + `apps/web/app/page.tsx` (read) |
+
+---
+
+## 24. Maintaining this document
+
+- Treat `PROJECT_DOCUMENTATION.md` as the source of truth over `README.md` and `AGENTS.md` when
+  they disagree; fix the older files rather than duplicating caveats here.
+- When adding a module, update §9 (catalog), §10 (events), §11.2 (registrations), §14 (endpoints),
+  §22 if you introduce a deviation, and §23 if the workflow changes.
+- The endpoint catalog is generated by reading `apps/api/modules/*/presentation/*.ts`; re-check it
+  whenever routes are added, because there is no OpenAPI generation in this repo.
+- If you change a pattern that the playbook teaches (contract query shape, port wiring, module
+  factory, composition root), update `docs/architecture-guide.html` in the same change — it is the
+  onboarding path, so a stale sample there costs more than a stale paragraph here.
+- When you change a flow, update the *why* comments in the owning app service in the same change; a
+  comment that restates code is worse than none. Conventions are in §8.5.
+- Verified against the tree on 2026-11-09 (post cross-module refactor): 13 API modules, 12 Mongoose
+  models, 124 mounted routes + `/health`, 11 aggregates, 30 value objects, 110 event classes,
+  14 contract queries, 8 contract ports, 127 SDK hooks, 27 web pages, 13 test files (78 tests).
+

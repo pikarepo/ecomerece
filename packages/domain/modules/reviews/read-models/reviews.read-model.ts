@@ -15,6 +15,12 @@ export type ReviewReadModel = {
   images: string[];
   isVerifiedPurchase: boolean;
   vendorReply: string | null;
+  block: {
+    blocked: boolean;
+    blockedFrom: Date | null;
+    blockedBy: string | null;
+    reason: string | null;
+  };
   deleted: {
     deleted: boolean;
     deletedFrom: Date | null;

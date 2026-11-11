@@ -1,32 +1,10 @@
 import type { IEvent } from '../../../events/event-bus.interface';
-import { EffectiveDate, type Id, type Money, type Quantity } from '../../../value-objects';
+import { EffectiveDate } from '../../../value-objects';
+import type { OrderItemEventPayload } from './order-item-event-payload';
 
-export class OrderItemCreatedEvent
-  implements
-    IEvent<{
-      orderItemId: Id;
-      orderId: Id;
-      vendorId: Id;
-      productId: Id;
-      variantId: Id;
-      quantity: Quantity;
-      price: Money;
-      totalPrice: Money;
-    }>
-{
+export class OrderItemCreatedEvent implements IEvent<OrderItemEventPayload> {
   readonly type = 'order-item.created';
   readonly occurredOn = EffectiveDate.today();
 
-  constructor(
-    public readonly payload: {
-      orderItemId: Id;
-      orderId: Id;
-      vendorId: Id;
-      productId: Id;
-      variantId: Id;
-      quantity: Quantity;
-      price: Money;
-      totalPrice: Money;
-    },
-  ) {}
+  constructor(public readonly payload: OrderItemEventPayload) {}
 }

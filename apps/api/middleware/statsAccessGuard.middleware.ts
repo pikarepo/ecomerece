@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { type StatsAccessGuard, statsAccessGuard } from './statsAccessGuard';
+import { getStatsAccessGuard, type IStatsAccessGuard } from './statsAccessGuard';
 
 export interface StatsAccessGuardOptions {
   /** Flex param name holding the entity type (`product` | `vendor` | ...). */
@@ -17,8 +17,8 @@ export interface StatsAccessGuardOptions {
   productOnly?: boolean;
   /** Always treat the entity as a vendor regardless of `entityTypeParam`. */
   vendorOnly?: boolean;
-  /** Test seam: inject a guard stub. Defaults to the shared singleton. */
-  guard?: StatsAccessGuard;
+  /** Test seam: inject a guard stub. Defaults to the composition-root guard. */
+  guard?: IStatsAccessGuard;
 }
 
 /**
@@ -26,14 +26,7 @@ export interface StatsAccessGuardOptions {
  * middleware level like the other guards in `apps/api/middleware/`.
  */
 export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOptions) {
-  const {
-    entityTypeParam,
-    entityIdParam,
-    mode,
-    productOnly,
-    vendorOnly,
-    guard = statsAccessGuard,
-  } = options;
+  const { entityTypeParam, entityIdParam, mode, productOnly, vendorOnly, guard } = options;
 
   return async (c: Context, next: Next) => {
     const entityId = c.req.param(entityIdParam) ?? '';
@@ -41,7 +34,7 @@ export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOption
     const userId = c.get('userId');
 
     if (mode === 'throw') {
-      await guard.ensureProductReadable(entityId, role, userId);
+      await (guard ?? getStatsAccessGuard()).ensureProductReadable(entityId, role, userId);
       return next();
     }
 
@@ -61,7 +54,12 @@ export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOption
     }
 
     try {
-      await guard.ensureEntityReadable(entityType, entityId, role, userId);
+      await (guard ?? getStatsAccessGuard()).ensureEntityReadable(
+        entityType,
+        entityId,
+        role,
+        userId,
+      );
       c.set('statsFullAccess', true);
     } catch {
       c.set('statsFullAccess', false);

@@ -10,8 +10,7 @@ import { AddressModel, type AddressPersistence } from './address.models';
 
 export class AddressRepository
   extends MongoRepository<AddressPersistence>
-  implements IAddressRepository
-{
+  implements IAddressRepository {
   constructor() {
     super(AddressModel);
   }

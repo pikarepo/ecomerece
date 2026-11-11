@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../apps/api/errors/app-error';
+import { BadRequestError } from '../errors/app-error';
 import { StringVO } from './string-vo';
 
 export abstract class EnumVO<T extends string> extends StringVO {

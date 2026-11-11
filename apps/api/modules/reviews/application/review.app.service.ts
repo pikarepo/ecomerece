@@ -10,16 +10,25 @@ import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import { Title } from '@ecomerece/domain/value-objects/title.vo';
 import { UrlVO } from '@ecomerece/domain/value-objects/url.vo';
 import type {
+  addVendorReplyDtoType,
+  blockReviewDtoType,
   createMyReviewDtoType,
+  deleteMyReviewDtoType,
   GetAdminPaginatedReviewsQueryDto,
   GetPaginatedReviewsQueryDto,
+  reportReviewDtoType,
+  updateMyReviewDtoType,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { ReviewResponseReadModel } from '../../../../../packages/shared/types/responses-read-models/review.response-read-model';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveOrderGetByIdQuery } from '../../order/application/queries/ensure-active-order-get-by-id.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
+import {
+  EnsureActiveOrderGetByIdQuery,
+  EnsureActiveProductGetByIdQuery,
+  GetVendorByUserIdQuery,
+} from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
 import { reviewMapper } from '../infrastructure/review.mapper';
 import type { ReviewPersistence } from '../infrastructure/review.model';
 import type { ReviewRepository } from '../infrastructure/review.repository';
@@ -56,7 +65,7 @@ export class ReviewApplicationService extends BaseService {
   async getPaginatedReviews(query: GetPaginatedReviewsQueryDto) {
     const filter: FilterQuery<ReviewPersistence> = {
       'deleted.deleted': false,
-      'block.blocked': false,
+      'block.blocked': { $ne: true },
     };
     if (query.productId) filter.productId = Id.create(query.productId).value;
     if (query.rating !== undefined) filter.rating = query.rating;
@@ -101,7 +110,7 @@ export class ReviewApplicationService extends BaseService {
 
   async createReview(
     data: createMyReviewDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ReviewMessagesType> {
     const reviewId = Id.create();
     const actorId = Id.create(actor._id);
@@ -141,5 +150,120 @@ export class ReviewApplicationService extends BaseService {
       actorId,
       reviewMapper.aggregateToResponseReadModel(review),
     );
+  }
+
+  async updateMyReview(
+    id: string,
+    data: updateMyReviewDtoType,
+    actor: AuthActor,
+  ): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.EnsureAuthorOwnershipGetByIdOrThrow(actorId, reviewId);
+    review.updateContent(
+      Title.create(data.title),
+      Description.create(data.comment),
+      data.images ? data.images.map((value) => UrlVO.create(value)) : review.images,
+      Quantity.create(data.rating),
+    );
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewUpdated(reviewId, actorId);
+  }
+
+  async deleteMyReview(
+    id: string,
+    data: deleteMyReviewDtoType,
+    actor: AuthActor,
+  ): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.EnsureAuthorOwnershipGetByIdOrThrow(actorId, reviewId);
+    review.deleteReview(DeleteInfoVO.create(actorId, Reason.create(data.reason)));
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewDeleted(reviewId, actorId);
+  }
+
+  async likeReview(id: string): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    review.like();
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewLiked(reviewId);
+  }
+
+  async dislikeReview(id: string): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    review.dislike();
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewDisliked(reviewId);
+  }
+
+  async reportReview(
+    id: string,
+    data: reportReviewDtoType,
+    actor: AuthActor,
+  ): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    review.report(Reason.create(data.reason));
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewReported(reviewId, actorId);
+  }
+
+  async addVendorReply(
+    id: string,
+    data: addVendorReplyDtoType,
+    actor: AuthActor,
+  ): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    const activeProduct = await this.queryBus.execute(
+      new EnsureActiveProductGetByIdQuery({ productId: review.productId }),
+    );
+    if (!activeProduct.product) throw new BadRequestError('Product not found.');
+    if (!activeProduct.active) throw new BadRequestError('Product is not active.');
+    const vendor = await this.queryBus.execute(
+      new GetVendorByUserIdQuery({ userId: actorId }),
+    );
+    if (!vendor) throw new BadRequestError('User does not own a vendor.');
+    if (vendor.id !== activeProduct.product.vendorId) {
+      throw new BadRequestError('This review does not belong to the current vendor.');
+    }
+    review.addVendorReply(Description.create(data.reply));
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.vendorReplyAdded(reviewId, Id.create(vendor.id));
+  }
+
+  async blockReview(
+    id: string,
+    data: blockReviewDtoType,
+    actor: AuthActor,
+  ): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    review.blockReview(Reason.create(data.reason), actorId);
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewBlocked(reviewId, actorId);
+  }
+
+  async unblockReview(id: string, actor: AuthActor): Promise<ReviewMessagesType> {
+    const reviewId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
+    review.unblockReview(actorId);
+    await this.reviewRepo.Save(review);
+    await this.publishEvents(review);
+    return reviewMessages.reviewUnblocked(reviewId, actorId);
   }
 }

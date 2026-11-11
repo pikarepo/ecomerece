@@ -1,12 +1,16 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { createProductVaraintModule } from '../product-variant.module';
+import type { createProductVaraintModule } from '../product-variant.module';
 
-const { controller } = createProductVaraintModule();
+type ProductVariantController = ReturnType<
+  typeof createProductVaraintModule
+>['controller'];
 
-export const productVariantRoutes = new Hono();
+export function createProductVariantRoutes(controller: ProductVariantController) {
+  const productVariantRoutes = new Hono();
 
+productVariantRoutes.get('/by-id/:id', controller.getVariantById);
 productVariantRoutes.get('/:id', controller.getVarientsByProductId);
 productVariantRoutes.post('/my', authMiddleware, controller.createMyProductVariant);
 productVariantRoutes.patch('/my/price', authMiddleware, controller.updateMyVariantPrice);
@@ -28,4 +32,7 @@ productVariantRoutes.get(
   authMiddleware,
   adminMiddleware,
   controller.getAdminPaginatedVariants,
-);
+  );
+
+  return productVariantRoutes;
+}

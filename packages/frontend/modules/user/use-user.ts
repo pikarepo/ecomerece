@@ -31,6 +31,14 @@ export const USER_QUERY_KEY = ['users'];
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
+export function useInitUser() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => userService.initUser(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: USER_QUERY_KEY }),
+  });
+}
+
 export function useGetMe() {
   return useQuery({
     queryKey: [...USER_QUERY_KEY, 'me'],

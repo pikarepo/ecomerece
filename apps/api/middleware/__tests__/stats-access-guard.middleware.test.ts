@@ -2,12 +2,12 @@ import { describe, expect, it } from 'bun:test';
 import type { Context, Next } from 'hono';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import type { StatsAccessGuard } from '../statsAccessGuard';
+import type { IStatsAccessGuard } from '../statsAccessGuard';
 import { createStatsAccessGuardMiddleware } from '../statsAccessGuard.middleware';
 
 function stubGuard(
   overrides: { readable?: boolean; productError?: Error; entityError?: Error } = {},
-): StatsAccessGuard {
+): IStatsAccessGuard {
   const { readable = true, productError, entityError } = overrides;
   return {
     async ensureProductReadable() {
@@ -17,12 +17,12 @@ function stubGuard(
       if (entityError) throw entityError;
       void readable;
     },
-  } as StatsAccessGuard;
+  };
 }
 
 function buildApp(options: {
   mode: 'mask' | 'throw';
-  guard?: StatsAccessGuard;
+  guard?: IStatsAccessGuard;
   role?: string;
   userId?: string;
 }) {

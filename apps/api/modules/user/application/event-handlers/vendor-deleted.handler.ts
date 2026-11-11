@@ -1,10 +1,8 @@
+import type { VendorDeletedEvent } from '@ecomerece/domain';
 import type { IEvent, IEventHandler } from '@ecomerece/domain/events/event-bus.interface';
-import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { UserInternalService } from '../user.internal.service';
 
-interface VendorDeletedPayload {
-  ownerId: Id;
-}
+type VendorDeletedPayload = VendorDeletedEvent['payload'];
 
 export class VendorDeletedHandler implements IEventHandler<VendorDeletedPayload> {
   constructor(private readonly internalSvc: UserInternalService) {}

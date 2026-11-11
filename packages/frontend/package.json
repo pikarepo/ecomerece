@@ -56,6 +56,22 @@
       "types": "./modules/vendor/index.ts",
       "default": "./modules/vendor/index.ts"
     },
+    "./order": {
+      "types": "./modules/order/index.ts",
+      "default": "./modules/order/index.ts"
+    },
+    "./review": {
+      "types": "./modules/review/index.ts",
+      "default": "./modules/review/index.ts"
+    },
+    "./inventory": {
+      "types": "./modules/inventory/index.ts",
+      "default": "./modules/inventory/index.ts"
+    },
+    "./product-variant": {
+      "types": "./modules/product-variant/index.ts",
+      "default": "./modules/product-variant/index.ts"
+    },
     "./address": {
       "types": "./modules/address/index.ts",
       "default": "./modules/address/index.ts"

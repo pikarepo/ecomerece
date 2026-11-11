@@ -17,15 +17,14 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
-import type { InMemoryCommandBus } from '../../../core/infrastructure/buses/in-memory-command-bus';
-import type { InMemoryQueryBus } from '../../../core/infrastructure/buses/in-memory-query-bus';
+import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
+import type { IProductPricingUpdater } from '@ecomerece/contracts';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { UpdatePriceCommand } from '../../product/application/commands/update-price.command';
-import { EnsureActiveProductGetByIdQuery } from '../../product/application/queries/ensure-active-product-get-by-id.query';
-import { EnsureActiveUserGetByIdQuery } from '../../user/application/queries/ensure-active-user-get-by-id.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
-import { EnsureActiveVendorGetByIdQuery } from '../../vendor/application/queries/ensure-active-vendor-get-by-id.query';
+import { EnsureActiveProductGetByIdQuery } from '@ecomerece/contracts';
+import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
+import { EnsureActiveVendorGetByIdQuery } from '@ecomerece/contracts';
 import { productVariantMapper } from '../infrastructure/product-variant.mapper';
 import type { ProductVariantPersistence } from '../infrastructure/product-variant.model';
 import type { ProductVariantRepository } from '../infrastructure/product-variant.repository';
@@ -37,8 +36,8 @@ import {
 export class productVariantApplicationService extends BaseService {
   constructor(
     private readonly vairiantRepo: ProductVariantRepository,
-    private readonly queryBus: InMemoryQueryBus,
-    private readonly commandBus: InMemoryCommandBus,
+    private readonly queryBus: IQueryBus,
+    private readonly pricingUpdater: IProductPricingUpdater,
     private readonly eventBus: IEventBus,
   ) {
     super();
@@ -74,7 +73,7 @@ export class productVariantApplicationService extends BaseService {
 
   async createMyProductVariant(
     data: createMyProductVariantDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ProductVaraintMessagesType> {
     const varaintId = Id.create();
     const actorId = Id.create(actor._id);
@@ -98,6 +97,11 @@ export class productVariantApplicationService extends BaseService {
     return productVaraintMessages.varaintCreated(varaintId, productId, actorId);
   }
 
+  async getVariantById(id: string): Promise<ProductVariantResponseReadModel> {
+    const variant = await this.vairiantRepo.FindByIdOrThrow(Id.create(id));
+    return productVariantMapper.aggregateToResponseReadModel(variant);
+  }
+
   async getVarientsByProductId(id: idType): Promise<ProductVariantResponseReadModel[] | null> {
     const productId = Id.create(id);
     const activeProduct = await this.queryBus.execute(
@@ -115,7 +119,7 @@ export class productVariantApplicationService extends BaseService {
 
   async updateMyVariantPrice(
     data: updateMyVariatPriceDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ProductVaraintMessagesType> {
     const actorId = Id.create(actor._id);
     const price = Money.create(data.price);
@@ -133,7 +137,7 @@ export class productVariantApplicationService extends BaseService {
 
   async updateMyVariantMeta(
     data: upadteMyVariantMetaDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ProductVaraintMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -149,7 +153,7 @@ export class productVariantApplicationService extends BaseService {
 
   async toggleMyVaraintAppereance(
     data: toggleVariantApperaaracneDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ProductVaraintMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -173,7 +177,7 @@ export class productVariantApplicationService extends BaseService {
 
   async softDeleteMyVariant(
     data: softDeleteMyVariantDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<ProductVaraintMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -188,7 +192,7 @@ export class productVariantApplicationService extends BaseService {
     return productVaraintMessages.variantDeleted(variantId, actorId);
   }
 
-  async recoverVariant(id: idType, actor: UserPersistence): Promise<ProductVaraintMessagesType> {
+  async recoverVariant(id: idType, actor: AuthActor): Promise<ProductVaraintMessagesType> {
     const actorId = Id.create(actor._id);
     const variantId = Id.create(id);
     const variant = await this.vairiantRepo.FindByIdOrThrow(variantId);
@@ -199,7 +203,7 @@ export class productVariantApplicationService extends BaseService {
     return productVaraintMessages.variantRecovered(variantId, actorId);
   }
 
-  async syncPricingSummary(id: string, actor: UserPersistence) {
+  async syncPricingSummary(id: string, actor: AuthActor) {
     const productId = Id.create(id);
     const actorId = Id.create(actor._id);
     let price;
@@ -223,7 +227,7 @@ export class productVariantApplicationService extends BaseService {
       };
     }
 
-    await this.commandBus.execute(new UpdatePriceCommand(productId, price, actorId));
+    await this.pricingUpdater.updatePrice(productId, price, actorId);
   }
 
   // Admin: all product variants — no baseline restrictions, optional filters

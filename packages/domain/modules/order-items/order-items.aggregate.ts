@@ -7,10 +7,17 @@ import {
   Money,
   Quantity,
 } from '../../value-objects';
+import { OrderItemCancelledEvent } from './events/order-item-cancelled.event';
+import { OrderItemCompletedEvent } from './events/order-item-completed.event';
+import { OrderItemConfirmedEvent } from './events/order-item-confirmed.event';
 import { OrderItemCreatedEvent } from './events/order-item-created.event';
+import type { OrderItemEventPayload } from './events/order-item-event-payload';
+import { OrderItemRefundedEvent } from './events/order-item-refunded.event';
+import { OrderItemReturnedEvent } from './events/order-item-returned.event';
+import { OrderItemUpdatedEvent } from './events/order-item-updated.event';
 import { StatusVo } from './value-objects/status.vo';
 
-export type cretaeOrderProps = {
+export type createOrderProps = {
   id: Id;
   orderId: Id;
   vendorId: Id;
@@ -80,7 +87,21 @@ export class OrderItemsAggregate extends AggregateRoot {
     return this._createdAt;
   }
 
-  static create(props: cretaeOrderProps): OrderItemsAggregate {
+  /** Snapshot used by every lifecycle event so payloads stay consistent. */
+  private eventPayload(): OrderItemEventPayload {
+    return {
+      orderItemId: this._id,
+      orderId: this._orderId,
+      vendorId: this._vendorId,
+      productId: this._productId,
+      variantId: this._variantId,
+      quantity: this._quantity,
+      price: this._price,
+      totalPrice: this._totalPrice,
+    };
+  }
+
+  static create(props: createOrderProps): OrderItemsAggregate {
     const totalPrice = Money.create(props.quantity.value * props.price.value);
     const orderItem = new OrderItemsAggregate(
       props.id,
@@ -97,18 +118,7 @@ export class OrderItemsAggregate extends AggregateRoot {
       Quantity.create(1),
       EffectiveDate.today(),
     );
-    orderItem.raise(
-      new OrderItemCreatedEvent({
-        orderItemId: orderItem._id,
-        orderId: orderItem._orderId,
-        vendorId: orderItem._vendorId,
-        productId: orderItem._productId,
-        variantId: orderItem._variantId,
-        quantity: orderItem._quantity,
-        price: orderItem._price,
-        totalPrice: orderItem._totalPrice,
-      }),
-    );
+    orderItem.raise(new OrderItemCreatedEvent(orderItem.eventPayload()));
 
     return orderItem;
   }
@@ -143,5 +153,58 @@ export class OrderItemsAggregate extends AggregateRoot {
       _version,
       _createdAt,
     );
+  }
+
+  confirm() {
+    this._status = this._status.confirm();
+    this.raise(new OrderItemConfirmedEvent(this.eventPayload()));
+    return this;
+  }
+
+  complete() {
+    this._status = this._status.complete();
+    this.raise(new OrderItemCompletedEvent(this.eventPayload()));
+    return this;
+  }
+
+  cancel() {
+    this._status = this._status.cancel();
+    this.raise(new OrderItemCancelledEvent(this.eventPayload()));
+    return this;
+  }
+
+  /** `return` is reserved in TS, so the method is named `returnItem`. */
+  returnItem() {
+    this._status = this._status.return();
+    this.raise(new OrderItemReturnedEvent(this.eventPayload()));
+    return this;
+  }
+
+  refund() {
+    this._status = this._status.refund();
+    this.raise(new OrderItemRefundedEvent(this.eventPayload()));
+    return this;
+  }
+
+  update(data: {
+    quantity: Quantity;
+    waitingTime: ExpirationDate;
+    price: Money;
+  }) {
+    this._quantity = data.quantity;
+    this._waitingTime = data.waitingTime;
+    this._price = data.price;
+    this._totalPrice = Money.create(data.quantity.value * data.price.value);
+    this.raise(
+      new OrderItemUpdatedEvent({
+        orderItemId: this._id,
+        orderId: this._orderId,
+        quantity: this._quantity,
+        waitingTime: this._waitingTime,
+        price: this._price,
+        totalPrice: this._totalPrice,
+      }),
+    );
+    return this;
   }
 }

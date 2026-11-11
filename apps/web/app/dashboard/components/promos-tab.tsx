@@ -5,8 +5,17 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import type { HomePromoResponse } from '@ecomerece/shared';
+import { HomeRowActions } from './home-row-actions';
 
-export function PromosTab({ promos }: { promos: HomePromoResponse[] }) {
+export function PromosTab({
+  promos,
+  onEdit,
+  onDelete,
+}: {
+  promos: HomePromoResponse[];
+  onEdit: (promo: HomePromoResponse) => void;
+  onDelete: (promo: HomePromoResponse) => void;
+}) {
   return (
     <TableContainer>
       <Table size="small">
@@ -16,6 +25,7 @@ export function PromosTab({ promos }: { promos: HomePromoResponse[] }) {
             <TableCell>Subtitle</TableCell>
             <TableCell>Link</TableCell>
             <TableCell>Accent</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -25,6 +35,9 @@ export function PromosTab({ promos }: { promos: HomePromoResponse[] }) {
               <TableCell>{row.subtitle}</TableCell>
               <TableCell sx={{ maxWidth: 260, wordBreak: 'break-all' }}>{row.link}</TableCell>
               <TableCell>{row.accent}</TableCell>
+              <TableCell align="right">
+                <HomeRowActions onEdit={() => onEdit(row)} onDelete={() => onDelete(row)} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

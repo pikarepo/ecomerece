@@ -1,6 +1,6 @@
-import type { IOrderItemsRepository, OrderItemsAggregate } from '@ecomerece/domain';
+import type { IOrderItemsRepository, OrderItemsAggregate, Quantity } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
-import type { UnitOfWork } from '../../../core/database/unit-of-work';
+import type { FilterQuery } from 'mongoose';
 import { MongoRepository } from '../../../core/repository/mongo.repository';
 import { BadRequestError, ConcurrencyError } from '../../../errors/app-error';
 import { OrderItemsMapper } from './order-item.mapper';
@@ -8,10 +8,19 @@ import { OrderItemsModel, type OrderItemsPersistence } from './order-item.model'
 
 export class OrderItemsRepository
   extends MongoRepository<OrderItemsPersistence>
-  implements IOrderItemsRepository
-{
-  constructor(private readonly unitOfWork: UnitOfWork) {
+  implements IOrderItemsRepository {
+  constructor() {
     super(OrderItemsModel);
+  }
+
+  async FindByIds(ids: Id[]): Promise<OrderItemsAggregate[]> {
+    const idValues = ids.map((id) => id.value);
+    const docs = await super.find({ _id: { $in: idValues } });
+    return docs.map(OrderItemsMapper.persistenceToAggregate);
+  }
+  async FindByOrderId(orderId: Id): Promise<OrderItemsAggregate[]> {
+    const docs = await super.find({ orderId: orderId.value });
+    return docs.map(OrderItemsMapper.persistenceToAggregate);
   }
 
   async FindById(id: Id): Promise<OrderItemsAggregate | null> {
@@ -90,5 +99,33 @@ export class OrderItemsRepository
     const persistentItems = items.map(OrderItemsMapper.aggregateToPersistence);
 
     await super.bulkCreate(persistentItems, { ordered: false });
+  }
+
+  async FindPaginated(params: {
+    filter?: FilterQuery<OrderItemsPersistence>;
+    cursor?: Id;
+    limit?: Quantity;
+    direction?: 'next' | 'prev';
+  }): Promise<{
+    data: OrderItemsAggregate[];
+    meta: {
+      nextCursor: string | null;
+      prevCursor: string | null;
+      hasMore: boolean;
+    };
+  }> {
+    const result = await this.paginateByCursor({
+      filter: params.filter,
+      cursor: params.cursor?.value,
+      limit: params.limit?.value,
+      direction: params.direction,
+    });
+
+    return {
+      data: result.data.map((doc: OrderItemsPersistence) =>
+        OrderItemsMapper.persistenceToAggregate(doc),
+      ),
+      meta: result.meta,
+    };
   }
 }

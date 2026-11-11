@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../../apps/api/errors/app-error';
+import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
 import {
   AppearanceVO,
@@ -13,11 +13,13 @@ import {
   type Title,
   type UrlVO,
 } from '../../value-objects';
+import { ReviewBlockedEvent } from './events/review-blocked.event';
 import { ReviewCreatedEvent } from './events/review-created.event';
 import { ReviewDeletedEvent } from './events/review-deleted.event';
 import { ReviewDislikedEvent } from './events/review-disliked.event';
 import { ReviewLikedEvent } from './events/review-liked.event';
 import { ReviewReportedEvent } from './events/review-reported.event';
+import { ReviewUnblockedEvent } from './events/review-unblocked.event';
 import { ReviewUpdatedEvent } from './events/review-updated.event';
 import { ReviewVendorReplyAddedEvent } from './events/review-vendor-reply-added.event';
 
@@ -54,6 +56,7 @@ export class ReviewAggregate extends AggregateRoot {
     private readonly _isVerifiedPurchase: boolean,
     private _vendorReply: Description | null,
     private _delete: DeleteInfoVO,
+    private _block: BlockInfoVO,
     private readonly _createdAt: EffectiveDate,
     private _version: Quantity,
     private _updatedAt: EffectiveDate,
@@ -82,6 +85,7 @@ export class ReviewAggregate extends AggregateRoot {
       props.isVerifiedPurchase ?? false,
       null,
       DeleteInfoVO.none(),
+      BlockInfoVO.none(),
 
       now,
       Quantity.zero(),
@@ -118,6 +122,7 @@ export class ReviewAggregate extends AggregateRoot {
     _isVerifiedPurchase: boolean,
     _vendorReply: Description | null,
     _delete: DeleteInfoVO,
+    _block: BlockInfoVO,
     _createdAt: EffectiveDate,
     _version: Quantity,
     _updatedAt: EffectiveDate,
@@ -140,6 +145,7 @@ export class ReviewAggregate extends AggregateRoot {
       _isVerifiedPurchase,
       _vendorReply,
       _delete,
+      _block,
       _createdAt,
       _version,
       _updatedAt,
@@ -202,6 +208,28 @@ export class ReviewAggregate extends AggregateRoot {
     this._delete = deleteInfo;
     this.touch();
     this.raise(new ReviewDeletedEvent({ reviewId: this._id, deletionInfo: this._delete }));
+  }
+
+  public blockReview(reason: Reason, actorId: Id): void {
+    this.ensureNotDeleted();
+    if (this._block.isBlocked) {
+      throw new BadRequestError('Review is already blocked.');
+    }
+    this._block = BlockInfoVO.create(actorId, reason);
+    this.touch();
+    this.raise(
+      new ReviewBlockedEvent({ reviewId: this._id, actorId, blockInfo: this._block }),
+    );
+  }
+
+  public unblockReview(actorId: Id): void {
+    this.ensureNotDeleted();
+    if (!this._block.isBlocked) {
+      throw new BadRequestError('Review is not blocked.');
+    }
+    this._block = BlockInfoVO.none();
+    this.touch();
+    this.raise(new ReviewUnblockedEvent({ reviewId: this._id, actorId }));
   }
 
   public get version(): Quantity {
@@ -273,6 +301,10 @@ export class ReviewAggregate extends AggregateRoot {
 
   public get delete(): DeleteInfoVO {
     return this._delete;
+  }
+
+  public get block(): BlockInfoVO {
+    return this._block;
   }
 
   public get createdAt(): EffectiveDate {

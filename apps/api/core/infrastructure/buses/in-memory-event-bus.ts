@@ -16,12 +16,21 @@ export class InMemoryEventBus implements IEventBus {
     for (const event of events) {
       const handlers = this.handlers.get(event.type);
 
-      if (!handlers) {
+      if (!handlers || handlers.size === 0) {
+        if (process.env.EVENT_BUS_DEBUG === 'true') {
+          console.warn(`[event-bus] No handlers registered for event "${event.type}"`);
+        }
         continue;
       }
 
-      for (const handler of handlers) {
-        await handler.handle(event);
+      const results = await Promise.allSettled(
+        Array.from(handlers).map((handler) => handler.handle(event)),
+      );
+
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error(`[event-bus] Handler failed for event "${event.type}"`, result.reason);
+        }
       }
     }
   }

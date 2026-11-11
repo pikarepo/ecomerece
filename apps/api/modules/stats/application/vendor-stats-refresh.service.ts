@@ -1,8 +1,6 @@
 import { getTimeWindows } from '@ecomerece/domain';
 import type { Metrics, StatEvent } from '@ecomerece/shared';
 import { connectDB } from '../../../lib/mongo';
-import { ProductModel } from '../../product/infrastructure/product.model';
-import { VendorModel } from '../../vendor/infrastructure/vendor.models';
 import { statsRepository } from '../infrastructure/StatsRepository';
 
 const SERIES_AGGREGATIONS = ['daily', 'weekly', 'monthly'] as const;
@@ -44,23 +42,11 @@ export class VendorStatsRefreshService {
   private static defaultDeps(): VendorStatsRefreshDeps {
     return {
       connectDB,
-      loadVendorProducts: async (vendorId) => {
-        const docs = await ProductModel.find({
-          vendorId,
-          'deleted.deleted': false,
-        })
-          .select('_id categoryId')
-          .lean();
-        return docs.map((d) => ({ id: String(d._id), categoryId: String(d.categoryId) }));
+      loadVendorProducts: async () => {
+        throw new Error('loadVendorProducts dependency is required');
       },
-      loadProductsByCategory: async (categoryIds) => {
-        const docs = await ProductModel.find({
-          categoryId: { $in: categoryIds },
-          'deleted.deleted': false,
-        })
-          .select('_id categoryId')
-          .lean();
-        return docs.map((d) => ({ id: String(d._id), categoryId: String(d.categoryId) }));
+      loadProductsByCategory: async () => {
+        throw new Error('loadProductsByCategory dependency is required');
       },
       getLifetimeMetricsForProducts: (productIds) =>
         statsRepository.getAggregateMetrics('product', 'lifetime', productIds),
@@ -82,8 +68,8 @@ export class VendorStatsRefreshService {
           to,
         );
       },
-      setVendorStats: async (vendorId, metrics) => {
-        await VendorModel.updateOne({ _id: vendorId }, { $set: { stats: metrics } });
+      setVendorStats: async () => {
+        throw new Error('setVendorStats dependency is required');
       },
       setStats: (events) => statsRepository.bulkSet(events),
     };
@@ -194,4 +180,4 @@ export class VendorStatsRefreshService {
   }
 }
 
-export const vendorStatsRefreshService = new VendorStatsRefreshService();
+

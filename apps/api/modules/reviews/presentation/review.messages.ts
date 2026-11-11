@@ -49,4 +49,9 @@ export const reviewMessages = {
       message: `Review ${reviewId.value} was blocked by ${actorId.value} on ${EffectiveDate.today().value}.`,
     };
   },
+  reviewUnblocked(reviewId: Id, actorId: Id): ReviewMessagesType {
+    return {
+      message: `Review ${reviewId.value} was unblocked by ${actorId.value} on ${EffectiveDate.today().value}.`,
+    };
+  },
 };

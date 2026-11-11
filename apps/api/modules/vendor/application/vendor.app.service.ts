@@ -39,9 +39,9 @@ import type {
   VerifyVendorDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { InMemoryEventBus } from '../../../core/infrastructure/buses/in-memory-event-bus';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
+import type { AuthActor } from '@ecomerece/contracts';
 import { VendorMapper } from '../infrastructure/vendor.mapper';
 import type { VendorPersistence } from '../infrastructure/vendor.models';
 import type { VendorRepository } from '../infrastructure/vendor.repository';
@@ -55,7 +55,7 @@ const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]
 export class VendorAppService extends BaseService {
   constructor(
     private readonly vendorRepo: VendorRepository,
-    private readonly eventBus: InMemoryEventBus,
+    private readonly eventBus: IEventBus,
     private readonly internalService: VendorInternalService,
     private readonly imageStorage: IImageStoragePort,
   ) {
@@ -115,7 +115,7 @@ export class VendorAppService extends BaseService {
     }
   }
 
-  async createMyVendor(data: CreateVendorDto, actor: UserPersistence): Promise<VendorMessagesType> {
+  async createMyVendor(data: CreateVendorDto, actor: AuthActor): Promise<VendorMessagesType> {
     const actorId = Id.create(actor._id);
     await this.internalService.canCreateVendor(actorId);
 
@@ -180,7 +180,7 @@ export class VendorAppService extends BaseService {
 
   async updateMyVendorMeta(
     data: UpdateMyVendorMetaDto,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<VendorResponseReadModel> {
     const actorId = Id.create(actor._id);
     const vendor = await this.vendorRepo.FindByOwnerIdOrThrow(actorId);
@@ -196,7 +196,7 @@ export class VendorAppService extends BaseService {
 
   async updateMyVendorContact(
     data: UpdateMyVendorContactDto,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<VendorResponseReadModel> {
     const actorId = Id.create(actor._id);
     const vendor = await this.vendorRepo.FindByOwnerIdOrThrow(actorId);
@@ -218,7 +218,7 @@ export class VendorAppService extends BaseService {
 
   async updateMyVendorImage(
     data: UpdateMyVendorImageDto,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<VendorResponseReadModel> {
     const actorId = Id.create(actor._id);
     const vendor = await this.vendorRepo.FindByOwnerIdOrThrow(actorId);
@@ -242,7 +242,7 @@ export class VendorAppService extends BaseService {
   }
 
   async findPaginatedVendors(query: GetPaginatedVendorsQueryDto) {
-    // Public: non-deleted vendors only
+
     const filter: FilterQuery<VendorPersistence> = {
       'deleted.deleted': false,
     };
@@ -252,7 +252,6 @@ export class VendorAppService extends BaseService {
 
     const cursor = query.cursor ? Id.create(query.cursor) : undefined;
     const limit = query.limit ? Quantity.create(query.limit) : undefined;
-
     const result = await this.vendorRepo.FindPaginated({
       filter,
       cursor,
@@ -326,7 +325,7 @@ export class VendorAppService extends BaseService {
     };
   }
 
-  async deleteMyVendor(data: DeleteMyVendorDto, actor: UserPersistence) {
+  async deleteMyVendor(data: DeleteMyVendorDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const reason = Reason.create(data.reason);
     const vendor = await this.vendorRepo.FindByOwnerIdOrThrow(actorId);
@@ -336,7 +335,7 @@ export class VendorAppService extends BaseService {
 
     return VendorMessages.deletedVendor(vendor.id, actorId);
   }
-  async softDeleteVendor(data: DeleteVendorDto, actor: UserPersistence) {
+  async softDeleteVendor(data: DeleteVendorDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const vendorId = Id.create(data.vendorId);
     const reason = Reason.create(data.reason);
@@ -348,7 +347,7 @@ export class VendorAppService extends BaseService {
     return VendorMessages.deletedVendor(vendor.id, actorId);
   }
 
-  async recoverVendor(data: RecoverVendorDto, actor: UserPersistence) {
+  async recoverVendor(data: RecoverVendorDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const vendorId = Id.create(data.vendorId);
     const vendor = await this.vendorRepo.FindByIdOrThrow(vendorId);
@@ -359,7 +358,7 @@ export class VendorAppService extends BaseService {
     return VendorMessages.recoveredVendor(vendor.id, actorId);
   }
 
-  async verifyVendor(data: VerifyVendorDto, actor: UserPersistence) {
+  async verifyVendor(data: VerifyVendorDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const vendorId = Id.create(data.vendorId);
     const vendor = await this.vendorRepo.FindByIdOrThrow(vendorId);
@@ -370,7 +369,7 @@ export class VendorAppService extends BaseService {
     return VendorMessages.verifiedVendor(vendor.id, actorId);
   }
 
-  async rejectVendorVerification(data: RejectVendorDto, actor: UserPersistence) {
+  async rejectVendorVerification(data: RejectVendorDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const vendorId = Id.create(data.vendorId);
     const reason = Reason.create(data.reason);
@@ -383,7 +382,7 @@ export class VendorAppService extends BaseService {
   }
 
   async updateMyStatsRefresh(
-    actor: UserPersistence,
+    actor: AuthActor,
     enabled: boolean,
   ): Promise<VendorResponseReadModel> {
     const actorId = Id.create(actor._id);

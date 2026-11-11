@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { createCategoryModule } from '../category.module';
+import type { createCategoryModule } from '../category.module';
 
-export const CategoryRoutes = new Hono();
-const { categoryController } = createCategoryModule();
+type CategoryController = ReturnType<typeof createCategoryModule>['categoryController'];
+
+export function createCategoryRoutes(categoryController: CategoryController) {
+  const CategoryRoutes = new Hono();
 
 CategoryRoutes.post('/create', authMiddleware, adminMiddleware, categoryController.createCategory);
 CategoryRoutes.patch('/update', authMiddleware, adminMiddleware, categoryController.updateCategory);
@@ -16,4 +18,19 @@ CategoryRoutes.get(
   adminMiddleware,
   categoryController.getAdminPaginated,
 );
+CategoryRoutes.patch(
+  '/:id/block',
+  authMiddleware,
+  adminMiddleware,
+  categoryController.blockCategory,
+);
+CategoryRoutes.patch(
+  '/:id/unblock',
+  authMiddleware,
+  adminMiddleware,
+  categoryController.unblockCategory,
+);
 CategoryRoutes.get('/:id', categoryController.getCategory);
+
+  return CategoryRoutes;
+}

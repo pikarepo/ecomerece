@@ -3,7 +3,7 @@ import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveQuery } from '../../user/application/queries/ensure-active.query';
+import { EnsureActiveQuery } from '@ecomerece/contracts';
 import { VendorMapper } from '../infrastructure/vendor.mapper';
 
 export class VendorInternalService extends BaseService {

@@ -1,7 +1,9 @@
-import type { IEvent, IEventHandler } from '@ecomerece/domain';
+import type {
+  IEvent,
+  IEventHandler,
+  ProductStatsDenormalizationRequestedEvent,
+} from '@ecomerece/domain';
 import { connectDB } from '../../../../lib/mongo';
-import { VendorModel } from '../../../vendor/infrastructure/vendor.models';
-import { vendorStatsRefreshService } from '../vendor-stats-refresh.service';
 
 export interface VendorStatsDenormalizationDeps {
   connectDB: () => Promise<unknown>;
@@ -23,7 +25,7 @@ export interface VendorStatsDenormalizationDeps {
  * handler already covers all categories on the same event. The vendor
  * force-refresh path (its own event) does include categories for its vendor.
  */
-export class VendorStatsDenormalizationHandler implements IEventHandler<{ force: boolean }> {
+export class VendorStatsDenormalizationHandler implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
   private readonly deps: VendorStatsDenormalizationDeps;
 
   constructor(deps: Partial<VendorStatsDenormalizationDeps> = {}) {
@@ -34,10 +36,11 @@ export class VendorStatsDenormalizationHandler implements IEventHandler<{ force:
     return {
       connectDB,
       loadVendors: async () => {
-        const docs = await VendorModel.find({ 'deleted.deleted': false }).select('_id').lean();
-        return docs.map((d) => ({ id: String(d._id) }));
+        throw new Error('loadVendors dependency is required');
       },
-      refreshVendorCore: (vendorId) => vendorStatsRefreshService.refreshVendorCore(vendorId),
+      refreshVendorCore: async () => {
+        throw new Error('refreshVendorCore dependency is required');
+      },
     };
   }
 

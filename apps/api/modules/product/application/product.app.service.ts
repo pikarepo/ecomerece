@@ -39,9 +39,9 @@ import type {
 import type { FilterQuery } from 'mongoose';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { VerifyCategoryAndGetQuery } from '../../category/application/queries/verify-category.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
-import { GetVendorByUserIdQuery } from '../../vendor/application/queries/get-vendor-by-user-id.query';
+import { VerifyCategoryAndGetQuery } from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
+import { GetVendorByUserIdQuery } from '@ecomerece/contracts';
 import { ProductMapper } from '../infrastructure/product.mapper';
 import type { ProductPersistence } from '../infrastructure/product.model';
 import type { ProductRepository } from '../infrastructure/product.repository';
@@ -113,7 +113,7 @@ export class ProductApplicationService extends BaseService {
 
   async createMyProduct(
     data: CreateMyProductDto,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const id = Id.create();
     const actorId = Id.create(actor._id);
@@ -170,7 +170,7 @@ export class ProductApplicationService extends BaseService {
 
   async softDeleteMyProduct(
     data: softDeleteMyProductDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -189,7 +189,7 @@ export class ProductApplicationService extends BaseService {
 
   async recoverMyProduct(
     data: recoverProductDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -207,7 +207,7 @@ export class ProductApplicationService extends BaseService {
 
   async blockProduct(
     data: blockProductDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -221,7 +221,7 @@ export class ProductApplicationService extends BaseService {
 
   async unBlockProduct(
     data: blockLiftProductDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -234,7 +234,7 @@ export class ProductApplicationService extends BaseService {
 
   async makeMyProductPublic(
     data: productAppereanceDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const vendor = this.ensureFound(
@@ -252,7 +252,7 @@ export class ProductApplicationService extends BaseService {
 
   async makeMyProductPrivate(
     data: productAppereanceDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const vendor = this.ensureFound(
@@ -270,7 +270,7 @@ export class ProductApplicationService extends BaseService {
 
   async updateMyProductMeta(
     data: updateProductMetaDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const title = Title.create(data.title);
@@ -290,7 +290,7 @@ export class ProductApplicationService extends BaseService {
 
   async toggleMyProductDisclaimer(
     data: toggleDiscalimerDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -310,7 +310,7 @@ export class ProductApplicationService extends BaseService {
 
   async addMyProductDisclaimers(
     data: disclaimerItemsDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -328,7 +328,7 @@ export class ProductApplicationService extends BaseService {
 
   async removeMyProductDisclaimers(
     data: disclaimerItemsDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -346,7 +346,7 @@ export class ProductApplicationService extends BaseService {
 
   async addMyProductImages(
     data: imagesDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -375,7 +375,7 @@ export class ProductApplicationService extends BaseService {
 
   async setMyProductDefaultImage(
     data: deafultImageDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -394,7 +394,7 @@ export class ProductApplicationService extends BaseService {
 
   async removeMyProductImages(
     data: imagesDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -419,7 +419,7 @@ export class ProductApplicationService extends BaseService {
 
   async toggleMyProductIngredients(
     data: toggleIngredientsDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -439,7 +439,7 @@ export class ProductApplicationService extends BaseService {
 
   async addMyProductIngredients(
     data: ingredientsDtotype,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -457,7 +457,7 @@ export class ProductApplicationService extends BaseService {
 
   async removeMyProductIngredients(
     data: ingredientsDtotype,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -527,7 +527,7 @@ export class ProductApplicationService extends BaseService {
   }
 
   // Vendor's own products: scope is derived from the actor, never from the client.
-  async findMyPaginatedProducts(query: GetMyPaginatedProductsQueryDto, actor: UserPersistence) {
+  async findMyPaginatedProducts(query: GetMyPaginatedProductsQueryDto, actor: AuthActor) {
     const actorId = Id.create(actor._id);
     const vendor = this.ensureFound(
       await this.queryBus.execute(new GetVendorByUserIdQuery({ userId: actorId })),

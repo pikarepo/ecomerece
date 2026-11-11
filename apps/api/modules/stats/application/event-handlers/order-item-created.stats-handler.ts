@@ -1,17 +1,8 @@
+import type { OrderItemCreatedEvent } from '@ecomerece/domain';
 import type { IEvent, IEventHandler } from '@ecomerece/domain/events/event-bus.interface';
-import type { Id, Money, Quantity } from '@ecomerece/domain/value-objects';
 import { statsBufferService } from '../StatsBufferService';
 
-interface OrderItemCreatedPayload {
-  orderItemId: Id;
-  orderId: Id;
-  vendorId: Id;
-  productId: Id;
-  variantId: Id;
-  quantity: Quantity;
-  price: Money;
-  totalPrice: Money;
-}
+type OrderItemCreatedPayload = OrderItemCreatedEvent['payload'];
 
 export class OrderItemCreatedStatsHandler implements IEventHandler<OrderItemCreatedPayload> {
   async handle(event: IEvent<OrderItemCreatedPayload>): Promise<void> {

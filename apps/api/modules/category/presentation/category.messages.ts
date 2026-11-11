@@ -21,4 +21,14 @@ export const CategoryMessags = {
       message: `Category ${id.value} was deleted by ${actorId.value} on ${EffectiveDate.today().value}.`,
     };
   },
+  blocked(id: Id, actorId: Id): CategoryMessagesType {
+    return {
+      message: `Category ${id.value} was blocked by ${actorId.value} on ${EffectiveDate.today().value}.`,
+    };
+  },
+  unblocked(id: Id, actorId: Id): CategoryMessagesType {
+    return {
+      message: `Category ${id.value} was unblocked by ${actorId.value} on ${EffectiveDate.today().value}.`,
+    };
+  },
 };

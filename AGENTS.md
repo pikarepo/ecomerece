@@ -7,12 +7,14 @@ bun install              # install all workspace deps
 bun run dev              # API (8000) + Web (3000) concurrently via --filter
 bun run typecheck        # tsc --noEmit across all workspaces
 bun run lint             # Next.js ESLint (apps/web)
+bun run arch             # architecture boundary scan (scripts/arch-check.ts)
+bun run arch             # module/package boundary check (fails on violation)
 bun run format           # biome format apps/web + packages
 bun test                 # test suite
 bun run test:watch       # test suite in watch mode
 ```
 
-**Validator order:** `bun run lint` → `bun run typecheck` → `bun test` → `next build`.
+**Validator order:** `bun run lint` → `bun run arch` → `bun run typecheck` → `bun test` → `next build`.
 Lint runs the Next.js ESLint config in `apps/web`; formatting is handled by Biome.
 
 ## Architecture
@@ -43,12 +45,12 @@ skin engine, design system, or in-house UI kit in this repo.
 Build bottom-up, exactly this order:
 
 1. `packages/domain/modules/<name>/` - VOs, events, ports (interface), read models, aggregate
-2. `apps/api/modules/<name>/infrastructure/` - Mongoose model, mapper (4 methods: `toDocument`, `toUpdatePayload`, `fromDocument`, `fromDocuments`), repository impl
+2. `apps/api/modules/<name>/infrastructure/` - Mongoose model, mapper (`aggregateToPersistence`, `persistenceToAggregate`, `aggregateToReadModel`, `persistenceToReadModel`), repository impl
 3. `apps/api/modules/<name>/application/` - Queries/commands DTOs, handlers, internal service, app service (orchestrates: load -> command -> save -> events)
-4. `apps/api/modules/<name>/presentation/` - messages, controller (extends `BaseController`), routes, `*.module.ts` (DI wiring, bus registration)
+4. `apps/api/modules/<name>/presentation/` - messages, controller (extends `BaseController`), routes, `*.module.ts` (factory: DI wiring + bus registration; invoked only by `apps/api/composition-root.ts`)
 5. Register new routes in `apps/api/routes/index.ts`
 
-**Dependency rule:** Domain never imports Infrastructure. Infrastructure never imports Presentation. Cross-module communication uses QueryBus, CommandBus, or EventBus (registered in each module's `*.module.ts`).
+**Dependency rule:** Domain never imports Infrastructure. Infrastructure never imports Presentation. Modules never import each other's application/presentation/infrastructure code: cross-module reads use contract queries on the QueryBus, cross-module writes use contract ports injected in `apps/api/composition-root.ts`, and reactions use EventBus events. `packages/contracts` is the only cross-module surface.
 
 ## Testing
 

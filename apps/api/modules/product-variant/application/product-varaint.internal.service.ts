@@ -1,6 +1,6 @@
 import type { ProductVariantReadModel } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
-import type { InMemoryQueryBus } from '../../../core/infrastructure/buses/in-memory-query-bus';
+import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { productVariantMapper } from '../infrastructure/product-variant.mapper';
 import type { ProductVariantRepository } from '../infrastructure/product-variant.repository';
@@ -8,9 +8,15 @@ import type { ProductVariantRepository } from '../infrastructure/product-variant
 export class productVariantInternalService extends BaseService {
   constructor(
     private readonly variantRepo: ProductVariantRepository,
-    private readonly queryBus: InMemoryQueryBus,
+    private readonly queryBus: IQueryBus,
   ) {
     super();
+  }
+
+  async getVariantById(variantId: Id): Promise<ProductVariantReadModel | null> {
+    const variant = await this.variantRepo.FindById(variantId);
+    if (!variant) return null;
+    return productVariantMapper.aggregateToReadModel(variant);
   }
 
   async ensureActiveVariantGetById(

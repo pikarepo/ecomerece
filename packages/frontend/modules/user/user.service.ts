@@ -29,6 +29,10 @@ export type PaginatedUsersResult = {
 };
 
 export class UserService {
+  initUser(): Promise<{ message: string }> {
+    return http.post<{ message: string }>('/users/init');
+  }
+
   getMe(): Promise<UserResponseReadModel> {
     return http.get<UserResponseReadModel>('/users/me');
   }

@@ -13,8 +13,16 @@ import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
-import { useGetHomeLayout } from '@ecomerece/frontend/home';
+import {
+  useGetHomeLayout,
+  useReorderCategories,
+  useReorderContainers,
+  useReorderSlides,
+  useSetFeatures,
+} from '@ecomerece/frontend/home';
 import { useState } from 'react';
+import { DashboardNav } from '../../components/dashboard-nav';
+import { RequireAuth } from '../../components/require-auth';
 import { SiteHeader } from '../../components/site-header';
 import { CategoriesTab } from './components/categories-tab';
 import { FeaturesTab } from './components/features-tab';
@@ -23,13 +31,39 @@ import { PromosTab } from './components/promos-tab';
 import { RawJsonTab } from './components/raw-json-tab';
 import { ShelvesTab } from './components/shelves-tab';
 import { SlidesTab } from './components/slides-tab';
+import { HomeItemDialog, type HomeItem, type HomeItemKind } from './components/home-item-dialog';
 import { StatCard } from './components/stat-card';
 
 const TABS = ['Overview', 'Slides', 'Promos', 'Categories', 'Features', 'Shelves', 'Raw JSON'];
 
 export default function DashboardPage() {
+  return (
+    <RequireAuth>
+      <DashboardPageContent />
+    </RequireAuth>
+  );
+}
+
+function DashboardPageContent() {
   const { data: layout, error, isFetching, refetch } = useGetHomeLayout();
   const [tab, setTab] = useState(0);
+  const [dialog, setDialog] = useState<{
+    kind: HomeItemKind;
+    mode: 'create' | 'edit' | 'delete';
+    item: HomeItem | null;
+  } | null>(null);
+  const reorderSlides = useReorderSlides();
+  const reorderCategories = useReorderCategories();
+  const reorderContainers = useReorderContainers();
+  const setFeatures = useSetFeatures();
+
+  const move = <T,>(items: T[], index: number, direction: -1 | 1): T[] => {
+    const target = index + direction;
+    if (target < 0 || target >= items.length) return items;
+    const next = [...items];
+    [next[index], next[target]] = [next[target], next[index]];
+    return next;
+  };
 
   const errorMessage =
     error instanceof Error ? error.message : error ? 'Unable to load the home layout.' : null;
@@ -75,6 +109,7 @@ export default function DashboardPage() {
       <SiteHeader />
 
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
+        <DashboardNav />
         <Stack
           direction={{ xs: 'column', md: 'row' }}
           spacing={2}
@@ -176,15 +211,133 @@ export default function DashboardPage() {
 
           <Box sx={{ p: { xs: 2, md: 3 } }}>
             {tab === 0 ? <OverviewTab layout={layout} /> : null}
-            {tab === 1 ? <SlidesTab slides={layout.slides} /> : null}
-            {tab === 2 ? <PromosTab promos={layout.promos} /> : null}
-            {tab === 3 ? <CategoriesTab categories={layout.categories} /> : null}
-            {tab === 4 ? <FeaturesTab features={layout.features} /> : null}
-            {tab === 5 ? <ShelvesTab containers={layout.productContainers} /> : null}
+            {tab === 1 ? (
+              <>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  onClick={() => setDialog({ kind: 'slide', mode: 'create', item: null })}
+                >
+                  New slide
+                </Button>
+                <SlidesTab
+                  slides={layout.slides}
+                  onEdit={(item) => setDialog({ kind: 'slide', mode: 'edit', item })}
+                  onDelete={(item) => setDialog({ kind: 'slide', mode: 'delete', item })}
+                  onMove={(index, direction) => {
+                    const ordered = [...layout.slides].sort(
+                      (a, b) => a.displayOrder - b.displayOrder,
+                    );
+                    const next = move(ordered, index, direction);
+                    reorderSlides.mutate({ orderedIds: next.map((item) => item.id) });
+                  }}
+                />
+              </>
+            ) : null}
+            {tab === 2 ? (
+              <>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  onClick={() => setDialog({ kind: 'promo', mode: 'create', item: null })}
+                >
+                  New promo
+                </Button>
+                <PromosTab
+                  promos={layout.promos}
+                  onEdit={(item) => setDialog({ kind: 'promo', mode: 'edit', item })}
+                  onDelete={(item) => setDialog({ kind: 'promo', mode: 'delete', item })}
+                />
+              </>
+            ) : null}
+            {tab === 3 ? (
+              <>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  onClick={() => setDialog({ kind: 'category', mode: 'create', item: null })}
+                >
+                  New category
+                </Button>
+                <CategoriesTab
+                  categories={layout.categories}
+                  onEdit={(item) => setDialog({ kind: 'category', mode: 'edit', item })}
+                  onDelete={(item) => setDialog({ kind: 'category', mode: 'delete', item })}
+                  onMove={(index, direction) => {
+                    const next = move(layout.categories, index, direction);
+                    reorderCategories.mutate({ orderedIds: next.map((item) => item.id) });
+                  }}
+                />
+              </>
+            ) : null}
+            {tab === 4 ? (
+              <>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  onClick={() => setDialog({ kind: 'feature', mode: 'create', item: null })}
+                >
+                  New feature
+                </Button>
+                <FeaturesTab
+                  features={layout.features}
+                  onEdit={(item) => setDialog({ kind: 'feature', mode: 'edit', item })}
+                  onDelete={(item) => setDialog({ kind: 'feature', mode: 'delete', item })}
+                  onMove={(index, direction) => {
+                    const next = move(layout.features, index, direction);
+                    setFeatures.mutate({
+                      features: next.map((item) => ({
+                        title: item.title,
+                        detail: item.detail,
+                        accent: item.accent,
+                        icon: item.icon,
+                      })),
+                    });
+                  }}
+                />
+              </>
+            ) : null}
+            {tab === 5 ? (
+              <>
+                <Button
+                  variant="contained"
+                  size="small"
+                  sx={{ mb: 2 }}
+                  onClick={() => setDialog({ kind: 'container', mode: 'create', item: null })}
+                >
+                  New shelf
+                </Button>
+                <ShelvesTab
+                  containers={layout.productContainers}
+                  onEdit={(item) => setDialog({ kind: 'container', mode: 'edit', item })}
+                  onDelete={(item) => setDialog({ kind: 'container', mode: 'delete', item })}
+                  onMove={(index, direction) => {
+                    const ordered = [...layout.productContainers].sort(
+                      (a, b) => a.displayOrder - b.displayOrder,
+                    );
+                    const next = move(ordered, index, direction);
+                    reorderContainers.mutate({ orderedIds: next.map((item) => item.id) });
+                  }}
+                />
+              </>
+            ) : null}
             {tab === 6 ? <RawJsonTab layout={layout} /> : null}
           </Box>
         </Paper>
       </Container>
+
+      <HomeItemDialog
+        open={Boolean(dialog)}
+        kind={dialog?.kind ?? 'slide'}
+        mode={dialog?.mode ?? 'create'}
+        item={dialog?.item ?? null}
+        onClose={() => setDialog(null)}
+        onSuccess={() => void refetch()}
+      />
     </Box>
   );
 }

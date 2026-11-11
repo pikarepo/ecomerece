@@ -2,10 +2,12 @@ import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
 import { initAuthMiddleware } from '../../../middleware/init-auth';
-import { createUserModule } from '../user.module';
+import type { createUserModule } from '../user.module';
 
-const usersRoutes = new Hono();
-const { userController } = createUserModule();
+type UserController = ReturnType<typeof createUserModule>['userController'];
+
+export function createUserRoutes(userController: UserController) {
+  const usersRoutes = new Hono();
 usersRoutes.post('/init', initAuthMiddleware, userController.initUser);
 usersRoutes.get('/me', authMiddleware, userController.getMe);
 usersRoutes.delete('/me/soft', authMiddleware, userController.softDeleteMe);
@@ -28,4 +30,5 @@ usersRoutes.delete('/soft', authMiddleware, adminMiddleware, userController.soft
 
 usersRoutes.get('/:id', authMiddleware, userController.getUserById);
 
-export default usersRoutes;
+  return usersRoutes;
+}

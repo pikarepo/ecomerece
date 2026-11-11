@@ -10,6 +10,16 @@ const deletedSchema = new Schema(
   { _id: false },
 );
 
+const blockSchema = new Schema(
+  {
+    blocked: { type: Boolean, default: false, required: true },
+    blockedFrom: { type: Date, default: null },
+    blockedBy: { type: String, default: null },
+    reason: { type: String, default: null },
+  },
+  { _id: false },
+);
+
 const reviewSchema = new Schema(
   {
     _id: {
@@ -107,6 +117,11 @@ const reviewSchema = new Schema(
     vendorReply: {
       type: String,
       default: null,
+    },
+
+    block: {
+      type: blockSchema,
+      required: true,
     },
 
     deleted: {

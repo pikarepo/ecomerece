@@ -9,6 +9,17 @@ export class AddressInternalService extends BaseService {
     super();
   }
 
+  async getAddressById(addressId: Id): Promise<AddressReadModel | null> {
+    const address = await this.addressRepo.FindById(addressId);
+    if (!address) return null;
+    return AddressMapper.aggregateToReadModel(address);
+  }
+
+  async getAddressesByOwnerId(ownerId: Id): Promise<AddressReadModel[]> {
+    const addresses = await this.addressRepo.FindByOwnerId(ownerId);
+    return (addresses ?? []).map((address) => AddressMapper.aggregateToReadModel(address));
+  }
+
   async ensureActiveAddressGetById(
     addressId: Id,
   ): Promise<{ address: AddressReadModel | null; active: boolean }> {

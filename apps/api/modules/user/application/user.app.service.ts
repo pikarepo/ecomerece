@@ -17,7 +17,7 @@ import type {
   UserRoleDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { InMemoryEventBus } from '../../../core/infrastructure/buses/in-memory-event-bus';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
 import { getUserById } from '../../../lib/supabase';
@@ -29,7 +29,7 @@ import { UserMessages, type UserMessagesType } from '../presentation/user.messag
 export class UserAppService extends BaseService {
   constructor(
     private readonly userRepo: UserRepository,
-    private readonly eventBus: InMemoryEventBus,
+    private readonly eventBus: IEventBus,
   ) {
     super();
   }

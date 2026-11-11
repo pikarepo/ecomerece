@@ -1,4 +1,4 @@
-import { AppError } from '../../../../../apps/api/errors/app-error';
+import { AppError } from '../../../errors/app-error';
 
 /**
  * Base class for every image-storage failure.

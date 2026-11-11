@@ -14,8 +14,7 @@ import { CategoryModel, type CategoryPersistence } from './category.models';
 
 export class CategoryRepository
   extends MongoRepository<CategoryPersistence>
-  implements ICategoryRepository
-{
+  implements ICategoryRepository {
   constructor() {
     super(CategoryModel);
   }

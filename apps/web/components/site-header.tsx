@@ -1,22 +1,37 @@
 'use client';
 
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import AppBar from '@mui/material/AppBar';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import Chip from '@mui/material/Chip';
+import Divider from '@mui/material/Divider';
 import Stack from '@mui/material/Stack';
 import Toolbar from '@mui/material/Toolbar';
-import AppBar from '@mui/material/AppBar';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import StorefrontIcon from '@mui/icons-material/Storefront';
+import { useAuth } from './auth-provider';
 
-const NAV = [
+const PUBLIC_NAV = [
   { href: '/', label: 'Storefront' },
-  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/products', label: 'Products' },
+  { href: '/categories', label: 'Categories' },
+  { href: '/vendors', label: 'Vendors' },
+  { href: '/reviews', label: 'Reviews' },
 ];
+
+function isActive(pathname: string, href: string) {
+  return href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function SiteHeader() {
   const pathname = usePathname();
+  const { isAuthenticated, signOut, role } = useAuth();
+  const privateNav = [
+    ...(isAuthenticated ? [{ href: '/account', label: 'Account' }] : []),
+    ...(role === 'admin' || role === 'vendor'
+      ? [{ href: '/dashboard', label: 'Admin' }]
+      : []),
+  ];
 
   return (
     <AppBar
@@ -51,15 +66,23 @@ export function SiteHeader() {
           >
             <StorefrontIcon fontSize="small" />
           </Box>
-          <Box sx={{ lineHeight: 1.1 }}>
+          <Box sx={{ lineHeight: 1.1, display: { xs: 'none', sm: 'block' } }}>
             <Box sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>Ecomerece</Box>
             <Box sx={{ fontSize: 11, color: 'text.secondary' }}>Storefront</Box>
           </Box>
         </Stack>
 
-        <Stack direction="row" spacing={0.5} sx={{ ml: { xs: 'auto', md: 2 }, flex: 1 }}>
-          {NAV.map((item) => {
-            const active = pathname === item.href;
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            flex: 1,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {PUBLIC_NAV.map((item) => {
+            const active = isActive(pathname, item.href);
             return (
               <Button
                 key={item.href}
@@ -69,6 +92,8 @@ export function SiteHeader() {
                 color={active ? 'primary' : 'inherit'}
                 sx={{
                   px: 1.75,
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap',
                   bgcolor: active ? 'primary.main' : 'transparent',
                   color: active ? 'primary.contrastText' : 'text.secondary',
                   '&:hover': {
@@ -82,12 +107,45 @@ export function SiteHeader() {
           })}
         </Stack>
 
-        <Chip
-          size="small"
-          label="Material UI"
-          variant="outlined"
-          sx={{ display: { xs: 'none', sm: 'inline-flex' } }}
-        />
+        <Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />
+
+        <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+          {privateNav.map((item) => {
+            const active = isActive(pathname, item.href);
+            return (
+              <Button
+                key={item.href}
+                component={Link}
+                href={item.href}
+                size="small"
+                variant={active ? 'contained' : 'outlined'}
+                sx={{ px: 1.5, whiteSpace: 'nowrap' }}
+              >
+                {item.label}
+              </Button>
+            );
+          })}
+          {isAuthenticated ? (
+            <Button
+              size="small"
+              color="inherit"
+              onClick={() => void signOut()}
+              sx={{ px: 1.5, whiteSpace: 'nowrap' }}
+            >
+              Sign out
+            </Button>
+          ) : (
+            <Button
+              component={Link}
+              href="/auth"
+              size="small"
+              variant="contained"
+              sx={{ px: 1.5, whiteSpace: 'nowrap' }}
+            >
+              Sign in
+            </Button>
+          )}
+        </Stack>
       </Toolbar>
     </AppBar>
   );

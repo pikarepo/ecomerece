@@ -1,14 +1,15 @@
 import { type IUserRepository, type UserReadModel, UserRoleVO } from '@ecomerece/domain';
+import type { EmailVO } from '@ecomerece/domain/value-objects/email.vo';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
-import type { InMemoryEventBus } from '../../../core/infrastructure/buses/in-memory-event-bus';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { UserMapper } from '../infrastructure/user.mapper';
 
 export class UserInternalService extends BaseService {
   constructor(
     private readonly userRepo: IUserRepository,
-    private readonly eventBus: InMemoryEventBus,
+    private readonly eventBus: IEventBus,
   ) {
     super();
   }
@@ -19,6 +20,12 @@ export class UserInternalService extends BaseService {
     if (!user) return null;
     return UserMapper.aggregateToReadModel(user);
   }
+  async getByEmail(email: EmailVO): Promise<UserReadModel | null> {
+    const user = await this.userRepo.FindByEmail(email);
+    if (!user) return null;
+    return UserMapper.aggregateToReadModel(user);
+  }
+
   async ensureActive(id: Id): Promise<boolean> {
     const user = await this.getById(id);
 

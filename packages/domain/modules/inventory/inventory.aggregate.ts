@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../../apps/api/errors/app-error';
+import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
 import { DeleteInfoVO, EffectiveDate, type Id, Quantity, type Reason } from '../../value-objects';
 import { InventoryBoughtEvent } from './events/inventory-bought.event';

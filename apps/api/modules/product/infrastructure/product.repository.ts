@@ -8,8 +8,7 @@ import { ProductModel, type ProductPersistence } from './product.model';
 
 export class ProductRepository
   extends MongoRepository<ProductPersistence>
-  implements IProductRepository
-{
+  implements IProductRepository {
   constructor() {
     super(ProductModel);
   }
@@ -202,17 +201,17 @@ export class ProductRepository
       const extra = metric
         ? goingForward
           ? {
-              $or: [
-                { [sortField]: { $lt: cur.v! } },
-                { [sortField]: cur.v!, _id: { $gt: cur.id } },
-              ],
-            }
+            $or: [
+              { [sortField]: { $lt: cur.v! } },
+              { [sortField]: cur.v!, _id: { $gt: cur.id } },
+            ],
+          }
           : {
-              $or: [
-                { [sortField]: { $gt: cur.v! } },
-                { [sortField]: cur.v!, _id: { $lt: cur.id } },
-              ],
-            }
+            $or: [
+              { [sortField]: { $gt: cur.v! } },
+              { [sortField]: cur.v!, _id: { $lt: cur.id } },
+            ],
+          }
         : goingForward
           ? dir === -1
             ? { _id: { $lt: cur.v } }

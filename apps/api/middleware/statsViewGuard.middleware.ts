@@ -1,15 +1,24 @@
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Context, Next } from 'hono';
 import { redis } from '../lib/redis';
-import { CategoryRepository } from '../modules/category/infrastructure/category.repository';
-import { ProductRepository } from '../modules/product/infrastructure/product.repository';
 import { StatsViewGuard, type StatsViewGuardDeps, type ViewEntityType } from './statsViewGuard';
 
-const defaultViewGuard = new StatsViewGuard({
-  redis,
-  productRepo: new ProductRepository(),
-  categoryRepo: new CategoryRepository(),
-});
+let configuredDeps: Pick<StatsViewGuardDeps, 'productRepo' | 'categoryRepo'> = {};
+
+/** Wired once by the application composition root. */
+export function configureStatsViewGuard(
+  deps: Pick<StatsViewGuardDeps, 'productRepo' | 'categoryRepo'>,
+): void {
+  configuredDeps = deps;
+}
+
+function defaultGuard(): StatsViewGuard {
+  return new StatsViewGuard({
+    redis,
+    productRepo: configuredDeps.productRepo,
+    categoryRepo: configuredDeps.categoryRepo,
+  });
+}
 
 function clientIp(c: Context): string {
   return (
@@ -31,7 +40,7 @@ export function createStatsViewGuardMiddleware(
   paramName: string,
   deps: StatsViewGuardDeps = {},
 ) {
-  const guard = Object.keys(deps).length > 0 ? new StatsViewGuard(deps) : defaultViewGuard;
+  const guard = Object.keys(deps).length > 0 ? new StatsViewGuard(deps) : defaultGuard();
 
   return async (c: Context, next: Next) => {
     const rawId = c.req.param(paramName) ?? '';

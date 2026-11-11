@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { createProductModule } from '../product.module';
+import type { createProductModule } from '../product.module';
 
-export const productRoutes = new Hono();
+type ProductController = ReturnType<typeof createProductModule>['productController'];
 
-const { productController } = createProductModule();
+export function createProductRoutes(productController: ProductController) {
+  const productRoutes = new Hono();
 
 productRoutes.get('/', productController.getPaginatedProducts);
 productRoutes.get(
@@ -61,4 +62,7 @@ productRoutes.patch(
   `/my/ingredients/remove`,
   authMiddleware,
   productController.removeMyProductIngredients,
-);
+  );
+
+  return productRoutes;
+}

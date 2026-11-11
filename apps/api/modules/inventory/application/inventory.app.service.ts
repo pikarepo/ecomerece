@@ -2,9 +2,11 @@ import { InventoryAggregate } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
+import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import type {
   buyMyInventoryStockDtoType,
   createMyInventoryDtoType,
+  DeleteInventoryDto,
   GetAdminPaginatedInventoryQueryDto,
   InventoryResponseReadModel,
   removeMyInventoryStockDtoType,
@@ -12,14 +14,14 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
-import type { InMemoryQueryBus } from '../../../core/infrastructure/buses/in-memory-query-bus';
+import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveProductGetByIdQuery } from '../../product/application/queries/ensure-active-product-get-by-id.query';
-import { EnsureActiveVariantGetByIdQuery } from '../../product-variant/application/queries/ensure-active-variant-get-by-id.query';
-import { EnsureActiveUserGetByIdQuery } from '../../user/application/queries/ensure-active-user-get-by-id.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
-import { EnsureActiveVendorGetByIdQuery } from '../../vendor/application/queries/ensure-active-vendor-get-by-id.query';
+import { EnsureActiveProductGetByIdQuery } from '@ecomerece/contracts';
+import { EnsureActiveVariantGetByIdQuery } from '@ecomerece/contracts';
+import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
+import { EnsureActiveVendorGetByIdQuery } from '@ecomerece/contracts';
 import { InventoryMapper } from '../infrastructure/inventory.mapper';
 import type { InventoryPersistence } from '../infrastructure/inventory.model';
 import type { InventoryReposityory } from '../infrastructure/inventory.repository';
@@ -28,7 +30,7 @@ import { InventoryMessages, type inventoryMessagesType } from '../presentation/i
 export class InventoryApplicationService extends BaseService {
   constructor(
     private readonly inventoryRepo: InventoryReposityory,
-    private readonly queryBus: InMemoryQueryBus,
+    private readonly queryBus: IQueryBus,
     private readonly eventBus: IEventBus,
   ) {
     super();
@@ -71,7 +73,7 @@ export class InventoryApplicationService extends BaseService {
 
   async createMyInventory(
     data: createMyInventoryDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<inventoryMessagesType> {
     const inventoryId = Id.create();
     const actorId = Id.create(actor._id);
@@ -94,7 +96,7 @@ export class InventoryApplicationService extends BaseService {
   async buyMyInventoryStock(
     data: buyMyInventoryStockDtoType,
     id: idType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<inventoryMessagesType> {
     const inventoryId = Id.create(id);
     const actorId = Id.create(actor._id);
@@ -115,7 +117,7 @@ export class InventoryApplicationService extends BaseService {
   async removeMyInventoryStock(
     data: removeMyInventoryStockDtoType,
     id: idType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<inventoryMessagesType> {
     const inventoryId = Id.create(id);
     const actorId = Id.create(actor._id);
@@ -137,7 +139,7 @@ export class InventoryApplicationService extends BaseService {
   async updateMylowStockThreshold(
     data: updateMylowStockThresholdDtoType,
     id: idType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<inventoryMessagesType> {
     const inventoryId = Id.create(id);
     const actorId = Id.create(actor._id);
@@ -160,6 +162,27 @@ export class InventoryApplicationService extends BaseService {
     const variantId = Id.create(id);
     const varinat = await this.inventoryRepo.FindByVariantIdOrThrow(variantId);
     return InventoryMapper.aggregateToResponseReadModel(varinat);
+  }
+
+  async getInventoryById(id: string): Promise<InventoryResponseReadModel> {
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(Id.create(id));
+    return InventoryMapper.aggregateToResponseReadModel(inventory);
+  }
+
+  /** Soft-deletes an empty inventory row owned by the actor's vendor. */
+  async deleteMyInventory(
+    data: DeleteInventoryDto,
+    id: idType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
+    await this.canActorEditInventory(inventory.variantId, actorId);
+    inventory.deleteInventory(Reason.create(data.reason), actorId);
+    await this.inventoryRepo.Save(inventory);
+    await this.publishEvents(inventory);
+    return InventoryMessages.inventoryDeleted(inventoryId, actorId);
   }
 
   // Admin: all inventory — no baseline restrictions, optional filters

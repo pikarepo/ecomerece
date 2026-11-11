@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../apps/api/errors/app-error';
+import { BadRequestError } from '../errors/app-error';
 import type { EffectiveDate } from './effective-date.vo';
 import type { ExpirationDate } from './expiration-date.vo';
 import type { Id } from './id.vo';

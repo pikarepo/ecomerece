@@ -1,10 +1,8 @@
+import type { VendorVerificationRejectedEvent } from '@ecomerece/domain';
 import type { IEvent, IEventHandler } from '@ecomerece/domain/events/event-bus.interface';
-import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { UserInternalService } from '../user.internal.service';
 
-interface VendorRejectedPayload {
-  ownerId: Id;
-}
+type VendorRejectedPayload = VendorVerificationRejectedEvent['payload'];
 
 export class VendorRejectedHandler implements IEventHandler<VendorRejectedPayload> {
   constructor(private readonly internalSvc: UserInternalService) {}

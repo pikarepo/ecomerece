@@ -1,9 +1,19 @@
-import type { IEvent, IEventHandler } from '@ecomerece/domain';
+import type {
+  IEvent,
+  IEventHandler,
+  ProductStatsDenormalizationRequestedEvent,
+} from '@ecomerece/domain';
 import { emptyMetrics, type Metrics } from '@ecomerece/shared';
 import { connectDB } from '../../../../lib/mongo';
-import { ProductModel } from '../../../product/infrastructure/product.model';
-import { VendorModel } from '../../../vendor/infrastructure/vendor.models';
 import { statsRepository } from '../../infrastructure/StatsRepository';
+
+export interface ProductStatsDenormalizationDeps {
+  listVendorIds: () => Promise<string[]>;
+  listVendorProductIds: (vendorId: string) => Promise<string[]>;
+  applyProductStats: (
+    updates: { productId: string; metrics: Record<string, number> }[],
+  ) => Promise<void>;
+}
 
 /**
  * Event-driven denormalization of lifetime metrics onto product documents so the
@@ -13,8 +23,11 @@ import { statsRepository } from '../../infrastructure/StatsRepository';
  * flag, so dashboards never go stale over long idle windows (the admin "force"
  * correction and the vendor force-refresh button re-use this same pipeline).
  */
-export class ProductStatsDenormalizationHandler implements IEventHandler<{ force: boolean }> {
-  async handle(event: IEvent<{ force: boolean }>): Promise<void> {
+export class ProductStatsDenormalizationHandler
+  implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
+  constructor(private readonly deps: ProductStatsDenormalizationDeps) {}
+
+  async handle(event: IEvent<ProductStatsDenormalizationRequestedEvent['payload']>): Promise<void> {
     void event.payload.force;
 
     // This pipeline runs from a background scheduler tick, outside any HTTP
@@ -23,19 +36,12 @@ export class ProductStatsDenormalizationHandler implements IEventHandler<{ force
     // `bufferTimeoutMS` (10s) and then throws a buffering timeout.
     await connectDB();
 
-    const vendors = await VendorModel.find({ 'deleted.deleted': false }).select('_id').lean();
+    const vendors = await this.deps.listVendorIds();
 
-    for (const vendor of vendors) {
-      const products = await ProductModel.find({
-        vendorId: vendor._id,
-        'deleted.deleted': false,
-      })
-        .select('_id')
-        .lean();
+    for (const vendorId of vendors) {
+      const productIds = await this.deps.listVendorProductIds(vendorId);
+      if (productIds.length === 0) continue;
 
-      if (products.length === 0) continue;
-
-      const productIds = products.map((p) => String(p._id));
       const lifetimeDocs = await statsRepository.getLifetimeDocs('product', productIds);
       const statsByProduct = new Map<string, Metrics>(
         lifetimeDocs.map((doc) => [
@@ -44,14 +50,11 @@ export class ProductStatsDenormalizationHandler implements IEventHandler<{ force
         ]),
       );
 
-      await ProductModel.bulkWrite(
-        productIds.map((id) => ({
-          updateOne: {
-            filter: { _id: id },
-            update: { $set: { stats: statsByProduct.get(id) ?? emptyMetrics() } },
-          },
+      await this.deps.applyProductStats(
+        productIds.map((productId) => ({
+          productId,
+          metrics: statsByProduct.get(productId) ?? emptyMetrics(),
         })),
-        { ordered: false },
       );
     }
   }

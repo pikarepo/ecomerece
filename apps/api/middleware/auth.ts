@@ -1,8 +1,15 @@
+import type { IAuthUserLookup } from '@ecomerece/contracts';
 import { createMiddleware } from 'hono/factory';
 import { ForbiddenError, UnauthorizedError } from '../errors/app-error';
 import { getBearerToken } from '../lib/getBearerToken';
 import { supabaseAdmin } from '../lib/supabase';
-import { UserModel } from '../modules/user/infrastructure/user.models';
+
+let authUserLookup: IAuthUserLookup | null = null;
+
+/** Wired once by the application composition root. */
+export function configureAuthUserLookup(lookup: IAuthUserLookup): void {
+  authUserLookup = lookup;
+}
 
 export const authMiddleware = createMiddleware(async (c, next) => {
   const authHeader = c.req.header('Authorization');
@@ -29,24 +36,28 @@ export const authMiddleware = createMiddleware(async (c, next) => {
     throw new UnauthorizedError('The token payload is invalid.');
   }
 
-  const user = await UserModel.findById(userId);
+  if (!authUserLookup) {
+    throw new Error('Auth user lookup is not configured.');
+  }
 
-  if (!user || user.deleted?.deleted) {
+  const snapshot = await authUserLookup.findAuthUser(userId);
+
+  if (!snapshot || snapshot.deleted) {
     throw new UnauthorizedError('User not found.');
   }
 
-  if (user.block?.blocked) {
+  if (snapshot.blocked) {
     throw new ForbiddenError('This user account is blocked.');
   }
 
-  if (user.ban?.banned) {
+  if (snapshot.banned) {
     throw new ForbiddenError('This user account is banned.');
   }
 
   c.set('email', email);
-  c.set('user', user);
+  c.set('user', snapshot.actor);
   c.set('userId', userId);
-  c.set('role', user.role?.role);
+  c.set('role', snapshot.role);
 
   await next();
 });

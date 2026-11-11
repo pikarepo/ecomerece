@@ -1,3 +1,4 @@
+import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
 import {
   BlockInfoVO,
@@ -16,6 +17,7 @@ import { CategoryDeletedEvent } from './events/category-deleted.event';
 import { CategoryImageUpdatedEvent } from './events/category-image-updated.event';
 import { CategoryMetaUpdatedEvent } from './events/category-meta-updated.event';
 import { CategoryRecoveredEvent } from './events/category-recovered.event';
+import { CategoryUnblockedEvent } from './events/category-unblocked.event';
 
 export type createCategoryProps = {
   id: Id;
@@ -131,7 +133,18 @@ export class CategoryAggregate extends AggregateRoot {
     this.raise(new CategoryRecoveredEvent({ categoryId: this._id, actorId }));
   }
   blockCategory(reason: Reason, actorId: Id) {
+    if (this._block.isBlocked) {
+      throw new BadRequestError('Category is already blocked.');
+    }
     this._block = BlockInfoVO.create(actorId, reason);
     this.raise(new CategoryBlockedEvent({ categoryId: this._id, actorId, blockInfo: this._block }));
+  }
+
+  unblockCategory(actorId: Id) {
+    if (!this._block.isBlocked) {
+      throw new BadRequestError('Category is not blocked.');
+    }
+    this._block = BlockInfoVO.none();
+    this.raise(new CategoryUnblockedEvent({ categoryId: this._id, actorId }));
   }
 }

@@ -2,13 +2,16 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { secureHeaders } from 'hono/secure-headers';
 import app from './app';
+import { createApplication } from './composition-root';
 import { registerErrorHandler } from './errors/error-handler';
 import { dbMiddleware } from './middleware/db.middleware';
 import { rateLimiter } from './middleware/rateLimiter';
 import { requestGuards } from './middleware/requestguard.middleware';
-import { productStatsSyncScheduler } from './modules/stats/application/ProductStatsSyncScheduler';
 import { statsBufferService } from './modules/stats/application/StatsBufferService';
-import routes from './routes';
+import { createRoutes } from './routes';
+
+const application = createApplication();
+const { productStatsSyncScheduler } = application.modules.stats;
 
 const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
   .split(',')
@@ -56,7 +59,7 @@ app.options('*', (c) => {
   return c.text('');
 });
 
-app.route('/', routes);
+app.route('/', createRoutes(application));
 
 registerErrorHandler(app);
 

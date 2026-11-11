@@ -51,4 +51,9 @@ export const InventoryMessages = {
       message: `The low-stock threshold for inventory ${inventoryId.value} was set to ${items.value} units by ${actorId.value} on ${EffectiveDate.today().value}.`,
     };
   },
+  inventoryDeleted(inventoryId: Id, actorId: Id): inventoryMessagesType {
+    return {
+      message: `Inventory ${inventoryId.value} was deleted by ${actorId.value} on ${EffectiveDate.today().value}.`,
+    };
+  },
 };

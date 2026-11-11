@@ -1,371 +1,135 @@
 import { OrderAggregate } from '@ecomerece/domain';
-import type { InventoryReadModel } from '@ecomerece/domain/modules/inventory/read-models/inventory.read-model';
-import type { ProductReadModel } from '@ecomerece/domain/modules/product/read-models/product.read-model';
-import type { ProductVariantReadModel } from '@ecomerece/domain/modules/product-variant/read-models/product-variant.read-model';
-import type { UserReadModel } from '@ecomerece/domain/modules/user/read-models/user.read-model';
-import type { VendorReadModel } from '@ecomerece/domain/modules/vendor/read-models/vendor-read-model';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
+import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import { FullAddressVO } from '@ecomerece/domain/value-objects/street-address.vo';
 import type {
   createMyOrderDtoType,
   GetAdminPaginatedOrdersQueryDto,
   GetMyOrdersQueryDto,
+  orderReasonDtoType,
+  updateOrderDtoType,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { InMemoryCommandBus } from '../../../core/infrastructure/buses/in-memory-command-bus';
-import type { InMemoryEventBus } from '../../../core/infrastructure/buses/in-memory-event-bus';
-import type { InMemoryQueryBus } from '../../../core/infrastructure/buses/in-memory-query-bus';
+import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
+import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
+import {
+  GetOrderItemsByOrderIdQuery,
+  type IInventoryReservation,
+  type IOrderItemsWriter,
+} from '@ecomerece/contracts';
 import { BaseService } from '../../../core/services/base.services';
+import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveAddressGetByIdQuery } from '../../address/application/queries/ensure-active-address-get-by-it.query';
-import { ReserveInventoryCommand } from '../../inventory/application/commands/reserve-inventory.command';
-import { CreateItemsCommand } from '../../order-items/application/commands/create-items-inventory.command';
-import { VerifyProductAndGetQuery } from '../../product/application/queries/verify-product-and-get.query';
-import { VerifyVariantsAndGetQuery } from '../../product-variant/application/queries/verify-variants-and-get.query';
-import { EnsureActiveUserGetByIdQuery } from '../../user/application/queries/ensure-active-user-get-by-id.query';
-import { VerifyUserAndGetQuery } from '../../user/application/queries/verify-user-and-get.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
-import { VerifyVendorAndGetQuery } from '../../vendor/application/queries/verify-vendor-and-get.query';
+import { EnsureActiveAddressGetByIdQuery } from '@ecomerece/contracts';
+import { VerifyProductAndGetQuery } from '@ecomerece/contracts';
+import { VerifyVariantsAndGetQuery } from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
 import { OrderMapper } from '../infrastructure/order.mapper';
 import type { OrderPersistence } from '../infrastructure/order.model';
 import type { OrderRepository } from '../infrastructure/order.repository';
 import { OrderMessages } from '../presentation/order.messages';
 
-interface InventoryResult {
-  validIds: Id[];
-  notFoundIds: Id[];
-  deletedIds: Id[];
-  availableStockIds: Id[];
-  buyableIds: Id[];
-  inventoriesReadModel: InventoryReadModel[];
-}
-interface VerifyReportResult {
-  fullAddress: FullAddressVO;
-  report: Array<{
-    variantId: Id;
-    productId: Id | null;
-    quantity: Quantity;
-    price: number | null;
-    valid: boolean;
-    reason: string | null;
-  }>;
-  validOrderItems: Array<{
-    variantId: Id;
-    productId: Id;
-    quantity: Quantity;
-    price: number; // price is guaranteed here
-  }>;
-  firstReport: any;
-}
+/** A cart line that survived product, variant and inventory validation. */
+type ResolvedOrderItem = {
+  variantId: Id;
+  productId: Id;
+  vendorId: Id;
+  quantity: Quantity;
+  price: number;
+};
 
+/**
+ * Order use cases.
+ *
+ * `createMyOrder` is the only write path that spans several modules: it
+ * validates the cart through contract queries, reserves stock through
+ * `IInventoryReservation`, writes items through `IOrderItemsWriter`, and saves
+ * the order aggregate inside one `UnitOfWork.transaction`. Item and order
+ * events are published only after that transaction commits.
+ */
 export class OrderApplicationService extends BaseService {
   constructor(
     private readonly orderRepo: OrderRepository,
-    private readonly queryBus: InMemoryQueryBus,
-    private readonly eventBus: InMemoryEventBus,
-    private readonly commandBus: InMemoryCommandBus,
+    private readonly queryBus: IQueryBus,
+    private readonly eventBus: IEventBus,
+    private readonly inventoryReservation: IInventoryReservation,
+    private readonly orderItemsWriter: IOrderItemsWriter,
+    private readonly unitOfWork: UnitOfWork,
   ) {
     super();
   }
 
-  getReport(
-    variants: {
-      validIds: Id[];
-      notFoundIds: Id[];
-      deletedIds: Id[];
-      nonActiveIds: Id[];
-      variantReadModel: ProductVariantReadModel[];
-    },
-    products: {
-      validIds: Id[];
-      notFoundIds: Id[];
-      deletedIds: Id[];
-      blockedIds: Id[];
-      productReadModel: ProductReadModel[];
-    },
-    vendors: {
-      validIds: Id[];
-      notFoundIds: Id[];
-      deletedIds: Id[];
-      nonVerifiedIds: Id[];
-      vendorReadModel: VendorReadModel[];
-    },
-    owners: {
-      validIds: Id[];
-      notFoundIds: Id[];
-      bannedIds: Id[];
-      blockedIds: Id[];
-      deletedIds: Id[];
-      userReadModel: UserReadModel[];
-    },
-    inventories?: InventoryResult,
-  ) {
-    // ----- 1. Build direct error maps -----
-    const ownerErrors = new Map<string, string>();
-    owners.notFoundIds.forEach((id) => ownerErrors.set(id.value, 'NOT_FOUND'));
-    owners.bannedIds.forEach((id) => ownerErrors.set(id.value, 'BANNED'));
-    owners.blockedIds.forEach((id) => ownerErrors.set(id.value, 'BLOCKED'));
-    owners.deletedIds.forEach((id) => ownerErrors.set(id.value, 'DELETED'));
-
-    const vendorErrors = new Map<string, string>();
-    vendors.notFoundIds.forEach((id) => vendorErrors.set(id.value, 'NOT_FOUND'));
-    vendors.deletedIds.forEach((id) => vendorErrors.set(id.value, 'DELETED'));
-    vendors.nonVerifiedIds.forEach((id) => vendorErrors.set(id.value, 'UNVERIFIED'));
-
-    const productErrors = new Map<string, string>();
-    products.notFoundIds.forEach((id) => productErrors.set(id.value, 'NOT_FOUND'));
-    products.deletedIds.forEach((id) => productErrors.set(id.value, 'DELETED'));
-    products.blockedIds.forEach((id) => productErrors.set(id.value, 'BLOCKED'));
-
-    const variantErrors = new Map<string, string>();
-    variants.notFoundIds.forEach((id) => variantErrors.set(id.value, 'NOT_FOUND'));
-    variants.deletedIds.forEach((id) => variantErrors.set(id.value, 'DELETED'));
-    variants.nonActiveIds.forEach((id) => variantErrors.set(id.value, 'INACTIVE'));
-
-    // ----- 2. Build parent → child relationships -----
-    const productToVariants = new Map<string, string[]>();
-    for (const v of variants.variantReadModel) {
-      const key = Id.create(v.productId).value;
-      const list = productToVariants.get(key) || [];
-      list.push(Id.create(v.id).value);
-      productToVariants.set(key, list);
-    }
-
-    const vendorToProducts = new Map<string, string[]>();
-    for (const p of products.productReadModel) {
-      const key = Id.create(p.vendorId).value;
-      const list = vendorToProducts.get(key) || [];
-      list.push(Id.create(p.id).value);
-      vendorToProducts.set(key, list);
-    }
-
-    const ownerToVendors = new Map<string, string[]>();
-    for (const v of vendors.vendorReadModel) {
-      const key = Id.create(v.ownerId).value;
-      const list = ownerToVendors.get(key) || [];
-      list.push(Id.create(v.id).value);
-      ownerToVendors.set(key, list);
-    }
-
-    // ----- 3. Propagate errors TOP-DOWN -----
-    for (const [ownerId, error] of ownerErrors) {
-      const vendorsList = ownerToVendors.get(ownerId) || [];
-      for (const vendorId of vendorsList) {
-        if (!vendorErrors.has(vendorId)) {
-          vendorErrors.set(vendorId, `OWNER_${error}`);
-        }
-      }
-    }
-
-    for (const [vendorId, error] of vendorErrors) {
-      const productsList = vendorToProducts.get(vendorId) || [];
-      for (const productId of productsList) {
-        if (!productErrors.has(productId)) {
-          productErrors.set(productId, `VENDOR_${error}`);
-        }
-      }
-    }
-
-    for (const [productId, error] of productErrors) {
-      const variantsList = productToVariants.get(productId) || [];
-      for (const variantId of variantsList) {
-        if (!variantErrors.has(variantId)) {
-          variantErrors.set(variantId, `PRODUCT_${error}`);
-        }
-      }
-    }
-
-    // ----- 4. Inventory errors -----
-    if (inventories) {
-      const inventoryErrors = new Map<string, string>();
-      inventories.notFoundIds.forEach((id) => inventoryErrors.set(id.value, 'NOT_FOUND'));
-      inventories.deletedIds.forEach((id) => {
-        if (!inventoryErrors.has(id.value)) {
-          inventoryErrors.set(id.value, 'DELETED');
-        }
-      });
-      const availableSet = new Set(inventories.availableStockIds.map((id) => id.value));
-      const buyableSet = new Set(inventories.buyableIds.map((id) => id.value));
-      const variantHasInventory = new Set(
-        inventories.inventoriesReadModel.map((inv) => Id.create(inv.variantId).value),
-      );
-      for (const variantId of variantHasInventory) {
-        if (inventoryErrors.has(variantId)) continue;
-        if (!availableSet.has(variantId)) {
-          inventoryErrors.set(variantId, 'OUT_OF_STOCK');
-        } else if (!buyableSet.has(variantId)) {
-          inventoryErrors.set(variantId, 'NOT_BUYABLE');
-        }
-      }
-      for (const [variantId, invError] of inventoryErrors) {
-        if (!variantErrors.has(variantId)) {
-          variantErrors.set(variantId, `INVENTORY_${invError}`);
-        }
-      }
-    }
-
-    // ----- 5. Build variant → product map -----
-    const variantProductMap = new Map<string, string>();
-    for (const v of variants.variantReadModel) {
-      variantProductMap.set(Id.create(v.id).value, Id.create(v.productId).value);
-    }
-
-    // ----- 6. All variant IDs -----
-    const allVariantIds = new Set<string>([
-      ...variants.validIds.map((id) => id.value),
-      ...variants.notFoundIds.map((id) => id.value),
-      ...variants.deletedIds.map((id) => id.value),
-      ...variants.nonActiveIds.map((id) => id.value),
-    ]);
-
-    // ----- 7. Generate report -----
-    const report = [];
-    for (const variantId of allVariantIds) {
-      const error = variantErrors.get(variantId);
-      const productIdValue = variantProductMap.get(variantId) || null;
-      report.push({
-        id: Id.create(variantId),
-        productId: productIdValue ? Id.create(productIdValue) : null,
-        valid: !error,
-        reason: error || null,
-      });
-    }
-    return report;
-  }
-  async verifyReport(
-    userId: Id,
-    addressId: Id,
-    actorId: Id,
+  /**
+   * Validates the cart and reserves stock.
+   *
+   * The contract queries already return only active, non-deleted variants and
+   * non-deleted, non-blocked products, so no extra `validIds` filtering is
+   * needed. The inventory port returns the ids it could reserve; any line it
+   * rejects is dropped, preserving the previous "partial order" behaviour.
+   */
+  private async resolveBuyableItems(
     items: { variantId: Id; quantity: Quantity }[],
-  ) {
-    // ----- 1. Validate address and user -----
-    const address = await this.queryBus.execute(new EnsureActiveAddressGetByIdQuery({ addressId }));
-    const user = await this.queryBus.execute(new EnsureActiveUserGetByIdQuery({ userId }));
-    if (!address.active) throw new BadRequestError('Address is not active.');
-    if (!address.address) throw new BadRequestError('Address not found.');
-    if (!user.active) throw new BadRequestError('User is not active.');
-    if (!user.user) throw new BadRequestError('User not found.');
-    if (!address.address.fullAddress) throw new BadRequestError('Address details are incomplete.');
-
-    // ----- 2. Fetch variants, products, vendors, owners -----
-    const variantIds = items.map((item) => item.variantId);
+    actorId: Id,
+  ): Promise<ResolvedOrderItem[]> {
     const variants = await this.queryBus.execute(
-      new VerifyVariantsAndGetQuery({ ids: variantIds }),
+      new VerifyVariantsAndGetQuery({ ids: items.map((item) => item.variantId) }),
     );
-    const productIds = variants.variantReadModel.map((v) => v.productId);
-    const products = await this.queryBus.execute(new VerifyProductAndGetQuery({ ids: productIds }));
-    const vendorIds = products.productReadModel.map((p) => Id.create(p.vendorId));
-    const vendors = await this.queryBus.execute(new VerifyVendorAndGetQuery({ ids: vendorIds }));
-    const ownerIds = vendors.vendorReadModel.map((v) => Id.create(v.id));
-    const owners = await this.queryBus.execute(new VerifyUserAndGetQuery({ ids: ownerIds }));
-
-    // ----- 3. First report (without inventory) -----
-    const emptyInventory: InventoryResult = {
-      validIds: [],
-      notFoundIds: [],
-      deletedIds: [],
-      availableStockIds: [],
-      buyableIds: [],
-      inventoriesReadModel: [],
-    };
-    const firstReport = this.getReport(variants, products, vendors, owners, emptyInventory);
-
-    const validOrderItems = items.filter((item) =>
-      firstReport.some((r) => r.valid && r.id.value === item.variantId.value),
+    const products = await this.queryBus.execute(
+      new VerifyProductAndGetQuery({
+        ids: variants.variantReadModel.map((variant) => Id.create(variant.productId)),
+      }),
     );
+    const productById = new Map(products.productReadModel.map((product) => [product.id, product]));
+    const variantById = new Map(variants.variantReadModel.map((variant) => [variant.id, variant]));
 
-    const inventoryResult = await this.commandBus.execute<InventoryResult>(
-      new ReserveInventoryCommand(validOrderItems, actorId),
-    );
-
-    const finalReport = this.getReport(variants, products, vendors, owners, inventoryResult);
-
-    // Build price map
-    const priceMap = new Map<string, number>();
-    for (const v of variants.variantReadModel) {
-      priceMap.set(Id.create(v.id).value, v.price);
-    }
-
-    // Build status map from finalReport
-    const reportMap = new Map<
-      string,
-      { productId: string | null; valid: boolean; reason: string | null }
-    >();
-    for (const entry of finalReport) {
-      reportMap.set(entry.id.value, {
-        productId: entry.productId ? entry.productId.value : null,
-        valid: entry.valid,
-        reason: entry.reason,
-      });
-    }
-
-    // Enrich report with price and null checks
-    const enrichedReport = items.map((item) => {
-      const variantId = item.variantId.value;
-      const status = reportMap.get(variantId);
-      const valid = status ? status.valid : false;
-      let reason = status ? status.reason : 'UNKNOWN';
-      const productId = status ? status.productId : null;
-      const price = priceMap.get(variantId) ?? null;
-
-      const finalValid = valid && price !== null;
-      if (!finalValid && price === null) {
-        reason = 'PRICE_MISSING';
-      }
-
-      return {
+    // Join request lines with their variant + product read models. A missing
+    // entry means the variant or product became unavailable between requests.
+    const candidates: ResolvedOrderItem[] = [];
+    for (const item of items) {
+      const variant = variantById.get(item.variantId.value);
+      const product = variant && productById.get(variant.productId);
+      if (!variant || !product) continue;
+      candidates.push({
         variantId: item.variantId,
-        productId: productId ? Id.create(productId) : null,
+        productId: Id.create(variant.productId),
+        vendorId: Id.create(product.vendorId),
         quantity: item.quantity,
-        price, // may be null
-        valid: finalValid,
-        reason,
-      };
-    });
-
-    // Build variant → vendorId map
-    const variantToVendor = new Map<string, string>();
-    for (const v of variants.variantReadModel) {
-      const variantId = Id.create(v.id).value;
-      const productId = Id.create(v.productId).value;
-      const product = products.productReadModel.find((p) => Id.create(p.id).value === productId);
-      if (product) {
-        const vendorId = Id.create(product.vendorId).value;
-        variantToVendor.set(variantId, vendorId);
-      }
+        price: variant.price,
+      });
     }
 
-    const trulyValidOrderItems = enrichedReport
-      .filter((entry) => entry.valid)
-      .map((entry) => {
-        const vendorIdValue = variantToVendor.get(entry.variantId.value);
-
-        if (!vendorIdValue) {
-          throw new Error(`Vendor not found for variant ${entry.variantId.value}`);
-        }
-        return {
-          variantId: entry.variantId,
-          productId: entry.productId as Id,
-          quantity: entry.quantity,
-          price: entry.price! as number,
-          vendorId: Id.create(vendorIdValue), // now an Id object
-        };
-      });
-
-    const fullAddress = FullAddressVO.create(address.address.fullAddress);
-
-    return {
-      fullAddress,
-      report: enrichedReport,
-      validOrderItems: trulyValidOrderItems,
-      firstReport,
-    };
+    // Reserve before building the order so the total only covers held stock.
+    const { buyableIds } = await this.inventoryReservation.reserve(
+      candidates.map(({ variantId, quantity }) => ({ variantId, quantity })),
+      actorId,
+    );
+    const buyable = new Set(buyableIds.map((id) => id.value));
+    return candidates.filter((item) => buyable.has(item.variantId.value));
   }
 
-  async createMyOrder(data: createMyOrderDtoType, actor: UserPersistence) {
+  /**
+   * Creates an order for the authenticated buyer.
+   *
+   * Flow:
+   * 1. build value objects from the DTO (new ids are always generated server-side),
+   * 2. reject a missing/inactive address before opening a transaction,
+   * 3. inside the transaction: enforce the idempotency key, resolve + reserve
+   *    items, create the order and item rows, and raise `order.created`,
+   * 4. after commit: publish item and order events together.
+   *
+   * Publishing after the transaction is deliberate: consumers must never react
+   * to an order that rolled back (covered by `order-create-commit.test.ts`).
+   */
+
+
+
+
+
+  async createMyOrder(data: createMyOrderDtoType, actor: AuthActor) {
     const orderId = Id.create();
     const idempotentKey = Id.create(data.idempotentKey);
     const addressId = Id.create(data.addressId);
@@ -375,42 +139,59 @@ export class OrderApplicationService extends BaseService {
       variantId: Id.create(value.variantId),
       quantity: Quantity.create(value.quantity),
     }));
-    await this.orderRepo.EnsureUniqueImpodentKey(idempotentKey);
-    const result = await this.verifyReport(actorId, addressId, actorId, items);
-    const totalPrice = result.validOrderItems.reduce(
-      (sum, ele) => sum + ele.quantity.value * ele.price,
-      0,
-    );
-    const order = OrderAggregate.create({
-      id: orderId,
-      idempotentKey: idempotentKey,
-      totalPrice: Money.create(totalPrice),
-      buyerId: actorId,
-      address: result.fullAddress,
-    });
-    const orderItems = result.validOrderItems.map((element) => ({
-      id: Id.create(),
-      orderId: orderId,
-      vendorId: element.vendorId,
-      productId: element.productId,
-      variantId: element.variantId,
-      quantity: element.quantity,
-      waitingTime: waitingTime,
-      price: Money.create(element.price),
-    }));
-    await this.commandBus.execute(new CreateItemsCommand(orderItems));
-    order.createOrder();
-    await this.orderRepo.Create(order);
-    const orderEvents = order.pullEvents();
-    if (orderEvents.length > 0) {
-      await this.eventBus.publish(orderEvents);
-    }
 
-    const response = OrderMapper.aggregateToResponseReadModel(order);
-    return OrderMessages.orderCreated(orderId, actorId, addressId, response);
+    // Address is only a guard; read it before the transaction to fail fast.
+    const { address, active } = await this.queryBus.execute(
+      new EnsureActiveAddressGetByIdQuery({ id: addressId, userId: actorId }),
+    );
+    if (!address || !active) throw new BadRequestError('Address not found or inactive.');
+
+    const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
+      // Checked inside the transaction so concurrent retries cannot both pass.
+      await this.orderRepo.EnsureUniqueImpodentKey(idempotentKey);
+      const orderItems = await this.resolveBuyableItems(items, actorId);
+
+      // Total is derived from reserved lines only, never from unreserved stock.
+      const order = OrderAggregate.create({
+        id: orderId,
+        idempotentKey,
+        totalPrice: Money.create(
+          orderItems.reduce((sum, item) => sum + item.quantity.value * item.price, 0),
+        ),
+        buyerId: actorId,
+        address: FullAddressVO.create(address.fullAddress),
+      });
+
+      const itemEvents = await this.orderItemsWriter.create(
+        orderItems.map((item) => ({
+          id: Id.create(),
+          orderId,
+          vendorId: item.vendorId,
+          productId: item.productId,
+          variantId: item.variantId,
+          quantity: item.quantity,
+          waitingTime,
+          price: Money.create(item.price),
+        })),
+      );
+
+      // Aggregate raises `order.created`; events stay buffered until commit.
+      order.createOrder();
+      await this.orderRepo.Create(order);
+      return { order, itemEvents };
+    });
+
+    const events = [...itemEvents, ...order.pullEvents()];
+    if (events.length > 0) await this.eventBus.publish(events);
+    return OrderMessages.orderCreated(
+      orderId,
+      actorId,
+      addressId,
+      OrderMapper.aggregateToResponseReadModel(order),
+    );
   }
 
-  // Public: the authenticated user's own non-deleted orders
+  /** Public: the authenticated user's own non-deleted orders. */
   async getMyOrders(query: GetMyOrdersQueryDto, buyerId: string) {
     const filter: FilterQuery<OrderPersistence> = {
       buyerId: Id.create(buyerId).value,
@@ -430,7 +211,7 @@ export class OrderApplicationService extends BaseService {
     };
   }
 
-  // Admin: all orders — no baseline restrictions, optional buyerId / deleted filters
+  /** Admin: all orders — optional buyerId / deleted filters, no baseline scope. */
   async findAdminPaginatedOrders(query: GetAdminPaginatedOrdersQueryDto) {
     const filter: FilterQuery<OrderPersistence> = {};
     if (query.buyerId) filter.buyerId = Id.create(query.buyerId).value;
@@ -447,5 +228,150 @@ export class OrderApplicationService extends BaseService {
       data: result.data.map((order) => OrderMapper.aggregateToReadModel(order)),
       meta: result.meta,
     };
+  }
+
+  /** Read: the buyer's own order, scoped by the authenticated actor. */
+  async getMyOrderById(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+    if (!order.buyerId.equals(actorId)) {
+      throw new BadRequestError('You do not own this order.');
+    }
+    return OrderMapper.aggregateToResponseReadModel(order);
+  }
+
+  /** Admin: any order by id, including soft-deleted rows. */
+  async getAdminOrderById(id: string) {
+    const order = await this.orderRepo.FindByIdOrThrow(Id.create(id));
+    return OrderMapper.aggregateToResponseReadModel(order);
+  }
+
+  /** Loads the order-item ids so order transitions can cascade to items. */
+  private async itemRefs(orderId: Id): Promise<{ id: Id; orderId: Id }[]> {
+    const items = await this.queryBus.execute(new GetOrderItemsByOrderIdQuery({ orderId }));
+    return items.map((item) => ({ id: Id.create(item._id), orderId }));
+  }
+
+  private async publish(events: IEvent[]): Promise<void> {
+    if (events.length > 0) await this.eventBus.publish(events);
+  }
+
+  /**
+   * Runs an order transition and its item cascade in one transaction.
+   * Events stay buffered until the transaction commits.
+   */
+  private async transitionOrder(
+    orderId: Id,
+    apply: (order: OrderAggregate) => void,
+    cascade: (items: { id: Id; orderId: Id }[]) => Promise<IEvent[]>,
+  ): Promise<OrderAggregate> {
+    const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
+      const order = await this.orderRepo.FindByIdOrThrow(orderId);
+      const itemEvents = await cascade(await this.itemRefs(orderId));
+      apply(order);
+      await this.orderRepo.Save(order);
+      return { order, itemEvents };
+    });
+    await this.publish([...itemEvents, ...order.pullEvents()]);
+    return order;
+  }
+
+  async cancelMyOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    await this.transitionOrder(
+      orderId,
+      (order) => {
+        if (!order.buyerId.equals(actorId)) {
+          throw new BadRequestError('You do not own this order.');
+        }
+        order.cancelOrder(reason, actorId);
+      },
+      (items) => this.orderItemsWriter.cancel(items),
+    );
+    return OrderMessages.orderCancelled(orderId, actorId, reason);
+  }
+
+  async confirmOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    await this.transitionOrder(
+      orderId,
+      (order) => order.confirmOrder(actorId),
+      (items) => this.orderItemsWriter.confirm(items),
+    );
+    return OrderMessages.orderConfirmed(orderId, actorId);
+  }
+
+  async completeOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    await this.transitionOrder(
+      orderId,
+      (order) => order.completeOrder(actorId),
+      (items) => this.orderItemsWriter.complete(items),
+    );
+    return OrderMessages.orderCompleted(orderId, actorId);
+  }
+
+  async returnOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    await this.transitionOrder(
+      orderId,
+      (order) => order.returnOrder(reason, actorId),
+      (items) => this.orderItemsWriter.returnItems(items),
+    );
+    return OrderMessages.orderReturned(orderId, actorId, reason);
+  }
+
+  async refundOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    await this.transitionOrder(
+      orderId,
+      (order) => order.refundOrder(reason, actorId),
+      (items) => this.orderItemsWriter.refund(items),
+    );
+    return OrderMessages.orderRefunded(orderId, actorId, reason);
+  }
+
+  async updateOrder(id: string, data: updateOrderDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+    order.updateOrder(
+      Money.create(data.totalPrice),
+      FullAddressVO.create(data.address),
+      actorId,
+    );
+    await this.orderRepo.Save(order);
+    await this.publish(order.pullEvents());
+    return OrderMessages.orderUpdated(orderId, actorId);
+  }
+
+  async deleteOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+    order.deleteOrder(reason, actorId);
+    await this.orderRepo.Save(order);
+    await this.publish(order.pullEvents());
+    return OrderMessages.orderDeleted(orderId, actorId, reason);
+  }
+
+  async recoverOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+    order.recoverOrder(actorId);
+    await this.orderRepo.Save(order);
+    await this.publish(order.pullEvents());
+    return OrderMessages.orderRecovered(orderId, actorId);
   }
 }

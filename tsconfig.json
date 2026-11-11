@@ -2,6 +2,8 @@
   "compilerOptions": {
     "paths": {
       "@ecomerece/domain": ["./packages/domain/index.ts"],
+      "@ecomerece/contracts": ["./packages/contracts/index.ts"],
+      "@ecomerece/contracts/*": ["./packages/contracts/*"],
       "@ecomerece/shared": ["./packages/shared/index.ts"],
       "@ecomerece/frontend": ["./packages/frontend/index.ts"],
       "@ecomerece/frontend/*": ["./packages/frontend/*"]

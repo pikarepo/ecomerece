@@ -21,6 +21,10 @@ export class ProductVariantController extends BaseController<productVariantAppli
     const productId = this.param(c, 'id', idSchema);
     return this.ok(c, await this.service.getVarientsByProductId(productId));
   };
+  getVariantById = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    return this.ok(c, await this.service.getVariantById(id));
+  };
   updateMyVariantPrice = async (c: Context) => {
     const data = await this.body(c, updateMyVariatPriceDto);
     const actor = c.get('user');

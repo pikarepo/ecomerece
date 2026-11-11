@@ -18,11 +18,11 @@ import type {
   GetAdminPaginatedAddressesQueryDto,
 } from '../../../../../packages/shared';
 import type { updateMyAddressDtoType } from '../../../../../packages/shared/request-dtos/address/update-address.dto';
-import type { InMemoryQueryBus } from '../../../core/infrastructure/buses/in-memory-query-bus';
+import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveUserGetByIdQuery } from '../../user/application/queries/ensure-active-user-get-by-id.query';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
+import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
+import type { AuthActor } from '@ecomerece/contracts';
 import { AddressMapper } from '../infrastructure/address.mapper';
 import type { AddressPersistence } from '../infrastructure/address.models';
 import type { AddressRepository } from '../infrastructure/address.repository';
@@ -31,7 +31,7 @@ import { AddressMessages, type addressMessagesType } from '../presentation/addre
 export class AddressApplicationService extends BaseService {
   constructor(
     private readonly addressRepo: AddressRepository,
-    private readonly queryBus: InMemoryQueryBus,
+    private readonly queryBus: IQueryBus,
     private readonly eventBus: IEventBus,
   ) {
     super();
@@ -52,7 +52,7 @@ export class AddressApplicationService extends BaseService {
     if (!activeUser.active) throw new BadRequestError('User is not active.');
   }
 
-  async getMyAddresses(actor: UserPersistence): Promise<AddressResponseReadModel[] | null> {
+  async getMyAddresses(actor: AuthActor): Promise<AddressResponseReadModel[] | null> {
     const userId = Id.create(actor._id);
     const address = await this.addressRepo.FindByOwnerId(userId);
     if (!address) return null;
@@ -60,7 +60,17 @@ export class AddressApplicationService extends BaseService {
     return addresses;
   }
 
-  async recoverAddress(id: string, actor: UserPersistence): Promise<addressMessagesType> {
+  async getAddressById(id: string, actor: AuthActor): Promise<AddressResponseReadModel> {
+    const addressId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const address = await this.addressRepo.FindByIdOrThrow(addressId);
+    if (!address.ownerId.equals(actorId)) {
+      throw new BadRequestError('You do not own this address.');
+    }
+    return AddressMapper.aggregateToResponseReadModel(address);
+  }
+
+  async recoverAddress(id: string, actor: AuthActor): Promise<addressMessagesType> {
     const addressId = Id.create(id);
     const actorId = Id.create(actor._id);
     const address = await this.addressRepo.FindByIdOrThrow(addressId);
@@ -71,7 +81,7 @@ export class AddressApplicationService extends BaseService {
     return AddressMessages.addressRecovered(actorId, addressId, response);
   }
 
-  async setMyAddressAsDefault(id: string, actor: UserPersistence) {
+  async setMyAddressAsDefault(id: string, actor: AuthActor) {
     const addressId = Id.create(id);
     const actorId = Id.create(actor._id);
     const address = await this.addressRepo.FindByIdOrThrow(addressId);
@@ -82,7 +92,7 @@ export class AddressApplicationService extends BaseService {
     return AddressMessages.defaultAddress(actorId, addressId, response);
   }
 
-  async deleteMyAddress(id: string, actor: UserPersistence): Promise<addressMessagesType> {
+  async deleteMyAddress(id: string, actor: AuthActor): Promise<addressMessagesType> {
     const addressId = Id.create(id);
     const actorId = Id.create(actor._id);
     const address = await this.addressRepo.FindByIdOrThrow(addressId);
@@ -95,7 +105,7 @@ export class AddressApplicationService extends BaseService {
 
   async createMyAddress(
     data: createMyAddressDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<addressMessagesType> {
     const addressId = Id.create();
     const actorId = Id.create(actor._id);
@@ -123,7 +133,7 @@ export class AddressApplicationService extends BaseService {
     return AddressMessages.addressCreated(actorId, addressId, response);
   }
 
-  async updateMyAddress(id: string, actor: UserPersistence, data: updateMyAddressDtoType) {
+  async updateMyAddress(id: string, actor: AuthActor, data: updateMyAddressDtoType) {
     const addressId = Id.create(id);
     const actorId = Id.create(actor._id);
     const address = await this.addressRepo.FindByIdOrThrow(addressId);

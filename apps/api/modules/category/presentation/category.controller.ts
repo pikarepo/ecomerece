@@ -1,4 +1,5 @@
 import {
+  blockCategoryDto,
   createCategoryDto,
   deleteCategoryDto,
   getAdminPaginatedCategoriesSchema,
@@ -37,5 +38,16 @@ export class CategoryController extends BaseController<CategoryAppService> {
   getCategory = async (c: Context) => {
     const id = this.param(c, 'id', idSchema);
     return this.ok(c, await this.service.getCategoryById(id));
+  };
+  blockCategory = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, blockCategoryDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.blockCategoryById(id, data, actor));
+  };
+  unblockCategory = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.unblockCategoryById(id, actor));
   };
 }

@@ -2,7 +2,9 @@
 
 An  multi-vendor e-commerce platform engineered around **Domain-Driven Design (DDD)**, **Hexagonal / Clean Architecture (Ports & Adapters)**, and **Command-Query Responsibility Segregation (CQRS)** — spanning a high-performance Hono API, a Next.js storefront + admin backoffice, and a shared cross-platform client SDK.
 
-> **Full engineering manual:** [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md) contains the complete 900-line architecture guide (DDD mental models, the 4-layer model, the Aggregate Fortress pattern, all cross-module decoupling patterns, the persistence & Unit-of-Work design, full API endpoint catalog, and the developer cheatsheet).
+> **Full engineering manual:** [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md) contains the complete 1,400-line architecture guide (DDD mental models, the 4-layer model, the Aggregate Fortress pattern, all cross-module decoupling patterns, the persistence & Unit-of-Work design, full API endpoint catalog, and the developer cheatsheet).
+>
+> **Hands-on playbook:** [docs/architecture-guide.html](./docs/architecture-guide.html) is a single-file interactive HTML course that builds a new module from scratch, step by step, and then explains cross-module communication in depth. Open it directly in a browser — no server or build step.
 
 ---
 
@@ -110,7 +112,7 @@ flowchart TB
 
     subgraph Api["API Layer"]
         API["apps/api (Hono v4 + Bun)"]
-        Buses["In-memory Command/Query/Event Buses"]
+        Buses["In-memory Query/Event Buses"]
         UoW["Unit of Work & MongoRepository (transactions)"]
     end
 
@@ -150,8 +152,8 @@ flowchart TB
 
     subgraph ApiApp["apps/api — Hono v4 + Bun runtime (port 8000)"]
         Entry["index.ts bootstrap — logger · secureHeaders · cors · requestGuards · dbMiddleware · rateLimiter"]
-        Routers["routes/index.ts — 10 mounted routers"]
-        Modules["11 module packages — 4-layer DDD scaffolds"]
+        Routers["routes/index.ts — 12 mounted routers"]
+        Modules["12 module packages — 4-layer DDD scaffolds"]
         Core["core infrastructure — buses · UnitOfWork · MongoRepository · BaseController"]
         Adapters["lib/ — mongo · redis · supabase · clerk · jwt"]
         Entry --> Routers
@@ -209,10 +211,11 @@ flowchart TB
         M7["Auth guards — auth · admin · initAuth · seller (per-route)"]
     end
 
-    subgraph Routers["routes/index.ts — 10 mounted routers"]
+    subgraph Routers["routes/index.ts — 12 mounted routers"]
         R1["/users · /product · /product-variant"]
         R2["/product-inventory · /order · /order-items"]
         R3["/category · /address · /vendor · /home"]
+        R4["/review · /stats"]
     end
 
     subgraph ModuleLayers["Every module = 4 layers"]
@@ -223,7 +226,7 @@ flowchart TB
     end
 
     subgraph CoreInfra["core/ — shared infrastructure"]
-        Bus["Buses — InMemoryCommandBus · InMemoryQueryBus · InMemoryEventBus"]
+        Bus["Buses — InMemoryQueryBus · InMemoryEventBus"]
         Uow["UnitOfWork — AsyncLocalStorage session propagation + transient retry"]
         Repo["BaseRepository · MongoRepository (session-aware CRUD)"]
         Ctrl["BaseController — typed responses / error binding"]
@@ -415,13 +418,15 @@ All business logic lives in self-contained aggregates under `packages/domain/mod
 
 ## 🚌 Cross-Module Communication (CQRS Buses)
 
-Modules never import each other directly. All inter-module calls go through one of three in-memory buses (implementations in `apps/api/core/infrastructure/buses/`):
+Modules never import each other directly. Cross-module traffic uses two in-memory buses plus ports, all declared in `packages/contracts` and wired once in `apps/api/composition-root.ts`:
 
-| Bus | When to use | Example |
+| Channel | When to use | Example |
 | :--- | :--- | :--- |
-| **QueryBus** | Synchronous cross-module **reads** | Getting a vendor's contact info from another module's read model |
-| **CommandBus** | Synchronous cross-module **writes** | `CreateItemsCommand` registered by the order-items module |
-| **EventBus** | Asynchronous reactive **broadcast** | `user.signed-in` → `UserSignedInHandler` |
+| **QueryBus** | Synchronous cross-module **reads**, keyed by the query class exported from `packages/contracts` | `GetProductByIdQuery` answered by the product module's handler |
+| **EventBus** | Asynchronous reactive **broadcast**, published after the transaction commits | `user.signed-in` → `UserSignedInHandler` |
+| **Ports** | Synchronous cross-module **writes / lookups** that need to run inside the caller's transaction | `IInventoryReservation` implemented by inventory, called by the order app service |
+
+There is **no CommandBus**: cross-module writes go through ports, so the caller states intent while the owning module keeps control of its own aggregate and invariants. Handlers and adapters are registered centrally in the composition root — never as an import side effect.
 
 Dependency rule across modules: communication happens via bus contracts (small, stable data bags), never via direct class imports — so renaming a method in one module can never cascade-compile-fail another.
 
@@ -447,7 +452,7 @@ The Application layer never makes business decisions; it only orchestrates *Load
 
 ## 🗄️ Persistence & Unit of Work
 
-- **Mappers** (`infrastructure/*.mapper.ts`) translate between Mongoose documents and aggregates (4 methods: `toDocument`, `toUpdatePayload`, `fromDocument`, `fromDocuments`).
+- **Mappers** (`infrastructure/*.mapper.ts`) translate between Mongoose documents and aggregates (`aggregateToPersistence`, `persistenceToAggregate`, `aggregateToReadModel`, `persistenceToReadModel`).
 - **Repositories** implement domain-defined **ports** (`I<Module>Repository`), keeping persistence swappable (swap MongoDB for Postgres by writing a new repository class — zero domain changes).
 - **Unit of Work** uses `AsyncLocalStorage` to propagate a shared MongoDB session across repositories, giving multi-document operations the same ACID transaction as a single write, with transient-error retries.
 
@@ -471,7 +476,7 @@ All routes are mounted from `apps/api/routes/index.ts` under the following route
 
 ```
 /product   /product-variant   /product-inventory   /order   /order-items
-/category   /address   /users   /vendor   /home
+/category   /address   /users   /vendor   /home   /review   /stats
 ```
 
 The **complete endpoint catalog** (method × path × access guard × action) is tabulated in the project documentation — covering user moderation, product & variant management, inventory ops, multi-vendor checkout, category management, address book, vendor KYC, and the full Home CMS surface.
@@ -535,7 +540,8 @@ bun run dev        # API (:8000) + Web (:3000) concurrently
 ```bash
 bun run lint      # Next.js ESLint (apps/web)
 bun run typecheck # strict TS across all workspaces
-bun test          # test suite (currently 9 passing home-module tests)
+bun run arch      # cross-module / layering boundary scan
+bun test          # test suite (78 tests across 13 files)
 ```
 
 ---
@@ -547,6 +553,7 @@ bun test          # test suite (currently 9 passing home-module tests)
 | `bun run dev` | Run API + Web concurrently in watch mode |
 | `bun run build` | Build the API workspace |
 | `bun run typecheck` | `tsc --noEmit` across all workspaces |
+| `bun run arch` | Architecture boundary scan (`scripts/arch-check.ts`) |
 | `bun test` / `bun run test:watch` | Run the test suite (plain / watch) |
 | `bun run lint` / `bun run format` | Next.js ESLint (web) & Biome format |
 | `pm2 start ecosystem.config.js` | Production process manager (Bun, fork mode, port 8000) |
@@ -582,12 +589,12 @@ Build **bottom-up** — never create a file that depends on something you haven'
 
 | Item | Status |
 | :--- | :--- |
-| `reviews` module HTTP surface | Scaffolded (aggregate + 7 events) — **no routes yet**, not mounted in `routes/index.ts`. |
-| Event publishing | Only `home` drains + publishes. All other modules **raise** events but app services don't call `publish()` yet. |
+| `reviews` module HTTP surface | Mounted at `/review`; aggregate + events + routes wired. |
+| Event publishing | Aggregates raise events and app services publish them after commit; `stats` and `user` modules consume them via the EventBus. |
 | `order` lifecycle events | `confirm`/`complete`/`cancel`/`refund`/`return` events defined but only `order.created` is raised. |
 | `sellerMiddleware` | Exists but not yet wired to any route (vendor scoping enforced in app services/controllers today). |
-| `bun run lint:imports` | **Broken** — references missing `scripts/check-imports.ts`; the import-boundary validator needs reviving. |
-| Biome lint scripts | Currently broken repo-wide by a `biome.json` schema/CLI version mismatch (2.3.8 vs 2.5.12). |
+| `bun run arch` | Architecture boundary checker (`scripts/arch-check.ts`) — replaces the old broken `lint:imports` script. |
+| Biome lint scripts | `bun run format` works; Biome is used for formatting only, ESLint covers linting. |
 | Mobile app | Placeholder; real navigation + storefront flows pending. |
 | Distributed event bus | In-memory EventBus is swappable behind `IEventBus` (Kafka/RabbitMQ) — not yet implemented. |
 
@@ -596,4 +603,5 @@ Build **bottom-up** — never create a file that depends on something you haven'
 ## 📘 Documentation
 
 - **Architecture & engineering manual:** [`PROJECT_DOCUMENTATION.md`](./PROJECT_DOCUMENTATION.md) — the definitive reference for how every pattern in this system works and why.
+- **Hands-on playbook:** [`docs/architecture-guide.html`](./docs/architecture-guide.html) — build a module from scratch in 12 steps, then learn cross-module reads, actions, events, middleware ports and transactions, with a verification ladder and cookbook.
 - **Agent/contributor brief:** [`AGENTS.md`](./AGENTS.md) — commands, conventions, and gotchas for automated tooling.

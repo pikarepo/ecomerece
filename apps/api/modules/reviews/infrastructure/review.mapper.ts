@@ -38,6 +38,12 @@ export const reviewMapper = {
         doc.deleted.deletedFrom ? EffectiveDate.rehydrate(doc.deleted.deletedFrom) : null,
         doc.deleted.reason ? Reason.rehydrate(doc.deleted.reason) : null,
       ),
+      BlockInfoVO.rehydrate(
+        doc.block?.blockedBy ? Id.rehydrate(doc.block.blockedBy) : null,
+        doc.block?.blocked ?? false,
+        doc.block?.blockedFrom ? EffectiveDate.rehydrate(doc.block.blockedFrom) : null,
+        doc.block?.reason ? Reason.rehydrate(doc.block.reason) : null,
+      ),
 
       EffectiveDate.rehydrate(doc.createdAt),
       Quantity.rehydrate(doc.version),
@@ -63,6 +69,12 @@ export const reviewMapper = {
       images: review.images.map((img) => img.value),
       isVerifiedPurchase: review.isVerifiedPurchase,
       vendorReply: review.vendorReply?.value ?? null,
+      block: {
+        blocked: review.block.blocked,
+        blockedFrom: review.block.from?.value ?? null,
+        blockedBy: review.block.performedBy?.value ?? null,
+        reason: review.block.reason?.value ?? null,
+      },
       deleted: {
         deleted: review.delete.deleted,
         deletedFrom: review.delete.from?.value ?? null,
@@ -93,6 +105,12 @@ export const reviewMapper = {
       images: review.images.map((img) => img.value),
       isVerifiedPurchase: review.isVerifiedPurchase,
       vendorReply: review.vendorReply?.value ?? null,
+      block: {
+        blocked: review.block.blocked,
+        blockedFrom: review.block.from?.value ?? null,
+        blockedBy: review.block.performedBy?.value ?? null,
+        reason: review.block.reason?.value ?? null,
+      },
       deleted: {
         deleted: review.delete.deleted,
         deletedFrom: review.delete.from?.value ?? null,

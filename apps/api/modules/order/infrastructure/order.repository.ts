@@ -17,6 +17,11 @@ export class OrderRepository extends MongoRepository<OrderPersistence> implement
     return OrderMapper.persistenceToAggregate(doc);
   }
 
+  async FindByIds(ids: Id[]): Promise<OrderAggregate[]> {
+    const docs = await super.find({ _id: { $in: ids.map((id) => id.value) } });
+    return docs.map(OrderMapper.persistenceToAggregate);
+  }
+
   async EnsureUniqueImpodentKey(key: Id): Promise<void> {
     const doc = await super.findOne({ idempotentKey: key.value });
     if (doc) {

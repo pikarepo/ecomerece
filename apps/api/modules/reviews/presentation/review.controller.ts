@@ -1,9 +1,14 @@
 import {
+  addVendorReplyDto,
+  blockReviewDto,
   createMyReviewDtoSchema,
+  deleteMyReviewDto,
   type GetAdminPaginatedReviewsQueryDto,
   type GetPaginatedReviewsQueryDto,
   getAdminPaginatedReviewsQuerySchema,
   getPaginatedReviewsQuerySchema,
+  reportReviewDto,
+  updateMyReviewDto,
 } from '@ecomerece/shared';
 import type { Context } from 'hono';
 import { idSchema } from '../../../../../packages/shared/dtos/id-schema';
@@ -38,5 +43,56 @@ export class ReviewController extends BaseController<ReviewApplicationService> {
       getAdminPaginatedReviewsQuerySchema,
     );
     return this.ok(c, await this.service.findAdminPaginatedReviews(query));
+  };
+
+  updateMyReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, updateMyReviewDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.updateMyReview(id, data, actor));
+  };
+
+  deleteMyReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, deleteMyReviewDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.deleteMyReview(id, data, actor));
+  };
+
+  likeReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    return this.ok(c, await this.service.likeReview(id));
+  };
+
+  dislikeReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    return this.ok(c, await this.service.dislikeReview(id));
+  };
+
+  reportReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, reportReviewDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.reportReview(id, data, actor));
+  };
+
+  addVendorReply = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, addVendorReplyDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.addVendorReply(id, data, actor));
+  };
+
+  blockReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, blockReviewDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.blockReview(id, data, actor));
+  };
+
+  unblockReview = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.unblockReview(id, actor));
   };
 }

@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { CreateVendorModule } from '../vendor.module';
+import type { CreateVendorModule } from '../vendor.module';
 
-const { vendorController } = CreateVendorModule();
-const vendorRoutes = new Hono();
+type VendorController = ReturnType<typeof CreateVendorModule>['vendorController'];
+
+export function createVendorRoutes(vendorController: VendorController) {
+  const vendorRoutes = new Hono();
 
 vendorRoutes.post('/my', authMiddleware, vendorController.createMyVendor);
 vendorRoutes.get('/my', authMiddleware, vendorController.getMyVendor);
@@ -30,4 +32,6 @@ vendorRoutes.get(
   vendorController.getAdminPaginatedVendors,
 );
 vendorRoutes.get('/:id', vendorController.getVendorById);
-export default vendorRoutes;
+
+  return vendorRoutes;
+}

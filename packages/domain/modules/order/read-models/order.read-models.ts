@@ -3,6 +3,7 @@ export interface OrderReadModel {
   buyerId: string;
   totalPrice: number;
   address: string;
+  status: string;
   deleted: {
     deleted: boolean;
     deletedFrom?: Date | null;

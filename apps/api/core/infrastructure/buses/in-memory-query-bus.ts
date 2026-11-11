@@ -7,6 +7,10 @@ export class InMemoryQueryBus implements IQueryBus {
     queryClass: QueryConstructor<TQuery>,
     handler: IQueryHandler<TQuery, TResult>,
   ): void {
+    if (this.handlers.has(queryClass)) {
+      throw new Error(`Handler already registered for ${queryClass.name}`);
+    }
+
     this.handlers.set(queryClass, handler as IQueryHandler<IQuery, unknown>);
   }
 

@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../apps/api/errors/app-error';
+import { BadRequestError } from '../errors/app-error';
 
 export abstract class Identifier<T extends string | number> {
   protected constructor(protected readonly _value: T) {

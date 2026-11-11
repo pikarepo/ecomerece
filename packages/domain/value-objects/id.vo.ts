@@ -1,5 +1,5 @@
 import { v7 as uuidv7 } from 'uuid';
-import { BadRequestError } from '../../../apps/api/errors/app-error';
+import { BadRequestError } from '../errors/app-error';
 import { Identifier } from './identifier-vo';
 
 export class Id extends Identifier<string> {

@@ -11,6 +11,7 @@ import {
 } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import type {
+  blockCategoryDtoType,
   createCategoryDtoType,
   deleteCategoryType,
   GetAdminPaginatedCategoriesDto,
@@ -19,7 +20,7 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import { BaseService } from '../../../core/services/base.services';
-import type { UserPersistence } from '../../user/infrastructure/user.models';
+import type { AuthActor } from '@ecomerece/contracts';
 import { CategoryMapper } from '../infrastructure/category.mapper';
 import type { CategoryPersistence } from '../infrastructure/category.models';
 import type { CategoryRepository } from '../infrastructure/category.repository';
@@ -96,7 +97,7 @@ export class CategoryAppService extends BaseService {
 
   async createCategory(
     data: createCategoryDtoType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<CategoryMessagesType> {
     const id = Id.create();
     const title = Title.create(data.title);
@@ -121,7 +122,7 @@ export class CategoryAppService extends BaseService {
 
   async updateCategory(
     data: updateCategoryType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<CategoryMessagesType> {
     const id = Id.create(data.id);
     const actorId = Id.create(actor._id);
@@ -148,7 +149,7 @@ export class CategoryAppService extends BaseService {
 
   async deleteCategoryById(
     data: deleteCategoryType,
-    actor: UserPersistence,
+    actor: AuthActor,
   ): Promise<CategoryMessagesType> {
     const id = Id.create(data.id);
     const actorId = Id.create(actor._id);
@@ -157,6 +158,29 @@ export class CategoryAppService extends BaseService {
     category.deleteCategory(reason, actorId);
     await this.persist(category);
     return CategoryMessags.deleted(id, actorId);
+  }
+
+  async blockCategoryById(
+    id: string,
+    data: blockCategoryDtoType,
+    actor: AuthActor,
+  ): Promise<CategoryMessagesType> {
+    const categoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    const category = await this.categoryRepo.FindByIdOrThrow(categoryId);
+    category.blockCategory(reason, actorId);
+    await this.persist(category);
+    return CategoryMessags.blocked(categoryId, actorId);
+  }
+
+  async unblockCategoryById(id: string, actor: AuthActor): Promise<CategoryMessagesType> {
+    const categoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const category = await this.categoryRepo.FindByIdOrThrow(categoryId);
+    category.unblockCategory(actorId);
+    await this.persist(category);
+    return CategoryMessags.unblocked(categoryId, actorId);
   }
 
   async getCategoryById(id: string) {

@@ -1,10 +1,12 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { createHomeModule } from '../home.module';
+import type { createHomeModule } from '../home.module';
 
-export const homeRoutes = new Hono();
-const { homeController } = createHomeModule();
+type HomeController = ReturnType<typeof createHomeModule>['homeController'];
+
+export function createHomeRoutes(homeController: HomeController) {
+  const homeRoutes = new Hono();
 
 // Public Read
 homeRoutes.get('/', homeController.getHome);
@@ -49,4 +51,5 @@ homeRoutes.patch(
   homeController.reorderContainers,
 );
 
-export default homeRoutes;
+  return homeRoutes;
+}

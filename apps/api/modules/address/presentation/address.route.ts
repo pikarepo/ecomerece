@@ -1,13 +1,15 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import { createAddressModule } from '../address.module';
+import type { createAddressModule } from '../address.module';
 
-export const AddressRoutes = new Hono();
+type AddressController = ReturnType<typeof createAddressModule>['addressController'];
 
-const { addressController } = createAddressModule();
+export function createAddressRoutes(addressController: AddressController) {
+  const AddressRoutes = new Hono();
 
 AddressRoutes.get('/my', authMiddleware, addressController.getMyAddresses);
+AddressRoutes.get('/:id', authMiddleware, addressController.getAddressById);
 AddressRoutes.get(
   '/admin/all',
   authMiddleware,
@@ -23,4 +25,7 @@ AddressRoutes.patch(
   authMiddleware,
   adminMiddleware,
   addressController.recoverAddress,
-);
+  );
+
+  return AddressRoutes;
+}

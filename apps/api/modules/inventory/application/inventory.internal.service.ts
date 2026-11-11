@@ -11,6 +11,18 @@ export class InventoryInternalServcie extends BaseService {
     super();
   }
 
+  async getInventoryById(id: Id): Promise<InventoryReadModel | null> {
+    const inventory = await this.inventoryRepo.FindById(id);
+    if (!inventory) return null;
+    return InventoryMapper.aggregateToReadModel(inventory);
+  }
+
+  async getInventoryByVariantId(variantId: Id): Promise<InventoryReadModel | null> {
+    const inventory = await this.inventoryRepo.FindByVariantId(variantId);
+    if (!inventory) return null;
+    return InventoryMapper.aggregateToReadModel(inventory);
+  }
+
   async verifyInventoriesItemsGet(inventoryItems: OrderItem[]): Promise<{
     validIds: Id[];
     notFoundIds: Id[];
@@ -76,10 +88,14 @@ export class InventoryInternalServcie extends BaseService {
       buyableIds.some((id) => id.value === inv.variantId.value),
     );
 
-    for (let i = 0; i <= buyableInventories.length - 1; i++) {
-      const quantity = inventoryItems[i].quantity;
+    const itemsByVariant = new Map(
+      inventoryItems.map((item) => [item.variantId.value, item] as const),
+    );
 
-      buyableInventories[i].reserve(quantity, actorId);
+    for (const inventory of buyableInventories) {
+      const item = itemsByVariant.get(inventory.variantId.value);
+      if (!item) continue;
+      inventory.reserve(item.quantity, actorId);
     }
     await this.inventoryRepo.SaveMany(buyableInventories);
     const inventoriesReadModel = validInventories.map((inv) =>

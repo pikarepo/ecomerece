@@ -1,4 +1,4 @@
-import { BadRequestError } from '../../../../../apps/api/errors/app-error';
+import { BadRequestError } from '../../../errors/app-error';
 import { Money, Quantity } from '../../../value-objects';
 
 export class VendorStatsVO {

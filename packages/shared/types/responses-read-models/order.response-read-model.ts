@@ -3,5 +3,6 @@ export interface OrderResponseReadModel {
   buyerId: string;
   totalPrice: number;
   address: string;
+  status: string;
   createdAt: Date;
 }

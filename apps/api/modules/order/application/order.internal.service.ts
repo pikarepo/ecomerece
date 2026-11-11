@@ -8,6 +8,12 @@ export class OrderInternalService extends BaseService {
     super();
   }
 
+  async getOrderById(orderId: Id): Promise<OrderReadModel | null> {
+    const order = await this.orderRepo.FindById(orderId);
+    if (!order) return null;
+    return OrderMapper.aggregateToReadModel(order);
+  }
+
   async ensureActiveOrderGetById(
     orderId: Id,
   ): Promise<{ order: OrderReadModel | null; active: boolean }> {

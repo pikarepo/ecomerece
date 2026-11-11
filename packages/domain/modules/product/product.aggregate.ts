@@ -1,5 +1,5 @@
-import { BadRequestError } from '../../../../apps/api/errors/app-error';
-import { type desclaimerItem, emptyMetrics, type Metrics } from '../../../shared';
+import { BadRequestError } from '../../errors/app-error';
+import type { desclaimerItem, Metrics } from '../../../shared';
 import { AggregateRoot } from '../../aggregate-root';
 import {
   AppearanceVO,
@@ -28,6 +28,7 @@ import { ProductDisclaimersRemovedEvent } from './events/product-disclaimers-rem
 import { ProductImagesAddedEvent } from './events/product-images-added.event';
 import { ProductImagesRemovedEvent } from './events/product-images-removed.event';
 import { ProductInStockUpdatedEvent } from './events/product-in-stock-updated.event';
+import { emptyMetrics } from '../stats/metrics';
 import { ProductIngredientsAddedEvent } from './events/product-ingredients-added.event';
 import { ProductIngredientsClearedEvent } from './events/product-ingredients-cleared.event';
 import { ProductIngredientsDisabledEvent } from './events/product-ingredients-disabled.event';

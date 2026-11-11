@@ -4,3 +4,4 @@ export * from './category-deleted.event';
 export * from './category-image-updated.event';
 export * from './category-meta-updated.event';
 export * from './category-recovered.event';
+export * from './category-unblocked.event';

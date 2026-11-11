@@ -1,6 +1,7 @@
 import {
   buyMyInventoryStockDto,
   createMyInventoryDto,
+  deleteInventoryDto,
   getAdminPaginatedInventoryQuerySchema,
   removeMyInventoryStockDto,
   updateMylowStockThresholdDto,
@@ -38,6 +39,16 @@ export class InventoryController extends BaseController<InventoryApplicationServ
     const id = this.param(c, 'id', idSchema);
 
     return this.ok(c, await this.service.getInventoryByVarientId(id));
+  };
+  getInventoryById = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    return this.ok(c, await this.service.getInventoryById(id));
+  };
+  deleteMyInventory = async (c: Context) => {
+    const data = await this.body(c, deleteInventoryDto);
+    const actor = c.get('user');
+    const inventoryId = this.param(c, 'id', idSchema);
+    return this.ok(c, await this.service.deleteMyInventory(data, inventoryId, actor));
   };
   getAdminPaginatedInventory = async (c: Context) => {
     const query = this.query(c, getAdminPaginatedInventoryQuerySchema);

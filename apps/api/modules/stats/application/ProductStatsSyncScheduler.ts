@@ -1,5 +1,5 @@
 import { ProductStatsDenormalizationRequestedEvent } from '@ecomerece/domain';
-import { eventBus } from '../../../core/infrastructure/buses/in-memory-event-bus';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { redis } from '../../../lib/redis';
 import { statsSyncSettingsService } from './StatsSyncSettingsService';
 import { effectiveSyncIntervalMs } from './stats-sync-interval';
@@ -18,6 +18,8 @@ const DEFAULT_TICK_MS = 60_000;
  */
 export class ProductStatsSyncScheduler {
   private timer: NodeJS.Timeout | null = null;
+
+  constructor(private readonly eventBus: IEventBus) {}
 
   start(tickMs = DEFAULT_TICK_MS): void {
     if (this.timer) return;
@@ -48,7 +50,9 @@ export class ProductStatsSyncScheduler {
       });
       if (!acquired) return;
 
-      await eventBus.publish(new ProductStatsDenormalizationRequestedEvent({ force: false }));
+      await this.eventBus.publish(
+        new ProductStatsDenormalizationRequestedEvent({ force: false }),
+      );
       await statsSyncSettingsService.markRan(now);
     } catch (error) {
       console.error('[stats-sync] scheduler tick failed:', error);
@@ -56,10 +60,11 @@ export class ProductStatsSyncScheduler {
   }
 }
 
-export const productStatsSyncScheduler = new ProductStatsSyncScheduler();
-
 /** Admin-triggered "data correction": publishes the same event with force:true. */
-export async function triggerProductStatsDenormalization(force: boolean): Promise<void> {
+export async function triggerProductStatsDenormalization(
+  force: boolean,
+  eventBus: IEventBus,
+): Promise<void> {
   await eventBus.publish(new ProductStatsDenormalizationRequestedEvent({ force }));
   if (force) await statsSyncSettingsService.markRan();
 }

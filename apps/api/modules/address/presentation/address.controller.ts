@@ -20,6 +20,11 @@ export class AddressController extends BaseController<AddressApplicationService>
     const actor = c.get('user');
     return this.ok(c, await this.service.getMyAddresses(actor));
   };
+  getAddressById = async (c: Context) => {
+    const addressId = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.getAddressById(addressId, actor));
+  };
   deleteMyAddress = async (c: Context) => {
     const addressId = this.param(c, 'id', idSchema);
     const actor = c.get('user');

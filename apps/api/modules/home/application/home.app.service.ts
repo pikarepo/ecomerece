@@ -440,12 +440,12 @@ export class HomeAppService extends BaseService {
       subTitle: data.subTitle !== undefined ? Title.create(data.subTitle) : existing.subTitle,
       query: data.query
         ? BaseQueryVO.create({
-            filter: data.query.filter as Record<string, unknown> | undefined,
-            cursor: data.query.cursor,
-            limit: data.query.limit !== undefined ? Quantity.create(data.query.limit) : undefined,
-            direction: data.query.direction,
-            sort: data.query.sort as Record<string, 1 | -1> | null | undefined,
-          })
+          filter: data.query.filter as Record<string, unknown> | undefined,
+          cursor: data.query.cursor,
+          limit: data.query.limit !== undefined ? Quantity.create(data.query.limit) : undefined,
+          direction: data.query.direction,
+          sort: data.query.sort as Record<string, 1 | -1> | null | undefined,
+        })
         : existing.query,
       displayOrder:
         data.displayOrder !== undefined
