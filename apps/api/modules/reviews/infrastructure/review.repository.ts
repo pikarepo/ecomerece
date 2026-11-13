@@ -69,7 +69,7 @@ export class ReviewRepository
   }
 
   async Save(review: ReviewAggregate): Promise<void> {
-    const data = reviewMapper.aggregateToPersistence(review);
+    const { version: _, ...data } = reviewMapper.aggregateToPersistence(review);
 
     const result = await ReviewModel.updateOne(
       {

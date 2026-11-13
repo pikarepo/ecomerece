@@ -10,7 +10,13 @@ export class NameInfoVO {
   static create(firstName: PersonName, middleName: PersonName | null, lastName: PersonName | null) {
     const arr = [];
     arr.push(firstName, middleName, lastName);
-    return new NameInfoVO(firstName, middleName, lastName, arr.join(' '));
+    // A missing middle name must not leave a double space in the derived
+    // full name — consumers validate it as a single Name value.
+    const fullName = arr
+      .filter(Boolean)
+      .map((part) => part!.value)
+      .join(' ');
+    return new NameInfoVO(firstName, middleName, lastName, fullName);
   }
   static rehydrate(
     firstName: PersonName,

@@ -18,10 +18,9 @@ import type {
   GetAdminPaginatedAddressesQueryDto,
 } from '../../../../../packages/shared';
 import type { updateMyAddressDtoType } from '../../../../../packages/shared/request-dtos/address/update-address.dto';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
+import type { IUserQueries } from '@ecomerece/contracts';
 import type { AuthActor } from '@ecomerece/contracts';
 import { AddressMapper } from '../infrastructure/address.mapper';
 import type { AddressPersistence } from '../infrastructure/address.models';
@@ -31,7 +30,7 @@ import { AddressMessages, type addressMessagesType } from '../presentation/addre
 export class AddressApplicationService extends BaseService {
   constructor(
     private readonly addressRepo: AddressRepository,
-    private readonly queryBus: IQueryBus,
+    private readonly userQueries: IUserQueries,
     private readonly eventBus: IEventBus,
   ) {
     super();
@@ -45,9 +44,7 @@ export class AddressApplicationService extends BaseService {
   }
 
   async canEditAddress(actorId: Id): Promise<void> {
-    const activeUser = await this.queryBus.execute(
-      new EnsureActiveUserGetByIdQuery({ userId: actorId }),
-    );
+    const activeUser = await this.userQueries.ensureActiveById(actorId);
     if (!activeUser.user) throw new BadRequestError('User not found.');
     if (!activeUser.active) throw new BadRequestError('User is not active.');
   }
@@ -85,7 +82,7 @@ export class AddressApplicationService extends BaseService {
     const addressId = Id.create(id);
     const actorId = Id.create(actor._id);
     const address = await this.addressRepo.FindByIdOrThrow(addressId);
-    address.setAsDefault();
+    address.setAsDefault(actorId);
     await this.addressRepo.Save(address);
     await this.publishEvents(address);
     const response = AddressMapper.aggregateToResponseReadModel(address);

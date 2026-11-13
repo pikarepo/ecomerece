@@ -15,23 +15,28 @@ import type {
 import type { FilterQuery } from 'mongoose';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
-import {
-  GetOrderItemsByOrderIdQuery,
-  type IInventoryReservation,
-  type IOrderItemsWriter,
+import type {
+  IAddressQueries,
+  IInventoryReservation,
+  IOrderItemsWriter,
+  IProductQueries,
+  IProductVariantQueries,
 } from '@ecomerece/contracts';
+import type { OrderItemReadModel } from '@ecomerece/domain/modules/order-items/read-models/order-items.read-model';
+import type { OrderItemsQueryAdapter } from '../../order-items/infrastructure/order-items-query.adapter';
 import { BaseService } from '../../../core/services/base.services';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveAddressGetByIdQuery } from '@ecomerece/contracts';
-import { VerifyProductAndGetQuery } from '@ecomerece/contracts';
-import { VerifyVariantsAndGetQuery } from '@ecomerece/contracts';
 import type { AuthActor } from '@ecomerece/contracts';
 import { OrderMapper } from '../infrastructure/order.mapper';
 import type { OrderPersistence } from '../infrastructure/order.model';
 import type { OrderRepository } from '../infrastructure/order.repository';
 import { OrderMessages } from '../presentation/order.messages';
+
+/** Order item fields needed to cascade a state change into inventory. */
+type OrderItemRef = { id: Id; orderId: Id; variantId: Id; quantity: Quantity };
+
+type InventoryTransition = 'complete' | 'release' | 'restock';
 
 /** A cart line that survived product, variant and inventory validation. */
 type ResolvedOrderItem = {
@@ -54,10 +59,13 @@ type ResolvedOrderItem = {
 export class OrderApplicationService extends BaseService {
   constructor(
     private readonly orderRepo: OrderRepository,
-    private readonly queryBus: IQueryBus,
+    private readonly addressQueries: IAddressQueries,
+    private readonly variantQueries: IProductVariantQueries,
+    private readonly productQueries: IProductQueries,
     private readonly eventBus: IEventBus,
     private readonly inventoryReservation: IInventoryReservation,
     private readonly orderItemsWriter: IOrderItemsWriter,
+    private readonly orderItemsQueries: OrderItemsQueryAdapter,
     private readonly unitOfWork: UnitOfWork,
   ) {
     super();
@@ -75,13 +83,11 @@ export class OrderApplicationService extends BaseService {
     items: { variantId: Id; quantity: Quantity }[],
     actorId: Id,
   ): Promise<ResolvedOrderItem[]> {
-    const variants = await this.queryBus.execute(
-      new VerifyVariantsAndGetQuery({ ids: items.map((item) => item.variantId) }),
+    const variants = await this.variantQueries.verifyAndGet(
+      items.map((item) => item.variantId),
     );
-    const products = await this.queryBus.execute(
-      new VerifyProductAndGetQuery({
-        ids: variants.variantReadModel.map((variant) => Id.create(variant.productId)),
-      }),
+    const products = await this.productQueries.verifyAndGet(
+      variants.variantReadModel.map((variant) => Id.create(variant.productId)),
     );
     const productById = new Map(products.productReadModel.map((product) => [product.id, product]));
     const variantById = new Map(variants.variantReadModel.map((variant) => [variant.id, variant]));
@@ -130,6 +136,7 @@ export class OrderApplicationService extends BaseService {
 
 
   async createMyOrder(data: createMyOrderDtoType, actor: AuthActor) {
+
     const orderId = Id.create();
     const idempotentKey = Id.create(data.idempotentKey);
     const addressId = Id.create(data.addressId);
@@ -139,19 +146,15 @@ export class OrderApplicationService extends BaseService {
       variantId: Id.create(value.variantId),
       quantity: Quantity.create(value.quantity),
     }));
-
+    if (waitingTime.remainingHours > 4) throw new BadRequestError('Waiting time must not be far in the future.');
     // Address is only a guard; read it before the transaction to fail fast.
-    const { address, active } = await this.queryBus.execute(
-      new EnsureActiveAddressGetByIdQuery({ id: addressId, userId: actorId }),
-    );
+    const { address, active } = await this.addressQueries.ensureActiveById(addressId, actorId);
+
     if (!address || !active) throw new BadRequestError('Address not found or inactive.');
 
     const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
-      // Checked inside the transaction so concurrent retries cannot both pass.
       await this.orderRepo.EnsureUniqueImpodentKey(idempotentKey);
       const orderItems = await this.resolveBuyableItems(items, actorId);
-
-      // Total is derived from reserved lines only, never from unreserved stock.
       const order = OrderAggregate.create({
         id: orderId,
         idempotentKey,
@@ -161,7 +164,6 @@ export class OrderApplicationService extends BaseService {
         buyerId: actorId,
         address: FullAddressVO.create(address.fullAddress),
       });
-
       const itemEvents = await this.orderItemsWriter.create(
         orderItems.map((item) => ({
           id: Id.create(),
@@ -174,7 +176,6 @@ export class OrderApplicationService extends BaseService {
           price: Money.create(item.price),
         })),
       );
-
       // Aggregate raises `order.created`; events stay buffered until commit.
       order.createOrder();
       await this.orderRepo.Create(order);
@@ -247,10 +248,15 @@ export class OrderApplicationService extends BaseService {
     return OrderMapper.aggregateToResponseReadModel(order);
   }
 
-  /** Loads the order-item ids so order transitions can cascade to items. */
-  private async itemRefs(orderId: Id): Promise<{ id: Id; orderId: Id }[]> {
-    const items = await this.queryBus.execute(new GetOrderItemsByOrderIdQuery({ orderId }));
-    return items.map((item) => ({ id: Id.create(item._id), orderId }));
+  /** Loads the order items so transitions can cascade to items and inventory. */
+  private async itemRefs(orderId: Id): Promise<OrderItemRef[]> {
+    const items = await this.orderItemsQueries.getByOrderId(orderId);
+    return items.map((item: OrderItemReadModel) => ({
+      id: Id.create(item._id),
+      orderId,
+      variantId: Id.create(item.variantId),
+      quantity: Quantity.create(item.quantity),
+    }));
   }
 
   private async publish(events: IEvent[]): Promise<void> {
@@ -258,18 +264,42 @@ export class OrderApplicationService extends BaseService {
   }
 
   /**
-   * Runs an order transition and its item cascade in one transaction.
-   * Events stay buffered until the transaction commits.
+   * Keeps the inventory module in step with the order state machine.
+   * `complete` consumes held stock; `release` returns it on cancellation;
+   * `restock` returns fulfilled stock on a return.
+   */
+  private async applyInventoryTransition(
+    action: InventoryTransition | null,
+    items: OrderItemRef[],
+    actorId: Id,
+  ): Promise<void> {
+    if (!action || items.length === 0) return;
+    const lines = items.map((item) => ({ variantId: item.variantId, quantity: item.quantity }));
+    if (action === 'complete') await this.inventoryReservation.complete(lines, actorId);
+    else if (action === 'release') await this.inventoryReservation.release(lines, actorId);
+    else await this.inventoryReservation.restock(lines, actorId);
+  }
+
+  /**
+   * Runs an order transition, its item cascade and the matching inventory
+   * change in one transaction. Events stay buffered until the transaction commits.
    */
   private async transitionOrder(
     orderId: Id,
+    actorId: Id,
     apply: (order: OrderAggregate) => void,
-    cascade: (items: { id: Id; orderId: Id }[]) => Promise<IEvent[]>,
+    cascade: (items: OrderItemRef[]) => Promise<IEvent[]>,
+    inventoryAction?: (order: OrderAggregate) => InventoryTransition | null,
   ): Promise<OrderAggregate> {
     const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
       const order = await this.orderRepo.FindByIdOrThrow(orderId);
-      const itemEvents = await cascade(await this.itemRefs(orderId));
+      const items = await this.itemRefs(orderId);
+      const action = inventoryAction?.(order) ?? null;
+      // Validate the state transition before any side effect, so a rejected
+      // transition never reaches the item cascade or the inventory module.
       apply(order);
+      const itemEvents = await cascade(items);
+      await this.applyInventoryTransition(action, items, actorId);
       await this.orderRepo.Save(order);
       return { order, itemEvents };
     });
@@ -283,6 +313,7 @@ export class OrderApplicationService extends BaseService {
     const reason = Reason.create(data.reason);
     await this.transitionOrder(
       orderId,
+      actorId,
       (order) => {
         if (!order.buyerId.equals(actorId)) {
           throw new BadRequestError('You do not own this order.');
@@ -290,6 +321,7 @@ export class OrderApplicationService extends BaseService {
         order.cancelOrder(reason, actorId);
       },
       (items) => this.orderItemsWriter.cancel(items),
+      () => 'release',
     );
     return OrderMessages.orderCancelled(orderId, actorId, reason);
   }
@@ -299,6 +331,7 @@ export class OrderApplicationService extends BaseService {
     const actorId = Id.create(actor._id);
     await this.transitionOrder(
       orderId,
+      actorId,
       (order) => order.confirmOrder(actorId),
       (items) => this.orderItemsWriter.confirm(items),
     );
@@ -310,8 +343,10 @@ export class OrderApplicationService extends BaseService {
     const actorId = Id.create(actor._id);
     await this.transitionOrder(
       orderId,
+      actorId,
       (order) => order.completeOrder(actorId),
       (items) => this.orderItemsWriter.complete(items),
+      () => 'complete',
     );
     return OrderMessages.orderCompleted(orderId, actorId);
   }
@@ -322,8 +357,12 @@ export class OrderApplicationService extends BaseService {
     const reason = Reason.create(data.reason);
     await this.transitionOrder(
       orderId,
+      actorId,
       (order) => order.returnOrder(reason, actorId),
       (items) => this.orderItemsWriter.returnItems(items),
+      // A completed order has already consumed its reservation; a confirmed
+      // one still holds it, so it is released instead of restocked.
+      (order) => (order.status.status === 'completed' ? 'restock' : 'release'),
     );
     return OrderMessages.orderReturned(orderId, actorId, reason);
   }
@@ -334,8 +373,12 @@ export class OrderApplicationService extends BaseService {
     const reason = Reason.create(data.reason);
     await this.transitionOrder(
       orderId,
+      actorId,
       (order) => order.refundOrder(reason, actorId),
       (items) => this.orderItemsWriter.refund(items),
+      // A refund is financial only: stock already came back through a return,
+      // or never left the shelf.
+      () => null,
     );
     return OrderMessages.orderRefunded(orderId, actorId, reason);
   }

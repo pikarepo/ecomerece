@@ -1,15 +1,11 @@
 import type { ProductVariantReadModel } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { productVariantMapper } from '../infrastructure/product-variant.mapper';
 import type { ProductVariantRepository } from '../infrastructure/product-variant.repository';
 
 export class productVariantInternalService extends BaseService {
-  constructor(
-    private readonly variantRepo: ProductVariantRepository,
-    private readonly queryBus: IQueryBus,
-  ) {
+  constructor(private readonly variantRepo: ProductVariantRepository) {
     super();
   }
 

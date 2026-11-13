@@ -13,7 +13,6 @@ export class ProductInternelService extends BaseService {
     productId: Id,
   ): Promise<{ product: ProductReadModel | null; active: boolean }> {
     const product = await this.productRepo.FindById(productId);
-
     if (!product) return { product: null, active: false };
     const ProductReadModel = ProductMapper.aggregateToReadModel(product);
     if (product.block.isBlocked || product.delete.isDeleted)
@@ -57,9 +56,7 @@ export class ProductInternelService extends BaseService {
     },
     actorId: Id,
   ): Promise<{ ok: boolean }> {
-    console.log('1');
     const product = await this.productRepo.FindById(productId);
-    console.log('2');
     if (!product) return { ok: false };
     product.updatePricingSummary(
       price.minPrice,
@@ -68,7 +65,6 @@ export class ProductInternelService extends BaseService {
       price.maxDiscountedPrice,
       actorId,
     );
-    console.log('3');
     await this.productRepo.Save(product).catch(() => {
       return { ok: false };
     });

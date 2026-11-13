@@ -14,7 +14,10 @@ export class UserAuthLookupAdapter implements IAuthUserLookup {
       actor: {
         _id: String(user._id),
         image: user.image ?? '',
-        name: { fullName: user.name.fullName },
+        // Older rows were persisted with collapsed-less whitespace (for
+        // example a missing middle name left "First  Last"). Normalise here so
+        // every consumer receives one Name-valid full name.
+        name: { fullName: user.name.fullName.replace(/\s+/g, ' ').trim() },
       },
       role: user.role?.role,
       blocked: Boolean(user.block?.blocked),

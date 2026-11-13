@@ -7,7 +7,7 @@ import {
   type Description,
   EffectiveDate,
   type Id,
-  type PersonName,
+  type Name,
   Quantity,
   type Reason,
   type Title,
@@ -27,7 +27,7 @@ type CreateReviewProps = {
   id: Id;
   productId: Id;
   authorId: Id;
-  authorName: PersonName;
+  authorName: Name;
   authorAvatar: UrlVO;
   orderId?: Id | null;
   rating: Quantity;
@@ -43,7 +43,7 @@ export class ReviewAggregate extends AggregateRoot {
     private readonly _productId: Id,
     private readonly _authorId: Id,
     private readonly _orderId: Id | null,
-    private readonly _authorName: PersonName,
+    private readonly _authorName: Name,
     private readonly _authorAvatar: UrlVO,
     private _reportCount: Quantity,
     private _reportReasons: Reason[],
@@ -109,7 +109,7 @@ export class ReviewAggregate extends AggregateRoot {
     _productId: Id,
     _authorId: Id,
     _orderId: Id | null,
-    _authorName: PersonName,
+    _authorName: Name,
     _authorAvatar: UrlVO,
     _reportCount: Quantity,
     _reportReasons: Reason[],
@@ -251,7 +251,7 @@ export class ReviewAggregate extends AggregateRoot {
     return this._orderId;
   }
 
-  public get authorName(): PersonName {
+  public get authorName(): Name {
     return this._authorName;
   }
 

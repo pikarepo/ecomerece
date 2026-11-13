@@ -1,45 +1,26 @@
 import type { ProductReadModel } from '@ecomerece/domain';
-import type { IQuery } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Money } from '@ecomerece/domain/value-objects/money.vo';
 
-export class EnsureActiveProductGetByIdQuery
-  implements IQuery<{ product: ProductReadModel | null; active: boolean }>
-{
-  readonly __result?: { product: ProductReadModel | null; active: boolean };
-  readonly type = 'EnsureActiveProductGetByIdQuery';
-  public readonly payload: { productId: Id };
-
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ productId: Id }];
-    this.payload = payload;
-  }
+/** Result of checking a product exists and may be used. */
+export interface EnsureActiveProductResult {
+  product: ProductReadModel | null;
+  active: boolean;
 }
 
-export class VerifyProductAndGetQuery
-  implements
-    IQuery<{
-      validIds: Id[];
-      notFoundIds: Id[];
-      deletedIds: Id[];
-      blockedIds: Id[];
-      productReadModel: ProductReadModel[];
-    }>
-{
-  readonly __result?: {
-    validIds: Id[];
-    notFoundIds: Id[];
-    deletedIds: Id[];
-    blockedIds: Id[];
-    productReadModel: ProductReadModel[];
-  };
-  readonly type = 'VerifyProductAndGetQuery';
-  public readonly payload: { ids: Id[] };
+/** Result of validating a batch of products. */
+export interface VerifyProductsResult {
+  validIds: Id[];
+  notFoundIds: Id[];
+  deletedIds: Id[];
+  blockedIds: Id[];
+  productReadModel: ProductReadModel[];
+}
 
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ ids: Id[] }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the product module. */
+export interface IProductQueries {
+  ensureActiveById(productId: Id): Promise<EnsureActiveProductResult>;
+  verifyAndGet(ids: Id[]): Promise<VerifyProductsResult>;
 }
 
 export interface ProductPriceRange {
@@ -47,6 +28,15 @@ export interface ProductPriceRange {
   maxPrice: Money;
   minDiscountedPrice: Money;
   maxDiscountedPrice: Money;
+}
+
+export interface IProductStockUpdater {
+  setInStock(
+    productId: Id,
+    inStock: boolean,
+    actorId: Id,
+    options?: { publish?: boolean },
+  ): Promise<{ ok: boolean }>;
 }
 
 export interface IProductPricingUpdater {

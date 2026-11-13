@@ -6,7 +6,7 @@ import { ForbiddenError, NotFoundError } from '../errors/app-error';
  *
  * - Admin: always allowed.
  * - Vendor owner: can read stats for its own vendor entity and any product it sells.
- * - Any other entity type stays open (public page/category awareness).
+ * - Every other caller and entity type is masked.
  */
 export interface IStatsAccessGuard {
   ensureProductReadable(

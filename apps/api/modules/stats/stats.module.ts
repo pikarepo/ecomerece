@@ -1,4 +1,8 @@
-import type { IProductStatsProjector, IVendorStatsProjector } from '@ecomerece/contracts';
+import type {
+  IProductStatsProjector,
+  IVendorQueries,
+  IVendorStatsProjector,
+} from '@ecomerece/contracts';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { connectDB } from '../../lib/mongo';
 import { CategoryStatsDenormalizationHandler } from './application/event-handlers/category-stats-denormalization.handler';
@@ -6,11 +10,7 @@ import { OrderItemCreatedStatsHandler } from './application/event-handlers/order
 import { ProductStatsDenormalizationHandler } from './application/event-handlers/product-stats-denormalization.handler';
 import { VendorStatsDenormalizationHandler } from './application/event-handlers/vendor-stats-denormalization.handler';
 import { VendorStatsForceRefreshHandler } from './application/event-handlers/vendor-stats-force-refresh.handler';
-import { GetEntityStatsOverviewQuery } from './application/queries/get-entity-stats-overview.query';
-import { GetPaginatedStatsQuery } from './application/queries/get-paginated-stats.query';
-import { GetEntityStatsOverviewHandler } from './application/query-handlers/get-entity-stats-overview.query-handler';
 import { ProductStatsSyncScheduler } from './application/ProductStatsSyncScheduler';
-import { GetPaginatedStatsHandler } from './application/query-handlers/get-paginated-stats.query-handler';
 import { statsQueryService } from './application/StatsQueryService';
 import { VendorStatsRefreshService } from './application/vendor-stats-refresh.service';
 import { StatsController } from './presentation/StatsController';
@@ -18,13 +18,14 @@ import { StatsController } from './presentation/StatsController';
 interface StatsModuleDeps extends Buses {
   productStats: IProductStatsProjector;
   vendorStats: IVendorStatsProjector;
+  vendorQueries: IVendorQueries;
 }
 
 export function CreateStatsModule({
-  queryBus,
   eventBus,
   productStats,
   vendorStats,
+  vendorQueries,
 }: StatsModuleDeps) {
   const vendorStatsRefresh = new VendorStatsRefreshService({
     loadVendorProducts: (vendorId) => productStats.listVendorProducts(vendorId),
@@ -65,15 +66,7 @@ export function CreateStatsModule({
     }),
   );
 
-  queryBus.register(
-    GetEntityStatsOverviewQuery,
-    new GetEntityStatsOverviewHandler(statsQueryService),
-  );
-  queryBus.register(
-    GetPaginatedStatsQuery,
-    new GetPaginatedStatsHandler(statsQueryService),
-  );
-  const statsController = new StatsController(queryBus, eventBus);
+  const statsController = new StatsController(vendorQueries, eventBus);
   const productStatsSyncScheduler = new ProductStatsSyncScheduler(eventBus);
 
   return { statsController, productStatsSyncScheduler };

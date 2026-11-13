@@ -48,7 +48,12 @@ statsRouter.get(
   adminMiddleware,
   statsController.getAggregate,
 );
-statsRouter.get('/:entityType/paginated', authMiddleware, statsController.getPaginatedEntityStats);
+statsRouter.get(
+  '/:entityType/paginated',
+  authMiddleware,
+  adminMiddleware,
+  statsController.getPaginatedEntityStats,
+);
 statsRouter.get(
   '/product/:entityId/overview',
   authMiddleware,
@@ -89,6 +94,7 @@ statsRouter.post('/vendor/force-update', authMiddleware, statsController.forceRe
 
 statsRouter.get(
   '/:entityType/:entityId/lifetime',
+  authMiddleware,
   createStatsAccessGuardMiddleware({
     mode: 'mask',
     entityTypeParam: 'entityType',
@@ -98,6 +104,7 @@ statsRouter.get(
 );
 statsRouter.get(
   '/:entityType/:entityId/timeseries',
+  authMiddleware,
   createStatsAccessGuardMiddleware({
     mode: 'mask',
     entityTypeParam: 'entityType',
@@ -105,7 +112,12 @@ statsRouter.get(
   }),
   statsController.getTimeSeries,
 );
-statsRouter.get('/:entityType/top', statsController.getTopEntities);
+statsRouter.get(
+  '/:entityType/top',
+  authMiddleware,
+  adminMiddleware,
+  statsController.getTopEntities,
+);
 
 statsRouter.get('/_health', statsController.getHealth);
 

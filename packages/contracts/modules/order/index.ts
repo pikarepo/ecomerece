@@ -1,14 +1,12 @@
-import type { Id, IQuery, OrderReadModel } from '@ecomerece/domain';
+import type { Id, OrderReadModel } from '@ecomerece/domain';
 
-export class EnsureActiveOrderGetByIdQuery
-  implements IQuery<{ order: OrderReadModel | null; active: boolean }>
-{
-  readonly __result?: { order: OrderReadModel | null; active: boolean };
-  readonly type = 'EnsureActiveOrderGetByIdQuery';
-  public readonly payload: { orderId: Id };
+/** Result of checking an order exists and may be used. */
+export interface EnsureActiveOrderResult {
+  order: OrderReadModel | null;
+  active: boolean;
+}
 
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ orderId: Id }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the order module. */
+export interface IOrderQueries {
+  ensureActiveById(orderId: Id): Promise<EnsureActiveOrderResult>;
 }

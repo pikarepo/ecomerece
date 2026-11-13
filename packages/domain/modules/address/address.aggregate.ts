@@ -128,6 +128,8 @@ export class AddressAggregate extends AggregateRoot {
     this.raise(new AddressUpdatedEvent({ addressId: this._id, ownerId: this._ownerId, actorId }));
   }
   deleteAddress(reason: Reason, actorId: Id) {
+    if (actorId.value !== this.ownerId.value)
+      throw new BadRequestError('You can only delete your own address.');
     if (this._delete.isDeleted) throw new BadRequestError('This address has already been removed.');
     this._delete = DeleteInfoVO.create(actorId, reason);
     this.raise(
@@ -145,7 +147,9 @@ export class AddressAggregate extends AggregateRoot {
     this._delete = DeleteInfoVO.none();
     this.raise(new AddressRecoveredEvent({ addressId: this._id, ownerId: this._ownerId, actorId }));
   }
-  setAsDefault() {
+  setAsDefault(actorId: Id) {
+    if (actorId.value !== this.ownerId.value)
+      throw new BadRequestError('You can only set your own address as default.');
     this._defaultDate = EffectiveDate.today();
     this.raise(new AddressSetAsDefaultEvent({ addressId: this._id, ownerId: this._ownerId }));
   }

@@ -14,14 +14,16 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveProductGetByIdQuery } from '@ecomerece/contracts';
-import { EnsureActiveVariantGetByIdQuery } from '@ecomerece/contracts';
-import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
 import type { AuthActor } from '@ecomerece/contracts';
-import { EnsureActiveVendorGetByIdQuery } from '@ecomerece/contracts';
+import type { IProductStockUpdater } from '@ecomerece/contracts';
+import type {
+  IProductQueries,
+  IProductVariantQueries,
+  IUserQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import { InventoryMapper } from '../infrastructure/inventory.mapper';
 import type { InventoryPersistence } from '../infrastructure/inventory.model';
 import type { InventoryReposityory } from '../infrastructure/inventory.repository';
@@ -30,10 +32,28 @@ import { InventoryMessages, type inventoryMessagesType } from '../presentation/i
 export class InventoryApplicationService extends BaseService {
   constructor(
     private readonly inventoryRepo: InventoryReposityory,
-    private readonly queryBus: IQueryBus,
+    private readonly variantQueries: IProductVariantQueries,
+    private readonly productQueries: IProductQueries,
+    private readonly vendorQueries: IVendorQueries,
+    private readonly userQueries: IUserQueries,
     private readonly eventBus: IEventBus,
+    private readonly productStock: IProductStockUpdater,
   ) {
     super();
+  }
+
+  private async syncProductStock(
+    variantId: Id,
+    inStock: boolean,
+    actorId: Id,
+  ): Promise<void> {
+    const activeVariant = await this.variantQueries.ensureActiveById(variantId);
+    if (!activeVariant.variant) return;
+    await this.productStock.setInStock(
+      Id.create(activeVariant.variant.productId),
+      inStock,
+      actorId,
+    );
   }
 
   private async publishEvents(inventory: InventoryAggregate): Promise<void> {
@@ -44,29 +64,21 @@ export class InventoryApplicationService extends BaseService {
   }
 
   async canActorEditInventory(variantId: Id, actorId: Id): Promise<void> {
-    const activeVariant = await this.queryBus.execute(
-      new EnsureActiveVariantGetByIdQuery({ variantId: variantId }),
-    );
+    const activeVariant = await this.variantQueries.ensureActiveById(variantId);
     if (!activeVariant.variant) throw new BadRequestError('Variant not found.');
     if (!activeVariant.active) throw new BadRequestError('Variant is not active.');
     const productId = Id.create(activeVariant.variant.productId);
-    const activeProduct = await this.queryBus.execute(
-      new EnsureActiveProductGetByIdQuery({ productId: productId }),
-    );
+    const activeProduct = await this.productQueries.ensureActiveById(productId);
     if (!activeProduct.product) throw new BadRequestError('Product not found.');
     if (!activeProduct.active) throw new BadRequestError('Product is not active.');
     const vendorId = Id.create(activeProduct.product.vendorId);
-    const activeVendor = await this.queryBus.execute(
-      new EnsureActiveVendorGetByIdQuery({ vendorId: vendorId }),
-    );
+    const activeVendor = await this.vendorQueries.ensureActiveById(vendorId);
     if (!activeVendor.vendor) throw new BadRequestError('Vendor not found.');
     if (!activeVendor.active) throw new BadRequestError('Vendor is not active.');
     if (activeVendor.vendor.ownerId !== actorId.value)
       throw new BadRequestError('This variant does not belong to the current owner.');
     const userId = Id.create(activeVendor.vendor.ownerId);
-    const activeUser = await this.queryBus.execute(
-      new EnsureActiveUserGetByIdQuery({ userId: userId }),
-    );
+    const activeUser = await this.userQueries.ensureActiveById(userId);
     if (!activeUser.user) throw new BadRequestError('User not found.');
     if (!activeUser.active) throw new BadRequestError('User is not active.');
   }
@@ -89,6 +101,7 @@ export class InventoryApplicationService extends BaseService {
     });
     await this.inventoryRepo.Create(inventory);
     await this.publishEvents(inventory);
+    await this.syncProductStock(variantId, available.value > 0, actorId);
     const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
     return InventoryMessages.inventoryCreated(inventoryId, actorId, inventoryReaponseReadModel);
   }
@@ -106,6 +119,7 @@ export class InventoryApplicationService extends BaseService {
     inventory.buy(quantity, actorId);
     await this.inventoryRepo.Save(inventory);
     await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, inventory.available.value > 0, actorId);
     const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
     return InventoryMessages.inventoryBought(
       inventoryId,
@@ -127,6 +141,7 @@ export class InventoryApplicationService extends BaseService {
     inventory.removeStock(quantity, actorId);
     await this.inventoryRepo.Save(inventory);
     await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, inventory.available.value > 0, actorId);
     const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
     return InventoryMessages.inventoryRemoved(
       inventoryId,
@@ -182,6 +197,7 @@ export class InventoryApplicationService extends BaseService {
     inventory.deleteInventory(Reason.create(data.reason), actorId);
     await this.inventoryRepo.Save(inventory);
     await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, false, actorId);
     return InventoryMessages.inventoryDeleted(inventoryId, actorId);
   }
 

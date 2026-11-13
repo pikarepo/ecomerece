@@ -1,14 +1,12 @@
-import type { categoryReadModels, Id, IQuery } from '@ecomerece/domain';
+import type { categoryReadModels, Id } from '@ecomerece/domain';
 
-export class VerifyCategoryAndGetQuery
-  implements IQuery<{ isValid: boolean; category: null | categoryReadModels }>
-{
-  readonly __result?: { isValid: boolean; category: null | categoryReadModels };
-  readonly type = 'VerifyCategoryAndGetQuery';
-  public readonly payload: { id: Id };
+/** Result of validating a category before attaching a product to it. */
+export interface VerifyCategoryResult {
+  isValid: boolean;
+  category: null | categoryReadModels;
+}
 
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ id: Id }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the category module. */
+export interface ICategoryQueries {
+  verifyAndGet(id: Id): Promise<VerifyCategoryResult>;
 }

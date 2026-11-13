@@ -4,8 +4,7 @@ import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
-import { EnsureActiveOrderGetByIdQuery, type AuthActor } from '@ecomerece/contracts';
+import type { AuthActor, IOrderQueries } from '@ecomerece/contracts';
 import type {
   CancelMyOrderItemsDto,
   GetAdminPaginatedOrderItemsQueryDto,
@@ -33,7 +32,7 @@ export class OrderItemsApplicationService extends BaseService {
   constructor(
     private readonly itemsInternalService: OrderItemsInternalService,
     private readonly itemsRepo: OrderItemsRepository,
-    private readonly queryBus: IQueryBus,
+    private readonly orderQueries: IOrderQueries,
     private readonly eventBus: IEventBus,
     private readonly unitOfWork: UnitOfWork,
   ) {
@@ -42,9 +41,7 @@ export class OrderItemsApplicationService extends BaseService {
 
   /** Throws unless the order exists, is active, and belongs to `actorId`. */
   private async assertOrderOwner(orderId: Id, actorId: Id): Promise<void> {
-    const { order, active } = await this.queryBus.execute(
-      new EnsureActiveOrderGetByIdQuery({ orderId }),
-    );
+    const { order, active } = await this.orderQueries.ensureActiveById(orderId);
     if (!order || !active) throw new NotFoundError('Order not found.');
     if (order.buyerId !== actorId.value) {
       throw new ForbiddenError('You do not own this order.');

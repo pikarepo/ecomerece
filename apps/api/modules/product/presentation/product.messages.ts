@@ -86,6 +86,11 @@ export const productMessages = {
       message: `The ingredients list for product ${productId.value} was disabled by ${actorId.value} on ${EffectiveDate.today().value}.`,
     };
   },
+  stockUpdated(productId: Id, actorId: Id, inStock: boolean): productMessagesType {
+    return {
+      message: `Product ${productId.value} stock status was set to ${inStock ? 'in stock' : 'out of stock'} by ${actorId.value} on ${EffectiveDate.today().value}.`,
+    };
+  },
   ingredientsUpdated(productId: Id, actorId: Id): productMessagesType {
     return {
       message: `The ingredients list for product ${productId.value} was updated by ${actorId.value} on ${EffectiveDate.today().value}.`,

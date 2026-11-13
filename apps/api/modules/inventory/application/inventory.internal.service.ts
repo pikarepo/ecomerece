@@ -58,6 +58,57 @@ export class InventoryInternalServcie extends BaseService {
       inventoriesReadModel,
     };
   }
+  /**
+   * Applies a reserved-stock transition to every line the order owns.
+   * Deleted inventories are skipped rather than failing the batch, matching
+   * the reserve path's tolerance for unavailable rows.
+   */
+  private async transitionReserved(
+    items: { variantId: Id; quantity: Quantity }[],
+    actorId: Id,
+    apply: 'complete' | 'release' | 'restock',
+  ): Promise<InventoryReadModel[]> {
+    if (items.length === 0) return [];
+    const inventories = await this.inventoryRepo.FindByVariantIds(
+      items.map((item) => item.variantId),
+    );
+    const itemsByVariant = new Map(items.map((item) => [item.variantId.value, item] as const));
+    const changed = inventories.filter((inventory) => {
+      const item = itemsByVariant.get(inventory.variantId.value);
+      return Boolean(item) && !inventory.delete.deleted;
+    });
+
+    for (const inventory of changed) {
+      const item = itemsByVariant.get(inventory.variantId.value)!;
+      if (apply === 'complete') inventory.complete(item.quantity, actorId);
+      else if (apply === 'release') inventory.release(item.quantity, actorId);
+      else inventory.restock(item.quantity, actorId);
+    }
+    await this.inventoryRepo.SaveMany(changed);
+    return changed.map((inventory) => InventoryMapper.aggregateToReadModel(inventory));
+  }
+
+  completeInventories(
+    items: { variantId: Id; quantity: Quantity }[],
+    actorId: Id,
+  ): Promise<InventoryReadModel[]> {
+    return this.transitionReserved(items, actorId, 'complete');
+  }
+
+  releaseInventories(
+    items: { variantId: Id; quantity: Quantity }[],
+    actorId: Id,
+  ): Promise<InventoryReadModel[]> {
+    return this.transitionReserved(items, actorId, 'release');
+  }
+
+  restockInventories(
+    items: { variantId: Id; quantity: Quantity }[],
+    actorId: Id,
+  ): Promise<InventoryReadModel[]> {
+    return this.transitionReserved(items, actorId, 'restock');
+  }
+
   async reserveInventories(
     inventoryItems: { variantId: Id; quantity: Quantity }[],
     actorId: Id,

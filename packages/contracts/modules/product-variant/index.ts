@@ -1,42 +1,23 @@
 import type { ProductVariantReadModel } from '@ecomerece/domain';
-import type { IQuery } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 
-export class EnsureActiveVariantGetByIdQuery
-  implements IQuery<{ variant: ProductVariantReadModel | null; active: boolean }>
-{
-  readonly __result?: { variant: ProductVariantReadModel | null; active: boolean };
-  readonly type = 'EnsureActiveVariantGetByIdQuery';
-  public readonly payload: { variantId: Id };
-
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ variantId: Id }];
-    this.payload = payload;
-  }
+/** Result of checking a variant exists and may be used. */
+export interface EnsureActiveVariantResult {
+  variant: ProductVariantReadModel | null;
+  active: boolean;
 }
 
-export class VerifyVariantsAndGetQuery
-  implements
-    IQuery<{
-      validIds: Id[];
-      notFoundIds: Id[];
-      deletedIds: Id[];
-      nonActiveIds: Id[];
-      variantReadModel: ProductVariantReadModel[];
-    }>
-{
-  readonly __result?: {
-    validIds: Id[];
-    notFoundIds: Id[];
-    deletedIds: Id[];
-    nonActiveIds: Id[];
-    variantReadModel: ProductVariantReadModel[];
-  };
-  readonly type = 'VerifyVariantsAndGetQuery';
-  public readonly payload: { ids: Id[] };
+/** Result of validating a batch of variants. */
+export interface VerifyVariantsResult {
+  validIds: Id[];
+  notFoundIds: Id[];
+  deletedIds: Id[];
+  nonActiveIds: Id[];
+  variantReadModel: ProductVariantReadModel[];
+}
 
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ ids: Id[] }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the product-variant module. */
+export interface IProductVariantQueries {
+  ensureActiveById(variantId: Id): Promise<EnsureActiveVariantResult>;
+  verifyAndGet(ids: Id[]): Promise<VerifyVariantsResult>;
 }

@@ -81,7 +81,7 @@ Bun workspaces monorepo:
 │   └── web                 Next.js 16 App Router storefront + admin (MUI)
 ├── packages
 │   ├── domain              aggregates, value objects, events, ports, read models
-│   ├── contracts           the only cross-module surface: query classes, ports, actor types
+│   ├── contracts           the only cross-module surface: query interfaces, ports, actor types
 │   ├── shared              Zod schemas, DTO types, read models, stats types
 │   └── frontend            headless SDK: HTTP client, React Query hooks, Zustand stores
 ├── AGENTS.md               contributor instructions
@@ -327,20 +327,19 @@ Per module (workspace bottom-up):
 
 ```
 packages/domain/modules/<name>/       aggregate, value objects, events, ports, read models (pure)
-packages/contracts/modules/<name>/    query classes other modules may execute, cross-module ports
+packages/contracts/modules/<name>/    typed query interfaces and cross-module ports
 apps/api/modules/<name>/
   infrastructure/                     Mongoose model + mapper + repository implementation
-  application/                        DTO types, query classes + handlers, internal service,
-                                      app service (load → mutate → save → publish events)
+  application/                        DTO types, internal service, app service
+                                      (load → mutate → save → publish events)
   presentation/                       messages, controller (extends BaseController), routes
   <name>.module.ts                    module factory: builds the graph, registers handlers
 ```
 
-Cross-module calls go through `IQueryBus` / `IEventBus` or through a port declared in
-`packages/contracts`; a module never imports another module's infrastructure, application or
-presentation. There is no `CommandBus` any more: the three former command paths (reserve inventory,
-write order items, update product price) are typed ports implemented by adapters
-(`IInventoryReservation`, `IOrderItemsWriter`, `IProductPricingUpdater`).
+Cross-module reads go through typed query interfaces declared in `packages/contracts` and
+implemented by the owner module's adapter; events go through `IEventBus`; other cross-module actions
+use ports declared in `packages/contracts`. A module never imports another module's infrastructure,
+application or presentation. There is no `CommandBus` or `QueryBus`.
 
 **Dependency reality check.** `packages/domain` no longer imports `apps/api`: `AppError` and friends
 live in `packages/domain/errors/app-error.ts` and `apps/api/errors/app-error.ts` just re-exports them.
@@ -383,13 +382,14 @@ that rolled back (covered by `order-create-commit.test.ts`).
 Each `<name>.module.ts` exports a factory that takes a deps object and returns the module's
 controller plus anything other modules need (an adapter, a projector, a scheduler, a stats-access
 port). The factory is where the graph is built — repository → mapper → internal service → app
-service → controller — and where handlers are registered
-(`queryBus.register(SomeQuery, new SomeQueryHandler(svc))`,
-`eventBus.register('order-item.created', handler)`).
+service → controller — and where event handlers are registered
+(`eventBus.register('order-item.created', handler)`) and query adapters are constructed.
 
 `apps/api/composition-root.ts` is the **single composition root**. `createApplication()` creates one
-`InMemoryQueryBus`, one `InMemoryEventBus`, the `UnitOfWork`, and the image-storage adapter, then
-calls every module factory in dependency order and returns `{ buses, unitOfWork, modules }`. Nothing
+`InMemoryEventBus`, the `UnitOfWork`, and the image-storage adapter, then calls every module factory
+in dependency order and returns `{ buses, unitOfWork, modules }`. Provider query adapters are built
+before the consumers that receive them; order-items is split into an eager core and application
+phase to keep the order ↔ order-items wiring acyclic. Nothing
 is wired as an import side effect, so a module factory can be instantiated in isolation by passing
 fakes for its deps. Cross-module adapters (auth lookup, stats access, stats view guard) are
 configured here too, via the middleware `configure*` functions.
@@ -481,23 +481,24 @@ Shared helpers in `packages/domain` worth knowing:
 
 ## 10. Domain events
 
-110 event classes live in `packages/domain/modules/<module>/events/`. Every event is
+116 event classes live in `packages/domain/modules/<module>/events/`. Every event is
 `{ type, payload, occurredOn }` (`IEvent`); the type is a string constant on the class and carries
 the module name as prefix. Full list as declared:
 
 | Module | Event types |
 |---|---|
 | address (5) | `address.created`, `address.deleted`, `address.recovered`, `address.set-as-default`, `address.updated` |
-| category (6) | `category.blocked`, `category.created`, `category.deleted`, `category.image-updated`, `category.meta-updated`, `category.recovered` |
+| category (7) | `category.blocked`, `category.created`, `category.deleted`, `category.image-updated`, `category.meta-updated`, `category.recovered`, `category.unblocked` |
 | home (19) | `home.slides-reordered`, `home.categories-reordered`, `home.containers-reordered`, `home.{slide,category,promo,feature,container}-{added,removed,updated}`, `home.features-set` |
 | inventory (7) | `inventory.bought`, `inventory.completed`, `inventory.created`, `inventory.deleted`, `inventory.low-stock-threshold-updated`, `inventory.reserved`, `inventory.stock-removed` |
-| order (6) | `order.cancelled`, `order.completed`, `order.confirmed`, `order.created`, `order.refunded`, `order.returnded` *(sic)* |
+| order (9) | `order.cancelled`, `order.completed`, `order.confirmed`, `order.created`, `order.deleted`, `order.recovered`, `order.refunded`, `order.returned`, `order.updated` |
 | order-items (7) | `order-item.cancelled`, `order-item.completed`, `order-item.confirmed`, `order-item.created`, `order-item.refunded`, `order-item.returned`, `order-item.updated` |
 | product (24) | `product.blocked`, `product.created`, `product.default-image-set`, `product.deleted`, `product.disclaimer-{disabled,enabled,updated}`, `product.disclaimers-{added,removed}`, `product.images-{added,removed}`, `product.ingredients-{added,cleared,disabled,enabled,removed}`, `product.in-stock-updated`, `product.made-private`, `product.made-public`, `product.meta-updated`, `product.pricing-summary-updated`, `product.rating-summary-updated`, `product.recovered`, `product.unblocked` |
 | product-variant (7) | `product-variant.activated`, `product-variant.created`, `product-variant.deactivated`, `product-variant.deleted`, `product-variant.meta-updated`, `product-variant.price-updated`, `product-variant.recovered` |
-| reviews (7) | `review.created`, `review.deleted`, `review.disliked`, `review.liked`, `review.reported`, `review.updated`, `review.vendor-reply-added` |
+| reviews (9) | `review.blocked`, `review.created`, `review.deleted`, `review.disliked`, `review.liked`, `review.reported`, `review.unblocked`, `review.updated`, `review.vendor-reply-added` |
 | stats (2) | `stats.product-denormalization-requested`, `stats.vendor-force-refresh-requested` |
 | user (11) | `user.ban-extended`, `user.ban-lifted`, `user.banned`, `user.ban-shortened`, `user.blocked`, `user.block-lifted`, `user.deleted`, `user.delete-lifted`, `user.logged-in`, `user.role-assigned`, `user.signed-in` |
+| vendor (9) | `vendor.contact-updated`, `vendor.created`, `vendor.deleted`, `vendor.image-updated`, `vendor.meta-updated`, `vendor.recovered`, `vendor.rejected`, `vendor.stats-refresh-toggled`, `vendor.verified` |
 | vendor (9) | `vendor.contact-updated`, `vendor.created`, `vendor.deleted`, `vendor.image-updated`, `vendor.meta-updated`, `vendor.recovered`, `vendor.rejected`, `vendor.stats-refresh-toggled`, `vendor.verified` |
 
 Notes:
@@ -515,17 +516,17 @@ Notes:
 
 ## 11. Buses and cross-module communication
 
-There are exactly four ways one module reaches another, and every one of them is wired in
+There are exactly three ways one module reaches another, and every one of them is wired in
 `apps/api/composition-root.ts`. A module never imports another module's files — `bun run arch`
 fails the build if it does.
 
 ```
 consumer module                 packages/contracts                 provider module
 ───────────────                 ──────────────────                 ───────────────
-order                     contracts/modules/inventory/…             inventory
+order                     contracts/modules/address/…               address
    │                                 │                                  │
-   │ 1. queryBus.execute(VerifyInventoriesItemsGetQuery)                │
-   ├──────────────────────────────► QueryBus ────────────────────────► handler → repo
+   │ 1. addressQueries.ensureActiveById(...)                           │
+   ├────────────────────────► IAddressQueries ───────────────────────► adapter → internal service → repo
    │                                 │                                  │
    │ 2. reservation.reserve(...)     │                                  │
    ├───────────────────────► IInventoryReservation ───────────────────► adapter → aggregate
@@ -537,64 +538,55 @@ order                     contracts/modules/inventory/…             inventory
 
 | Need | Channel | Keyed by | Implemented by | Wired where |
 |---|---|---|---|---|
-| Read another module's data | contract `IQuery` class executed on `QueryBus` | the class object (`query.constructor`) | provider's query handler | provider factory registers; consumer executes |
+| Read another module's data | typed query interface from `contracts`, called on an injected adapter | the injected object | provider's `infrastructure/*-query.adapter.ts` | `createApplication()` passes `provider.queries` into the consumer factory |
 | Perform an action owned by another module | port interface from `contracts`, called on an injected adapter | the injected object | provider's `infrastructure/*.adapter.ts` | `createApplication()` passes `provider.xxx` into the consumer factory |
 | React to something that happened | event `type` string on `EventBus` | the string; many handlers per type | consumer's event handler | consumer factory `eventBus.register(...)` |
 | Guard / middleware needs | port configured at startup | the configured function/object | provider adapter | `configureAuthUserLookup()`, `configureStatsAccess()`, `configureStatsViewGuard()` |
 
-The port-shaped calls (rows 2 and 4) are direct in-process calls, not bus dispatches: there is no
-`CommandBus`, so a missing dependency is a TypeScript error at the module factory instead of a
-runtime "no handler registered".
+All cross-module calls are direct in-process calls: there is no `CommandBus` and no `QueryBus`, so a
+missing dependency is a TypeScript error at the module factory instead of a runtime
+"no handler registered".
 
 ### 11.1 Contracts
 
+The only bus left is the event bus.
+
 | Bus | File (domain) | Implementation | Keying |
 |---|---|---|---|
-| Query | `packages/domain/query/query-bus.interface.ts` | `apps/api/core/infrastructure/buses/in-memory-query-bus.ts` | query **class** |
 | Event | `packages/domain/events/event-bus.interface.ts` | `.../in-memory-event-bus.ts` | event `type` string, many handlers per type |
-
-There is no command bus.
 
 Behaviour worth knowing:
 
-- Both buses are constructed once in `createApplication()` and handed to module factories as part of
-  their deps object; there are no module-level bus singletons and no registration by import side
+- The event bus is constructed once in `createApplication()` and handed to module factories as part
+  of their deps object; there are no module-level bus singletons and no registration by import side
   effect.
-- `QueryBus.execute(queryInstance)` finds the handler by the instance's constructor. An unregistered
-  query throws (never returns `undefined`); registering the same class twice throws
-  `Handler already registered for <Name>`.
-- Cross-module query classes live in `packages/contracts/modules/<module>` and the provider's own
-  `application/queries/*.ts` file is a one-line re-export of that class
-  (`export { VerifyProductAndGetQuery } from '@ecomerece/contracts/modules/product'`). Re-declaring a
-  local copy would register a *different* class and the handler would never be found.
+- Cross-module reads are interfaces in `packages/contracts/modules/<module>/index.ts`
+  (`IUserQueries`, `IAddressQueries`, `ICategoryQueries`, `IProductQueries`,
+  `IProductVariantQueries`, `IVendorQueries`, `IOrderQueries`, `IOrderItemsQueries`). The owner
+  module implements each interface with an adapter that delegates to its internal service.
+- The composition root builds providers before consumers, so every adapter is a real object by the
+  time it is injected. The `order` ↔ `order-items` cycle is broken by splitting order-items into an
+  eager **core** (repository, internal service, writer, read port) and an **application** phase
+  (controller/use cases that need `IOrderQueries`). No lazy providers are used.
 - `EventBus.publish` accepts one event or an array. Handlers run with `Promise.allSettled`, so one
   failing handler no longer blocks the others; each rejection is logged with the event type. Unknown
   event types are ignored, and handlers are stored in a `Set`, so duplicate registration is a no-op.
 
-### 11.2 Registrations and ports (source of truth)
+### 11.2 Providers and ports (source of truth)
 
-| Registered in | Queries | Events |
+| Module | Query adapter | Contract interface |
 |---|---|---|
-| `address.module.ts` | `EnsureActiveAddressGetByIdQuery`, `GetAddressByIdQuery`, `GetAddressesByOwnerIdQuery`, `GetAdminPaginatedAddressesQuery` | — |
-| `category.module.ts` | `VerifyCategoryAndGetQuery`, `GetCategoryByIdQuery`, `GetPaginatedCategoriesQuery`, `GetAdminPaginatedCategoriesQuery` | — |
-| `home.module.ts` | `GetHomeQuery` | — |
-| `inventory.module.ts` | `VerifyInventoriesItemsGetQuery`, `GetInventoryByIdQuery`, `GetInventoryByVariantIdQuery`, `GetAdminPaginatedInventoryQuery` | — |
-| `order.module.ts` | `EnsureActiveOrderGetByIdQuery`, `GetOrderByIdQuery`, `GetMyOrdersQuery`, `GetAdminPaginatedOrdersQuery` | — |
-| `order-items.module.ts` | `GetOrderItemByIdQuery` | — |
-| `product.module.ts` | `EnsureActiveProductGetByIdQuery`, `VerifyProductAndGetQuery`, `GetProductByIdQuery`, `GetMyPaginatedProductsQuery`, `GetPublicPaginatedProductsQuery`, `GetAdminPaginatedProductsQuery` | — |
-| `product-variant.module.ts` | `EnsureActiveVariantGetByIdQuery`, `VerifyVariantsAndGetQuery`, `GetVariantByIdQuery`, `GetVariantsByProductIdQuery`, `GetAdminPaginatedVariantsQuery` | — |
-| `reviews.module.ts` | `GetReviewByIdQuery`, `GetPaginatedReviewsQuery`, `GetReviewsByProductIdQuery`, `GetAdminPaginatedReviewsQuery` | — |
-| `user.module.ts` | `EnsureActiveQuery`, `EnsureActiveUserGetByIdQuery`, `VerifyUserAndGetQuery`, `GetUserByIdQuery`, `GetUserByEmailQuery`, `GetPaginatedUsersQuery`, `GetAdminPaginatedUsersQuery` | `user.signed-in`, `vendor.verified`, `vendor.deleted`, `vendor.rejected` |
-| `vendor.module.ts` | `EnsureActiveVendorGetByIdQuery`, `VerifyVendorAndGetQuery`, `EnsureActiveVendorQuery`, `GetVendorByUserIdQuery`, `GetVendorByIdQuery`, `GetMyVendorQuery`, `GetPaginatedVendorsQuery`, `GetAdminPaginatedVendorsQuery` | — |
-| `stats.module.ts` | `GetEntityStatsOverviewQuery`, `GetPaginatedStatsQuery` | `order-item.created`, `stats.product-denormalization-requested` (3 handlers), `stats.vendor-force-refresh-requested` |
+| `user` | `user-query.adapter.ts` | `IUserQueries` |
+| `address` | `address-query.adapter.ts` | `IAddressQueries` |
+| `category` | `category-query.adapter.ts` | `ICategoryQueries` |
+| `product` | `product-query.adapter.ts` | `IProductQueries` |
+| `product-variant` | `product-variant-query.adapter.ts` | `IProductVariantQueries` |
+| `vendor` | `vendor-query.adapter.ts` | `IVendorQueries` |
+| `order` | `order-query.adapter.ts` | `IOrderQueries` |
+| `order-items` | `order-items-query.adapter.ts` | `IOrderItemsQueries` |
 
-The **contract** queries (the 14 classes in `packages/contracts/modules/*/index.ts`) are the only
-ones other modules execute: `EnsureActiveAddressGetByIdQuery`, `VerifyCategoryAndGetQuery`,
-`EnsureActiveUserGetByIdQuery`, `VerifyUserAndGetQuery`, `EnsureActiveQuery`,
-`EnsureActiveOrderGetByIdQuery`, `VerifyInventoriesItemsGetQuery`,
-`EnsureActiveProductGetByIdQuery`, `VerifyProductAndGetQuery`,
-`EnsureActiveVariantGetByIdQuery`, `VerifyVariantsAndGetQuery`,
-`EnsureActiveVendorGetByIdQuery`, `VerifyVendorAndGetQuery`, `GetVendorByUserIdQuery`.
+Event registrations live in the consumer factories: `user` registers the vendor lifecycle handlers,
+and `stats` registers `order-item.created` plus the product/vendor denormalization handlers.
 
 #### Cross-module ports
 
@@ -622,8 +614,8 @@ middleware agree on the actor shape.
 
 **Create a product** (`POST /product/my`)
 
-1. `ProductApplicationService` resolves the caller's vendor via `GetVendorByUserIdQuery`.
-2. It validates the category with `VerifyCategoryAndGetQuery`.
+1. `ProductApplicationService` resolves the caller's vendor via `IVendorQueries.getByUserId`.
+2. It validates the category with `ICategoryQueries.verifyAndGet`.
 3. Uploads images through `IImageStorage` (Cloudinary adapter).
 4. Saves the aggregate and publishes `product.created`.
 
@@ -640,11 +632,9 @@ middleware agree on the actor shape.
 | PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 
 
-1. Inside `UnitOfWork.transaction`: `EnsureUniqueImpodentKey`, then `verifyReport` runs
-   `EnsureActiveAddressGetByIdQuery`, `EnsureActiveUserGetByIdQuery`,
-   `VerifyVariantsAndGetQuery`, `VerifyProductAndGetQuery`, `VerifyVendorAndGetQuery`,
-   `VerifyUserAndGetQuery` and `VerifyInventoriesItemsGetQuery` (all contract queries), builds the
-   per-line valid/invalid report, and reserves stock through `IInventoryReservation`.
+1. Inside `UnitOfWork.transaction`: `EnsureUniqueImpodentKey`, then the service calls
+   `IAddressQueries.ensureActiveById`, `IProductVariantQueries.verifyAndGet`,
+   `IProductQueries.verifyAndGet`, and reserves stock through `IInventoryReservation`.
 2. The order aggregate is created/saved and the lines are written through `IOrderItemsWriter`
    (order-items module), which returns the `order-item.created` events.
 3. The transaction commits; only then does the service publish the item + order events on the event

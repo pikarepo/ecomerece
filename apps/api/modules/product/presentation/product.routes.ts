@@ -62,7 +62,18 @@ productRoutes.patch(
   `/my/ingredients/remove`,
   authMiddleware,
   productController.removeMyProductIngredients,
-  );
+);
+productRoutes.patch(
+  `/my/disclaimer/update`,
+  authMiddleware,
+  productController.updateMyProductDisclaimer,
+);
+productRoutes.patch(
+  `/my/ingredients/clear`,
+  authMiddleware,
+  productController.clearMyProductIngredients,
+);
+productRoutes.patch(`/my/stock`, authMiddleware, productController.setMyProductInStock);
 
-  return productRoutes;
+return productRoutes;
 }

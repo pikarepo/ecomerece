@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
-import type { createOrderItemsModule } from '../order-items.module';
+import type { createOrderItemsApplication } from '../order-items.module';
 
-type OrderItemsController = ReturnType<typeof createOrderItemsModule>['orderItemsController'];
+type OrderItemsController = ReturnType<typeof createOrderItemsApplication>['orderItemsController'];
 
 export function createOrderItemsRoutes(orderItemsController: OrderItemsController) {
   const OrderItemsRoutes = new Hono();
@@ -52,7 +52,12 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
     orderItemsController.refundOrderItem,
   );
 
-  OrderItemsRoutes.get('/:id', authMiddleware, orderItemsController.getOrderItemById);
+  OrderItemsRoutes.get(
+    '/:id',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.getOrderItemById,
+  );
 
   return OrderItemsRoutes;
 }

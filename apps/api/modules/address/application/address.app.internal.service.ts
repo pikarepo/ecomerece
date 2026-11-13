@@ -22,9 +22,12 @@ export class AddressInternalService extends BaseService {
 
   async ensureActiveAddressGetById(
     addressId: Id,
+    userId: Id,
   ): Promise<{ address: AddressReadModel | null; active: boolean }> {
     const address = await this.addressRepo.FindById(addressId);
     if (!address) return { address: null, active: false };
+
+    if (address.ownerId.value !== userId.value) return { address: null, active: false };
 
     const AddressReadModel = AddressMapper.aggregateToReadModel(address);
 

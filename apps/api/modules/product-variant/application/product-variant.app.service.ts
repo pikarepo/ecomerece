@@ -17,14 +17,15 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
-import type { IProductPricingUpdater } from '@ecomerece/contracts';
+import type {
+  IProductPricingUpdater,
+  IProductQueries,
+  IUserQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveProductGetByIdQuery } from '@ecomerece/contracts';
-import { EnsureActiveUserGetByIdQuery } from '@ecomerece/contracts';
 import type { AuthActor } from '@ecomerece/contracts';
-import { EnsureActiveVendorGetByIdQuery } from '@ecomerece/contracts';
 import { productVariantMapper } from '../infrastructure/product-variant.mapper';
 import type { ProductVariantPersistence } from '../infrastructure/product-variant.model';
 import type { ProductVariantRepository } from '../infrastructure/product-variant.repository';
@@ -36,7 +37,9 @@ import {
 export class productVariantApplicationService extends BaseService {
   constructor(
     private readonly vairiantRepo: ProductVariantRepository,
-    private readonly queryBus: IQueryBus,
+    private readonly userQueries: IUserQueries,
+    private readonly productQueries: IProductQueries,
+    private readonly vendorQueries: IVendorQueries,
     private readonly pricingUpdater: IProductPricingUpdater,
     private readonly eventBus: IEventBus,
   ) {
@@ -51,20 +54,14 @@ export class productVariantApplicationService extends BaseService {
   }
 
   async canActorEditProductVaraintOrThrow(productId: Id, actorId: Id): Promise<void> {
-    const activeUser = await this.queryBus.execute(
-      new EnsureActiveUserGetByIdQuery({ userId: actorId }),
-    );
+    const activeUser = await this.userQueries.ensureActiveById(actorId);
     if (!activeUser.user) throw new BadRequestError('User not found.');
     if (!activeUser.active) throw new BadRequestError('User is not active.');
-    const activeProduct = await this.queryBus.execute(
-      new EnsureActiveProductGetByIdQuery({ productId: productId }),
-    );
+    const activeProduct = await this.productQueries.ensureActiveById(productId);
     if (!activeProduct.product) throw new BadRequestError('Product not found.');
     if (!activeProduct.active) throw new BadRequestError('Product is not active.');
     const vendorId = Id.create(activeProduct.product.vendorId);
-    const activeVendor = await this.queryBus.execute(
-      new EnsureActiveVendorGetByIdQuery({ vendorId: vendorId }),
-    );
+    const activeVendor = await this.vendorQueries.ensureActiveById(vendorId);
     if (!activeVendor.vendor) throw new BadRequestError('Vendor not found.');
     if (!activeVendor.active) throw new BadRequestError('Vendor is not active.');
     if (activeVendor.vendor.ownerId !== actorId.value)
@@ -104,9 +101,7 @@ export class productVariantApplicationService extends BaseService {
 
   async getVarientsByProductId(id: idType): Promise<ProductVariantResponseReadModel[] | null> {
     const productId = Id.create(id);
-    const activeProduct = await this.queryBus.execute(
-      new EnsureActiveProductGetByIdQuery({ productId: productId }),
-    );
+    const activeProduct = await this.productQueries.ensureActiveById(productId);
     if (!activeProduct.product) throw new BadRequestError('Product not found.');
     if (!activeProduct.active) throw new BadRequestError('Product is not active.');
     const varaints = await this.vairiantRepo.FindByProductId(productId);

@@ -10,11 +10,10 @@ import {
   updateProductStatsSettingsSchema,
 } from '@ecomerece/shared';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ViewEntityType } from '../../../middleware/statsViewGuard';
-import { GetVendorByUserIdQuery } from '@ecomerece/contracts';
+import type { IVendorQueries } from '@ecomerece/contracts';
 import { requestVendorStatsForceRefresh } from '../application/event-handlers/vendor-stats-force-refresh.handler';
 import { triggerProductStatsDenormalization } from '../application/ProductStatsSyncScheduler';
 import { statsBufferService } from '../application/StatsBufferService';
@@ -51,7 +50,7 @@ function backWeeks(count: number, fromWeek: string): string[] {
 
 export class StatsController {
   constructor(
-    private readonly queryBus: IQueryBus,
+    private readonly vendorQueries: IVendorQueries,
     private readonly eventBus: IEventBus,
   ) {}
 
@@ -219,7 +218,7 @@ export class StatsController {
   private async resolveMyVendor(c: Context) {
     const userId = c.get('userId') as string | undefined;
     if (!userId) throw new HTTPException(401, { message: 'Authentication required' });
-    return this.queryBus.execute(new GetVendorByUserIdQuery({ userId: Id.create(userId) }));
+    return this.vendorQueries.getByUserId(Id.create(userId));
   }
 
   private async getEntityOverview(c: Context, entityType: EntityType, entityId: string) {

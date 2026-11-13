@@ -2,6 +2,7 @@ import type { Context } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { HTTPException } from 'hono/http-exception';
 import type { ZodSchema } from 'zod';
+import { getBearerToken } from '../../lib/getBearerToken';
 
 // ─── Shared Types ─────────────────────────────────────────────────────────────
 
@@ -156,8 +157,7 @@ export abstract class BaseController<TService> {
    * if (!token) return this.unauthorized(c);
    */
   protected bearerToken(c: Context): string | undefined {
-    const auth = c.req.header('Authorization');
-    return auth?.startsWith('Bearer ') ? auth.slice(7) : undefined;
+    return getBearerToken(c.req.header('Authorization')) ?? undefined;
   }
 
   // ── Guards ───────────────────────────────────────────────────────────────────

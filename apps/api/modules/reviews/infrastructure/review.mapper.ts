@@ -1,4 +1,4 @@
-import { PersonName } from '@ecomerece/domain';
+import { Name } from '@ecomerece/domain';
 import type { ReviewReadModel } from '@ecomerece/domain/modules/reviews/read-models/reviews.read-model';
 import { ReviewAggregate } from '@ecomerece/domain/modules/reviews/reviews.aggregate';
 import { BlockInfoVO } from '@ecomerece/domain/value-objects/block-info.vo';
@@ -20,7 +20,7 @@ export const reviewMapper = {
       Id.rehydrate(doc.productId),
       Id.rehydrate(doc.authorId),
       doc.orderId ? Id.rehydrate(doc.orderId) : null,
-      PersonName.rehydrate(doc.authorName),
+      Name.rehydrate(doc.authorName),
       UrlVO.rehydrate(doc.authorAvatar),
       Quantity.rehydrate(doc.reportCount),
       doc.reportReasons.map((reason) => Reason.rehydrate(reason)),

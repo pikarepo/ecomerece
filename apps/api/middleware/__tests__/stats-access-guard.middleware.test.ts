@@ -72,10 +72,10 @@ describe('createStatsAccessGuardMiddleware (mask mode)', () => {
     expect(await res.json()).toEqual({ full: true });
   });
 
-  it('keeps non product/vendor entity types open', async () => {
+  it('masks non product/vendor entity types', async () => {
     const app = buildApp({ mode: 'mask', role: 'seller' });
     const res = await app.request('/page/home/lifetime');
-    expect(await res.json()).toEqual({ full: true });
+    expect(await res.json()).toEqual({ full: false });
   });
 
   it('shares full stats when the guard allows the owner', async () => {

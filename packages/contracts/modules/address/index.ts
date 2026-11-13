@@ -1,16 +1,13 @@
 import type { AddressReadModel } from '@ecomerece/domain/modules/address/read-models/address.read-models';
-import type { IQuery } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 
-export class EnsureActiveAddressGetByIdQuery
-  implements IQuery<{ address: AddressReadModel | null; active: boolean }>
-{
-  readonly __result?: { address: AddressReadModel | null; active: boolean };
-  readonly type = 'EnsureActiveAddressGetByIdQuery';
-  public readonly payload: { addressId: Id };
+/** Result of checking an address exists, is active, and belongs to a user. */
+export interface EnsureActiveAddressResult {
+  address: AddressReadModel | null;
+  active: boolean;
+}
 
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ addressId: Id }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the address module. */
+export interface IAddressQueries {
+  ensureActiveById(addressId: Id, userId: Id): Promise<EnsureActiveAddressResult>;
 }

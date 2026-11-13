@@ -56,21 +56,23 @@ function buildService(options: { saveFails?: boolean } = {}) {
     },
   };
 
-  const queryBus = {
-    execute: async (query: { type: string }) => {
-      if (query.type === 'EnsureActiveAddressGetByIdQuery') {
-        return { address: { fullAddress: '123 Main Street, Springfield' }, active: true };
+  const addressQueries = {
+    ensureActiveById: async (addressId: Id, userId: Id) => {
+      if (!addressId || !userId) {
+        throw new Error('Address query must carry addressId and userId');
       }
-      if (query.type === 'VerifyVariantsAndGetQuery') {
-        return {
-          variantReadModel: [{ id: id(2), productId: id(3), price: 10, discountedPrice: 10 }],
-        };
-      }
-      if (query.type === 'VerifyProductAndGetQuery') {
-        return { productReadModel: [{ id: id(3), vendorId: id(4) }] };
-      }
-      throw new Error(`Unexpected query: ${query.type}`);
+      return { address: { fullAddress: '123 Main Street, Springfield' }, active: true };
     },
+  };
+
+  const variantQueries = {
+    verifyAndGet: async () => ({
+      variantReadModel: [{ id: id(2), productId: id(3), price: 10, discountedPrice: 10 }],
+    }),
+  };
+
+  const productQueries = {
+    verifyAndGet: async () => ({ productReadModel: [{ id: id(3), vendorId: id(4) }] }),
   };
 
   const inventoryReservation = {
@@ -87,12 +89,19 @@ function buildService(options: { saveFails?: boolean } = {}) {
     },
   };
 
+  const orderItemsQueries = {
+    getByOrderId: async () => [],
+  };
+
   const service = new OrderApplicationService(
     orderRepo as never,
-    queryBus as never,
+    addressQueries as never,
+    variantQueries as never,
+    productQueries as never,
     eventBus as never,
     inventoryReservation as never,
     orderItemsWriter as never,
+    orderItemsQueries as never,
     unitOfWork as never,
   );
 

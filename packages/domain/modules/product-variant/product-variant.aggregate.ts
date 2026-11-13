@@ -185,6 +185,9 @@ export class ProductVariantAggregate extends AggregateRoot {
     if (!this._delete.deleted)
       throw new BadRequestError('This product variant has already been recovered.');
     this._delete = DeleteInfoVO.none();
+    // Deletion deactivates the variant; recovery must make it sellable again,
+    // otherwise the product's pricing summary stays at zero after recovery.
+    this._active = true;
     this.raise(
       new ProductVariantRecoveredEvent({
         variantId: this._id,

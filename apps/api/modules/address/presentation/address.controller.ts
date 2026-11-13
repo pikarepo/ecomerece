@@ -18,6 +18,7 @@ export class AddressController extends BaseController<AddressApplicationService>
   };
   getMyAddresses = async (c: Context) => {
     const actor = c.get('user');
+    console.log('actor', actor);
     return this.ok(c, await this.service.getMyAddresses(actor));
   };
   getAddressById = async (c: Context) => {

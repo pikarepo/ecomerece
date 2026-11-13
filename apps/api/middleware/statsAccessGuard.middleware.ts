@@ -49,7 +49,7 @@ export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOption
         ? 'vendor'
         : (c.req.param(entityTypeParam ?? '') ?? '');
     if (entityType !== 'product' && entityType !== 'vendor') {
-      c.set('statsFullAccess', true);
+      c.set('statsFullAccess', false);
       return next();
     }
 

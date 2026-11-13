@@ -31,6 +31,7 @@ export const InventoryMapper = {
       available: inventory.available.value,
       reserved: inventory.reserved.value,
       lowStockThreshold: inventory.lowStockThreshold.value,
+      inStock: inventory.available.value > 0,
       deleted: {
         deleted: inventory.delete.deleted,
         deletedFrom: inventory.delete.from?.value ?? null,

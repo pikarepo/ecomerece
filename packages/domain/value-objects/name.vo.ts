@@ -46,16 +46,15 @@ export class Name extends StringVO {
       throw new BadRequestError('Name cannot exceed 50 characters.');
     }
 
-    if (trimmed.includes(' ')) {
-      throw new BadRequestError('Name cannot contain spaces.');
-    }
-
-    if (!/^[A-Za-z]+$/.test(trimmed)) {
-      throw new BadRequestError('Name can only contain letters.');
+    if (!/^[A-Za-z]+(?:[ '\-][A-Za-z]+)*$/.test(trimmed)) {
+      throw new BadRequestError('Name can only contain letters, spaces, hyphens and apostrophes.');
     }
   }
 
   static create(name: string) {
-    return new PersonName(name);
+    return new Name(name);
+  }
+  static rehydrate(name: string) {
+    return new Name(name);
   }
 }

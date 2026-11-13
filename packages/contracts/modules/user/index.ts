@@ -1,5 +1,4 @@
 import type { UserReadModel } from '@ecomerece/domain';
-import type { IQuery } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 
 /**
@@ -27,54 +26,14 @@ export interface IAuthUserLookup {
   findAuthUser(userId: string): Promise<AuthUserSnapshot | null>;
 }
 
-export class EnsureActiveUserGetByIdQuery
-  implements IQuery<{ user: UserReadModel | null; active: boolean }>
-{
-  readonly __result?: { user: UserReadModel | null; active: boolean };
-  readonly type = 'EnsureActiveUserGetByIdQuery';
-  public readonly payload: { userId: Id };
-
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ userId: Id }];
-    this.payload = payload;
-  }
+/** Result of checking whether a user exists and may act. */
+export interface EnsureActiveUserResult {
+  user: UserReadModel | null;
+  active: boolean;
 }
 
-export class VerifyUserAndGetQuery
-  implements
-    IQuery<{
-      validIds: Id[];
-      notFoundIds: Id[];
-      bannedIds: Id[];
-      blockedIds: Id[];
-      deletedIds: Id[];
-      userReadModel: UserReadModel[];
-    }>
-{
-  readonly __result?: {
-    validIds: Id[];
-    notFoundIds: Id[];
-    bannedIds: Id[];
-    blockedIds: Id[];
-    deletedIds: Id[];
-    userReadModel: UserReadModel[];
-  };
-  readonly type = 'VerifyUserAndGetQuery';
-  public readonly payload: { ids: Id[] };
-
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ ids: Id[] }];
-    this.payload = payload;
-  }
-}
-
-export class EnsureActiveQuery implements IQuery<boolean> {
-  readonly __result?: boolean;
-  readonly type = 'EnsureActiveQuery';
-  public readonly payload: { userId: Id };
-
-  constructor(...args: unknown[]) {
-    const [payload] = args as [{ userId: Id }];
-    this.payload = payload;
-  }
+/** Cross-module read port implemented by the user module. */
+export interface IUserQueries {
+  ensureActiveById(userId: Id): Promise<EnsureActiveUserResult>;
+  ensureActive(userId: Id): Promise<boolean>;
 }

@@ -1,6 +1,7 @@
 import {
   blockLiftProductDto,
   blockProductDto,
+  clearIngredientsDto,
   CreateMyProductDtoSchema,
   deafultImageDto,
   disclaimerItemsDto,
@@ -10,10 +11,12 @@ import {
   imagesDto,
   ingredientsDto,
   productAppereanceDto,
+  productStockDto,
   recoverProductDto,
   softDeleteMyProductDto,
   toggleDiscalimerDto,
   toggleIngredientsDto,
+  updateDisclaimerDto,
   updateProductMetaDto,
 } from '@ecomerece/shared';
 import type { Context } from 'hono';
@@ -139,6 +142,24 @@ export class ProductController extends BaseController<ProductApplicationService>
     const data = await this.body(c, ingredientsDto);
     const actor = c.get('user');
     return this.ok(c, await this.service.removeMyProductIngredients(data, actor));
+  };
+
+  updateMyProductDisclaimer = async (c: Context) => {
+    const data = await this.body(c, updateDisclaimerDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.updateMyProductDisclaimer(data, actor));
+  };
+
+  clearMyProductIngredients = async (c: Context) => {
+    const data = await this.body(c, clearIngredientsDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.clearMyProductIngredients(data, actor));
+  };
+
+  setMyProductInStock = async (c: Context) => {
+    const data = await this.body(c, productStockDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.setMyProductInStock(data, actor));
   };
 
   getMyPaginatedProducts = async (c: Context) => {

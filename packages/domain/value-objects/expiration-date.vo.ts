@@ -12,6 +12,9 @@ export class ExpirationDate extends DateVO {
 
   // --- Existing methods ---
   static create(date: Date): ExpirationDate {
+    if (date.getTime() <= Date.now()) {
+      throw new BadRequestError('Expiration date must be in the future.');
+    }
     return new ExpirationDate(date, false);
   }
 
@@ -134,4 +137,9 @@ export class ExpirationDate extends DateVO {
     const diffMs = this.value.getTime() - Date.now();
     return Math.ceil(diffMs / 1000);
   }
+  get remaininghours(): number {
+    const diffMs = this.value.getTime() - Date.now();
+    return Math.ceil(diffMs / (1000 * 60 * 60));
+  }
+
 }

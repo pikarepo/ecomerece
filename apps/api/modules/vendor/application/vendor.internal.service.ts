@@ -1,21 +1,20 @@
 import type { IVendorRepository, VendorReadModel } from '@ecomerece/domain';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import { EnsureActiveQuery } from '@ecomerece/contracts';
+import type { IUserQueries } from '@ecomerece/contracts';
 import { VendorMapper } from '../infrastructure/vendor.mapper';
 
 export class VendorInternalService extends BaseService {
   constructor(
     private readonly vendorRepo: IVendorRepository,
-    private readonly queryBus: IQueryBus,
+    private readonly userQueries: IUserQueries,
   ) {
     super();
   }
   async canCreateVendor(id: Id) {
-    const user = await this.queryBus.execute(new EnsureActiveQuery({ userId: id }));
-    if (!user) throw new BadRequestError('User is not active.');
+    const userActive = await this.userQueries.ensureActive(id);
+    if (!userActive) throw new BadRequestError('User is not active.');
     const vendor = await this.vendorRepo.FindByOwnerId(id);
     if (vendor) throw new BadRequestError('Each user can create only one vendor.');
   }
@@ -27,8 +26,8 @@ export class VendorInternalService extends BaseService {
   }
 
   async ensureActiveVendor(userId: Id, vendorId: Id): Promise<VendorReadModel> {
-    const user = await this.queryBus.execute(new EnsureActiveQuery({ userId: userId }));
-    if (!user) throw new BadRequestError('User is not active.');
+    const userActive = await this.userQueries.ensureActive(userId);
+    if (!userActive) throw new BadRequestError('User is not active.');
     const vendor = await this.vendorRepo.FindByIdOrThrow(vendorId);
     if (vendor.ownerId !== userId) throw new BadRequestError('You do not own this vendor.');
     if (vendor.delete.isDeleted) throw new BadRequestError('This vendor has been removed.');

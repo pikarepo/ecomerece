@@ -23,7 +23,7 @@ export class ProductRepository
 
   async FindByIds(id: Id[]): Promise<ProductAggregate[]> {
     const ids = id.map((value) => value.value);
-    const products = await super.find({ id: { $in: ids } });
+    const products = await super.find({ _id: { $in: ids } });
     return products.map((value) => ProductMapper.persistenceToAggregate(value));
   }
 

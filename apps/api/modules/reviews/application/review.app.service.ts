@@ -1,7 +1,6 @@
-import { PersonName } from '@ecomerece/domain';
+import { Name } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { ReviewAggregate } from '@ecomerece/domain/modules/reviews/reviews.aggregate';
-import type { IQueryBus } from '@ecomerece/domain/query/query-bus.interface';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { Description } from '@ecomerece/domain/value-objects/description.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -23,10 +22,10 @@ import type { FilterQuery } from 'mongoose';
 import type { ReviewResponseReadModel } from '../../../../../packages/shared/types/responses-read-models/review.response-read-model';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import {
-  EnsureActiveOrderGetByIdQuery,
-  EnsureActiveProductGetByIdQuery,
-  GetVendorByUserIdQuery,
+import type {
+  IOrderQueries,
+  IProductQueries,
+  IVendorQueries,
 } from '@ecomerece/contracts';
 import type { AuthActor } from '@ecomerece/contracts';
 import { reviewMapper } from '../infrastructure/review.mapper';
@@ -36,7 +35,9 @@ import { type ReviewMessagesType, reviewMessages } from '../presentation/review.
 
 export class ReviewApplicationService extends BaseService {
   constructor(
-    private readonly queryBus: IQueryBus,
+    private readonly orderQueries: IOrderQueries,
+    private readonly productQueries: IProductQueries,
+    private readonly vendorQueries: IVendorQueries,
     private readonly reviewRepo: ReviewRepository,
     private readonly eventBus: IEventBus,
   ) {
@@ -121,12 +122,10 @@ export class ReviewApplicationService extends BaseService {
     const comment = Description.create(data.comment);
     const authorAvatar = UrlVO.create(actor.image);
     const images = data.images ? data.images.map((value) => UrlVO.create(value)) : [];
-    const authorName = PersonName.create(actor.name.fullName);
+    const authorName = Name.create(actor.name.fullName);
     let verified = false;
     if (orderId) {
-      const activeOrder = await this.queryBus.execute(
-        new EnsureActiveOrderGetByIdQuery({ orderId: orderId }),
-      );
+      const activeOrder = await this.orderQueries.ensureActiveById(orderId);
 
       if (activeOrder.active) if (activeOrder.order?.buyerId == actorId.value) verified = true;
     }
@@ -225,14 +224,10 @@ export class ReviewApplicationService extends BaseService {
     const reviewId = Id.create(id);
     const actorId = Id.create(actor._id);
     const review = await this.reviewRepo.FindByIdOrThrow(reviewId);
-    const activeProduct = await this.queryBus.execute(
-      new EnsureActiveProductGetByIdQuery({ productId: review.productId }),
-    );
+    const activeProduct = await this.productQueries.ensureActiveById(review.productId);
     if (!activeProduct.product) throw new BadRequestError('Product not found.');
     if (!activeProduct.active) throw new BadRequestError('Product is not active.');
-    const vendor = await this.queryBus.execute(
-      new GetVendorByUserIdQuery({ userId: actorId }),
-    );
+    const vendor = await this.vendorQueries.getByUserId(actorId);
     if (!vendor) throw new BadRequestError('User does not own a vendor.');
     if (vendor.id !== activeProduct.product.vendorId) {
       throw new BadRequestError('This review does not belong to the current vendor.');

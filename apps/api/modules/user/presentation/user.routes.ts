@@ -11,7 +11,7 @@ export function createUserRoutes(userController: UserController) {
 usersRoutes.post('/init', initAuthMiddleware, userController.initUser);
 usersRoutes.get('/me', authMiddleware, userController.getMe);
 usersRoutes.delete('/me/soft', authMiddleware, userController.softDeleteMe);
-usersRoutes.get('/', authMiddleware, userController.getPaginatedUsers);
+usersRoutes.get('/', authMiddleware, adminMiddleware, userController.getPaginatedUsers);
 usersRoutes.get(
   '/admin/all',
   authMiddleware,
@@ -28,7 +28,7 @@ usersRoutes.patch('/role', authMiddleware, adminMiddleware, userController.assig
 usersRoutes.patch('/recover', authMiddleware, adminMiddleware, userController.recover);
 usersRoutes.delete('/soft', authMiddleware, adminMiddleware, userController.softDelete);
 
-usersRoutes.get('/:id', authMiddleware, userController.getUserById);
+usersRoutes.get('/:id', authMiddleware, adminMiddleware, userController.getUserById);
 
   return usersRoutes;
 }

@@ -13,7 +13,7 @@ import { createRoutes } from './routes';
 const application = createApplication();
 const { productStatsSyncScheduler } = application.modules.stats;
 
-const corsOrigins = (process.env.CORS_ORIGIN ?? 'http://localhost:3000')
+const corsOrigins = (process.env.CORS_ORIGIN)
   .split(',')
   .map((o) => o.trim());
 app.use(logger());
@@ -45,7 +45,7 @@ app.use(
   ...requestGuards({
     maxUrlLength: 200,
     maxQueryLength: 200,
-    maxParamLength: 20,
+    maxParamLength: 50,
     maxBodyBytes: 7_000_000,
     maxJsonDepth: 5,
     maxJsonNodes: 50,

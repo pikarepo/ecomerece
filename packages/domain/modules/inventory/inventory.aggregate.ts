@@ -6,7 +6,9 @@ import { InventoryCompletedEvent } from './events/inventory-completed.event';
 import { InventoryCreatedEvent } from './events/inventory-created.event';
 import { InventoryDeletedEvent } from './events/inventory-deleted.event';
 import { InventoryLowStockThresholdUpdatedEvent } from './events/inventory-low-stock-threshold-updated.event';
+import { InventoryReleasedEvent } from './events/inventory-released.event';
 import { InventoryReservedEvent } from './events/inventory-reserved.event';
+import { InventoryRestockedEvent } from './events/inventory-restocked.event';
 import { InventoryStockRemovedEvent } from './events/inventory-stock-removed.event';
 
 type createInventoryProps = {
@@ -106,10 +108,28 @@ export class InventoryAggregate extends AggregateRoot {
     );
   }
 
+  /** Consumes held stock once an order is fulfilled (reserved leaves the shelf). */
   complete(quantity: Quantity, actorId: Id) {
     this._reserved = this._reserved.decrease(quantity.value);
     this.raise(
       new InventoryCompletedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
+    );
+  }
+
+  /** Puts a held reservation back on the shelf (order cancelled before fulfilment). */
+  release(quantity: Quantity, actorId: Id) {
+    this._reserved = this._reserved.decrease(quantity.value);
+    this._available = this._available.increase(quantity.value);
+    this.raise(
+      new InventoryReleasedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
+    );
+  }
+
+  /** Puts already-consumed stock back on the shelf (a return). */
+  restock(quantity: Quantity, actorId: Id) {
+    this._available = this._available.increase(quantity.value);
+    this.raise(
+      new InventoryRestockedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
   }
 

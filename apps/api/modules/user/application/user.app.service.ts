@@ -59,11 +59,16 @@ export class UserAppService extends BaseService {
       return UserMessages.initialized(id);
     }
 
+    const metadata = SupabaseUser.user_metadata ?? {};
+    const fullName = String(
+      metadata.full_name ?? metadata.name ?? SupabaseUser.email.split('@')[0] ?? 'User',
+    ).trim() || 'User';
     const image = new UrlVO(
-      SupabaseUser.user_metadata?.avatar_url || SupabaseUser.user_metadata?.picture,
+      metadata.avatar_url ||
+        metadata.picture ||
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
     );
-    const fullName = SupabaseUser.user_metadata.full_name;
-    const nameArray = fullName.trim().split(/\s+/);
+    const nameArray = fullName.split(/\s+/);
     const firstName = nameArray[0] || '';
     const lastName = nameArray.length > 1 ? nameArray[nameArray.length - 1] : '';
     const middleName = nameArray.length > 2 ? nameArray.slice(1, -1).join(' ') : '';

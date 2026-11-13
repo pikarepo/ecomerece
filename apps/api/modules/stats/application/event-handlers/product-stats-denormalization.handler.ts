@@ -43,12 +43,19 @@ export class ProductStatsDenormalizationHandler
       if (productIds.length === 0) continue;
 
       const lifetimeDocs = await statsRepository.getLifetimeDocs('product', productIds);
-      const statsByProduct = new Map<string, Metrics>(
-        lifetimeDocs.map((doc) => [
-          doc.entity?.id ?? '',
-          { ...emptyMetrics(), ...((doc.metrics ?? {}) as Partial<Metrics>) },
-        ]),
-      );
+      // Lifetime rows keep their non-time dimensions (source, country, ...),
+      // so one product can own several rows. Sum them instead of letting the
+      // last row overwrite the others.
+      const statsByProduct = new Map<string, Metrics>();
+      for (const doc of lifetimeDocs) {
+        const productId = doc.entity?.id ?? '';
+        const merged = statsByProduct.get(productId) ?? emptyMetrics();
+        for (const [metric, value] of Object.entries(doc.metrics ?? {})) {
+          const key = metric as keyof Metrics;
+          merged[key] = (merged[key] ?? 0) + Number(value ?? 0);
+        }
+        statsByProduct.set(productId, merged);
+      }
 
       await this.deps.applyProductStats(
         productIds.map((productId) => ({
