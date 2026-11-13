@@ -7,6 +7,8 @@ const statusSchema = z.enum([
   'returned',
   'refunded',
   'cancelled',
+  // Rejected cart lines, stored with a failure reason.
+  'failed',
 ]);
 
 // Admin: all order items — optionally filter by order / status / deleted state

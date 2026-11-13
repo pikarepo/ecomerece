@@ -5,7 +5,12 @@ import type { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Money } from '@ecomerece/domain/value-objects/money.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
-import type { OrderItemCancelInput, OrderItemUpdateInput } from '@ecomerece/contracts';
+import type {
+  OrderItemCancelInput,
+  OrderItemFailureInput,
+  OrderItemRestoreInput,
+  OrderItemUpdateInput,
+} from '@ecomerece/contracts';
 import { BadRequestError } from '../../../errors/app-error';
 import { BaseService } from '../../../core/services/base.services';
 import { OrderItemsMapper } from '../infrastructure/order-item.mapper';
@@ -84,15 +89,67 @@ export class OrderItemsInternalService extends BaseService {
     return updatedItems.flatMap((value) => value.pullEvents());
   }
 
+  /** One item for the API: rejected lines are returned with their reason. */
   async getOrderItemById(id: Id): Promise<OrderItemResponseReadModel | null> {
-    const item = await this.itemsRepo.FindById(id);
-    if (!item) return null;
-    return OrderItemsMapper.aggregateToResponseReadModel(item);
+    return this.itemsRepo.FindResponseById(id);
   }
 
+  /**
+   * Items for order transitions: rejected lines are excluded, because they were
+   * never reserved and must not cascade into inventory or item status changes.
+   */
   async getOrderItemsByOrderId(orderId: Id): Promise<OrderItemReadModel[]> {
     const items = await this.itemsRepo.FindByOrderId(orderId);
     return items.map(OrderItemsMapper.aggregateToReadModel);
+  }
+
+  /** Items for the API: rejected lines are included so the buyer sees why. */
+  async listOrderItemsWithFailures(orderId: Id): Promise<OrderItemResponseReadModel[]> {
+    return this.itemsRepo.FindResponseByOrderId(orderId);
+  }
+
+  /** Rejected lines of an order, for a later fulfilment retry. */
+  async getFailedOrderItems(orderId: Id): Promise<OrderItemReadModel[]> {
+    return this.itemsRepo.FindFailedReadModelsByOrderId(orderId);
+  }
+
+  /** One rejected line, for a single-line retry. */
+  async getFailedOrderItemById(id: Id): Promise<OrderItemReadModel | null> {
+    return this.itemsRepo.FindFailedReadModelById(id);
+  }
+
+  /**
+   * Reopens rejected lines as real order items using the caller's fresh quote.
+   * Whether a line may be restored at all is decided by the aggregate, not here.
+   */
+  async restoreOrderItemFailures(items: OrderItemRestoreInput[]): Promise<IEvent[]> {
+    if (items.length === 0) return [];
+
+    const docs = await this.itemsRepo.FindFailedByIds(items.map((value) => value.id));
+    if (docs.length !== items.length) {
+      throw new BadRequestError('Some failed order items not found.');
+    }
+
+    const restoredItems = docs.map((doc) => {
+      const quote = items.find((value) => value.id.value === doc._id);
+      if (!quote) {
+        throw new BadRequestError('Restore data not found for item.');
+      }
+      return OrderItemsMapper.persistenceToRestoredAggregate(doc, quote);
+    });
+
+    await this.itemsRepo.SaveMany(restoredItems);
+
+    return restoredItems.flatMap((value) => value.pullEvents());
+  }
+
+  /**
+   * Persists rejected cart lines. They carry no price and hold no stock, so no
+   * domain event is raised for them.
+   */
+  async recordOrderItemFailures(items: OrderItemFailureInput[]): Promise<IEvent[]> {
+    await this.itemsRepo.createFailures(items);
+    return [];
   }
 
   async createOrderItems(

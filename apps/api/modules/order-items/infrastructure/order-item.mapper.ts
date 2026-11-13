@@ -11,17 +11,20 @@ import type { OrderItemsPersistence } from './order-item.model';
 
 export const OrderItemsMapper = {
   persistenceToAggregate(doc: OrderItemsPersistence): OrderItemsAggregate {
+    if (doc.failureReason) {
+      throw new Error('A failed order item cannot be rehydrated as an aggregate.');
+    }
     return OrderItemsAggregate.rehydrate(
       Id.rehydrate(doc._id),
       Id.rehydrate(doc.orderId),
-      Id.rehydrate(doc.vendorId),
-      Id.rehydrate(doc.productId),
+      Id.rehydrate(doc.vendorId as string),
+      Id.rehydrate(doc.productId as string),
       Id.rehydrate(doc.variantId),
       Quantity.rehydrate(doc.quantity),
       ExpirationDate.rehydrate(doc.waitingTime),
       StatusVo.rehydrate(doc.status),
       Money.rehydrate(doc.totalPrice),
-      Money.rehydrate(doc.price),
+      Money.rehydrate(doc.price as number),
       DeleteInfoVO.rehydrate(
         doc.deleted.deletedBy ? Id.create(doc.deleted.deletedBy) : null,
         doc.deleted.deleted,
@@ -33,6 +36,30 @@ export const OrderItemsMapper = {
       EffectiveDate.rehydrate(doc.createdAt),
     );
   },
+  /**
+   * Rebuilds a rejected line as a pending aggregate with a fresh quote. The
+   * transition rules live in `OrderItemsAggregate.restoreFromFailure`.
+   */
+  persistenceToRestoredAggregate(
+    doc: OrderItemsPersistence,
+    quote: { productId: Id; vendorId: Id; price: Money },
+  ): OrderItemsAggregate {
+    return OrderItemsAggregate.restoreFromFailure({
+      id: Id.rehydrate(doc._id),
+      orderId: Id.rehydrate(doc.orderId),
+      variantId: Id.rehydrate(doc.variantId),
+      quantity: Quantity.rehydrate(doc.quantity),
+      waitingTime: ExpirationDate.rehydrate(doc.waitingTime),
+      status: doc.status,
+      failureReason: doc.failureReason,
+      productId: quote.productId,
+      vendorId: quote.vendorId,
+      price: quote.price,
+      version: Quantity.rehydrate(doc.version),
+      createdAt: EffectiveDate.rehydrate(doc.createdAt),
+    });
+  },
+
   aggregateToPersistence(items: OrderItemsAggregate) {
     return {
       _id: items.id.value,
@@ -45,6 +72,7 @@ export const OrderItemsMapper = {
       vendorId: items.vendorId.value,
       productId: items.productId.value,
       variantId: items.variantId.value,
+      failureReason: null,
       version: items.version.value,
       deleted: {
         deleted: items.delete.deleted,
@@ -67,6 +95,7 @@ export const OrderItemsMapper = {
       status: items.status.toStatusType(),
       totalPrice: items.totalPrice.value,
       price: items.price.value,
+      failureReason: null,
       delete: {
         deleted: items.delete.deleted,
         deletedFrom: items.delete.from?.value ?? null,
@@ -89,6 +118,7 @@ export const OrderItemsMapper = {
       status: doc.status,
       totalPrice: doc.totalPrice,
       price: doc.price,
+      failureReason: doc.failureReason,
       delete: {
         deleted: doc.deleted.deleted,
         deletedFrom: doc.deleted.deletedFrom ?? null,
@@ -111,8 +141,27 @@ export const OrderItemsMapper = {
       status: items.status.toStatusType(),
       totalPrice: items.totalPrice.value,
       price: items.price.value,
+      failureReason: null,
 
       createdAt: items.createdAt.value,
+    };
+  },
+
+  persistenceToResponseReadModel(doc: OrderItemsPersistence): OrderItemResponseReadModel {
+    return {
+      _id: doc._id,
+      orderId: doc.orderId,
+      vendorId: doc.vendorId,
+      productId: doc.productId,
+      variantId: doc.variantId,
+      quantity: doc.quantity,
+      waitingTime: doc.waitingTime,
+      status: doc.status,
+      totalPrice: doc.totalPrice,
+      price: doc.price,
+      failureReason: doc.failureReason,
+
+      createdAt: doc.createdAt,
     };
   },
 };

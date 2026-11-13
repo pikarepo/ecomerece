@@ -62,6 +62,7 @@ export function createApplication() {
     eventBus,
     inventoryReservation: inventory.inventoryReservation,
     orderItemsWriter: orderItemsCore.orderItemsWriter,
+    orderItemsQueries: orderItemsCore.queries,
     addressQueries: address.queries,
     variantQueries: productVariant.queries,
     productQueries: product.queries,

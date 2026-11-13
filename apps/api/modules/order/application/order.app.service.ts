@@ -1,4 +1,4 @@
-import { OrderAggregate } from '@ecomerece/domain';
+import { OrderAggregate, type OrderItemFailureReason } from '@ecomerece/domain';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
@@ -18,12 +18,13 @@ import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import type {
   IAddressQueries,
   IInventoryReservation,
+  IOrderItemsQueries,
   IOrderItemsWriter,
   IProductQueries,
   IProductVariantQueries,
+  OrderItemRestoreInput,
 } from '@ecomerece/contracts';
 import type { OrderItemReadModel } from '@ecomerece/domain/modules/order-items/read-models/order-items.read-model';
-import type { OrderItemsQueryAdapter } from '../../order-items/infrastructure/order-items-query.adapter';
 import { BaseService } from '../../../core/services/base.services';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BadRequestError } from '../../../errors/app-error';
@@ -47,6 +48,13 @@ type ResolvedOrderItem = {
   price: number;
 };
 
+/** A cart line that could not be bought, with the reason to persist on it. */
+type RejectedOrderItem = {
+  variantId: Id;
+  quantity: Quantity;
+  reason: OrderItemFailureReason;
+};
+
 /**
  * Order use cases.
  *
@@ -65,24 +73,24 @@ export class OrderApplicationService extends BaseService {
     private readonly eventBus: IEventBus,
     private readonly inventoryReservation: IInventoryReservation,
     private readonly orderItemsWriter: IOrderItemsWriter,
-    private readonly orderItemsQueries: OrderItemsQueryAdapter,
+    private readonly orderItemsQueries: IOrderItemsQueries,
     private readonly unitOfWork: UnitOfWork,
   ) {
     super();
   }
 
   /**
-   * Validates the cart and reserves stock.
+   * Validates the cart and reserves stock, reporting why each line was rejected.
    *
    * The contract queries already return only active, non-deleted variants and
    * non-deleted, non-blocked products, so no extra `validIds` filtering is
-   * needed. The inventory port returns the ids it could reserve; any line it
-   * rejects is dropped, preserving the previous "partial order" behaviour.
+   * needed. Every line that does not survive lands in `rejected` with a reason
+   * instead of being silently dropped, which is what `safeOrder` needs.
    */
-  private async resolveBuyableItems(
+  private async resolveOrderItems(
     items: { variantId: Id; quantity: Quantity }[],
     actorId: Id,
-  ): Promise<ResolvedOrderItem[]> {
+  ): Promise<{ buyable: ResolvedOrderItem[]; rejected: RejectedOrderItem[] }> {
     const variants = await this.variantQueries.verifyAndGet(
       items.map((item) => item.variantId),
     );
@@ -95,10 +103,28 @@ export class OrderApplicationService extends BaseService {
     // Join request lines with their variant + product read models. A missing
     // entry means the variant or product became unavailable between requests.
     const candidates: ResolvedOrderItem[] = [];
+    const rejected: RejectedOrderItem[] = [];
     for (const item of items) {
       const variant = variantById.get(item.variantId.value);
-      const product = variant && productById.get(variant.productId);
-      if (!variant || !product) continue;
+      if (!variant) {
+        rejected.push({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          reason: variants.notFoundIds.some((id) => id.equals(item.variantId))
+            ? 'variant_not_found'
+            : 'variant_unavailable',
+        });
+        continue;
+      }
+      const product = productById.get(variant.productId);
+      if (!product) {
+        rejected.push({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          reason: 'product_unavailable',
+        });
+        continue;
+      }
       candidates.push({
         variantId: item.variantId,
         productId: Id.create(variant.productId),
@@ -109,12 +135,27 @@ export class OrderApplicationService extends BaseService {
     }
 
     // Reserve before building the order so the total only covers held stock.
-    const { buyableIds } = await this.inventoryReservation.reserve(
+    const { lines } = await this.inventoryReservation.reserve(
       candidates.map(({ variantId, quantity }) => ({ variantId, quantity })),
       actorId,
     );
-    const buyable = new Set(buyableIds.map((id) => id.value));
-    return candidates.filter((item) => buyable.has(item.variantId.value));
+    const lineByVariant = new Map(lines.map((line) => [line.variantId.value, line]));
+
+    const buyable: ResolvedOrderItem[] = [];
+    for (const candidate of candidates) {
+      const line = lineByVariant.get(candidate.variantId.value);
+      if (line?.reserved) {
+        buyable.push(candidate);
+        continue;
+      }
+      rejected.push({
+        variantId: candidate.variantId,
+        quantity: candidate.quantity,
+        reason: line?.reason ?? 'inventory_not_found',
+      });
+    }
+
+    return { buyable, rejected };
   }
 
   /**
@@ -127,16 +168,14 @@ export class OrderApplicationService extends BaseService {
    *    items, create the order and item rows, and raise `order.created`,
    * 4. after commit: publish item and order events together.
    *
+   * `data.safeOrder` decides what a rejected line does: `true` throws, which
+   * rolls back the reservation, the item rows and the order itself; `false`
+   * records the line on the order with its failure reason and zero cost.
+   *
    * Publishing after the transaction is deliberate: consumers must never react
    * to an order that rolled back (covered by `order-create-commit.test.ts`).
    */
-
-
-
-
-
   async createMyOrder(data: createMyOrderDtoType, actor: AuthActor) {
-
     const orderId = Id.create();
     const idempotentKey = Id.create(data.idempotentKey);
     const addressId = Id.create(data.addressId);
@@ -154,18 +193,27 @@ export class OrderApplicationService extends BaseService {
 
     const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
       await this.orderRepo.EnsureUniqueImpodentKey(idempotentKey);
-      const orderItems = await this.resolveBuyableItems(items, actorId);
+      const { buyable, rejected } = await this.resolveOrderItems(items, actorId);
+
+      // Safe order: one rejected line fails the whole order before any write.
+      if (data.safeOrder && rejected.length > 0) {
+        const reasons = [...new Set(rejected.map((item) => item.reason))].join(', ');
+        throw new BadRequestError(
+          `Order rejected: ${rejected.length} item(s) could not be fulfilled (${reasons}).`,
+        );
+      }
+
       const order = OrderAggregate.create({
         id: orderId,
         idempotentKey,
         totalPrice: Money.create(
-          orderItems.reduce((sum, item) => sum + item.quantity.value * item.price, 0),
+          buyable.reduce((sum, item) => sum + item.quantity.value * item.price, 0),
         ),
         buyerId: actorId,
         address: FullAddressVO.create(address.fullAddress),
       });
       const itemEvents = await this.orderItemsWriter.create(
-        orderItems.map((item) => ({
+        buyable.map((item) => ({
           id: Id.create(),
           orderId,
           vendorId: item.vendorId,
@@ -176,10 +224,24 @@ export class OrderApplicationService extends BaseService {
           price: Money.create(item.price),
         })),
       );
+      // Rejected lines are recorded with a reason, never priced or reserved.
+      const failureEvents =
+        rejected.length > 0
+          ? await this.orderItemsWriter.recordFailures(
+              rejected.map((item) => ({
+                id: Id.create(),
+                orderId,
+                variantId: item.variantId,
+                quantity: item.quantity,
+                waitingTime,
+                reason: item.reason,
+              })),
+            )
+          : [];
       // Aggregate raises `order.created`; events stay buffered until commit.
       order.createOrder();
       await this.orderRepo.Create(order);
-      return { order, itemEvents };
+      return { order, itemEvents: [...itemEvents, ...failureEvents] };
     });
 
     const events = [...itemEvents, ...order.pullEvents()];
@@ -188,6 +250,141 @@ export class OrderApplicationService extends BaseService {
       orderId,
       actorId,
       addressId,
+      OrderMapper.aggregateToResponseReadModel(order),
+    );
+  }
+
+  /**
+   * Retries every rejected line of the buyer's own order.
+   *
+   * The rules live in the domain (`Order.ensureOwnedBy`,
+   * `OrderStatusVO.ensureItemsRetryable`, and
+   * `OrderItemsAggregate.restoreFromFailure` which enforces failed -> pending),
+   * so this method only orchestrates them.
+   */
+  async retryMyOrderItems(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    const { order, restored, remaining, itemEvents } = await this.unitOfWork.transaction(
+      async () => {
+        const order = await this.orderRepo.FindByIdOrThrow(orderId);
+        // Domain permissions: only the buyer may act, and only while the order
+        // can still change.
+        order.ensureOwnedBy(actorId);
+        order.status.ensureItemsRetryable();
+
+        const failed = await this.orderItemsQueries.getFailedByOrderId(orderId);
+        if (failed.length === 0) {
+          throw new BadRequestError('Order has no failed items to retry.');
+        }
+
+        return this.retryFailedLines(order, failed, actorId);
+      },
+    );
+
+    await this.publish([...itemEvents, ...order.pullEvents()]);
+    return this.retriedMessage(order, actorId, restored.length, remaining.length);
+  }
+
+  /** Retries one rejected line of the buyer's own order; the rest is untouched. */
+  async retryMyOrderItem(itemId: string, actor: AuthActor) {
+    const id = Id.create(itemId);
+    const actorId = Id.create(actor._id);
+
+    const { order, restored, remaining, itemEvents } = await this.unitOfWork.transaction(
+      async () => {
+        const failedItem = await this.orderItemsQueries.getFailedById(id);
+        if (!failedItem) {
+          throw new BadRequestError('Failed order item not found.');
+        }
+
+        const order = await this.orderRepo.FindByIdOrThrow(Id.create(failedItem.orderId));
+        order.ensureOwnedBy(actorId);
+        order.status.ensureItemsRetryable();
+
+        return this.retryFailedLines(order, [failedItem], actorId);
+      },
+    );
+
+    await this.publish([...itemEvents, ...order.pullEvents()]);
+    return this.retriedMessage(order, actorId, restored.length, remaining.length);
+  }
+
+  /**
+   * Re-resolves the given failed lines, reserves whatever stock is available
+   * again, reopens those lines as real items and re-prices the order.
+   *
+   * Must run inside a transaction: a throw here rolls the reservation and the
+   * restored rows back together. Lines that still cannot be bought keep their
+   * failure reason and keep costing nothing.
+   */
+  private async retryFailedLines(
+    order: OrderAggregate,
+    failed: OrderItemReadModel[],
+    actorId: Id,
+  ) {
+    const { buyable, rejected } = await this.resolveOrderItems(
+      failed.map((item) => ({
+        variantId: Id.create(item.variantId),
+        quantity: Quantity.create(item.quantity),
+      })),
+      actorId,
+    );
+
+    if (buyable.length === 0) {
+      return { order, restored: [], remaining: rejected, itemEvents: [] as IEvent[] };
+    }
+
+    // The same variant can be rejected twice, so quotes are matched per failed
+    // row in order rather than by variant alone.
+    const failedByVariant = new Map<string, OrderItemReadModel[]>();
+    for (const item of failed) {
+      const bucket = failedByVariant.get(item.variantId) ?? [];
+      bucket.push(item);
+      failedByVariant.set(item.variantId, bucket);
+    }
+
+    const quotes: OrderItemRestoreInput[] = [];
+    const restoredTotals: Money[] = [];
+    for (const line of buyable) {
+      const failedItem = failedByVariant.get(line.variantId.value)?.shift();
+      if (!failedItem) continue;
+      quotes.push({
+        id: Id.create(failedItem._id),
+        productId: line.productId,
+        vendorId: line.vendorId,
+        price: Money.create(line.price),
+      });
+      restoredTotals.push(Money.create(line.price * line.quantity.value));
+    }
+
+    const itemEvents = await this.orderItemsWriter.restoreFailures(quotes);
+
+    // Re-price from every line that is real now: already valid items plus the
+    // restored ones. Failed lines never contribute to the total.
+    const validItems = await this.orderItemsQueries.getByOrderId(order.id);
+    order.applyRecoveredItems(
+      [...validItems.map((item) => Money.create(item.totalPrice)), ...restoredTotals],
+      actorId,
+    );
+    await this.orderRepo.Save(order);
+
+    return { order, restored: quotes, remaining: rejected, itemEvents };
+  }
+
+  private retriedMessage(
+    order: OrderAggregate,
+    actorId: Id,
+    restoredCount: number,
+    remainingCount: number,
+  ) {
+    return OrderMessages.orderItemsRetried(
+      order.id,
+      actorId,
+      restoredCount,
+      remainingCount,
+      order.totalPrice.value,
       OrderMapper.aggregateToResponseReadModel(order),
     );
   }
@@ -315,9 +512,7 @@ export class OrderApplicationService extends BaseService {
       orderId,
       actorId,
       (order) => {
-        if (!order.buyerId.equals(actorId)) {
-          throw new BadRequestError('You do not own this order.');
-        }
+        order.ensureOwnedBy(actorId);
         order.cancelOrder(reason, actorId);
       },
       (items) => this.orderItemsWriter.cancel(items),

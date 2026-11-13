@@ -1,4 +1,9 @@
 import type { InventoryReadModel } from '@ecomerece/domain';
+import type {
+  InventoryReservationFailureReason,
+  InventoryReservationLineResult,
+  InventoryReservationResult,
+} from '@ecomerece/contracts';
 import type { OrderItem } from '@ecomerece/domain/modules/order/value-objects/order-item.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
@@ -109,19 +114,52 @@ export class InventoryInternalServcie extends BaseService {
     return this.transitionReserved(items, actorId, 'restock');
   }
 
+  /**
+   * Reserves every line that has enough stock and reports why the rest could
+   * not be reserved.
+   *
+   * A short line no longer aborts the batch (the old `available > 0` check let
+   * `inventory.reserve` throw `Insufficient quantity`): the caller decides
+   * whether a rejection fails the whole order or is recorded on the item.
+   */
   async reserveInventories(
     inventoryItems: { variantId: Id; quantity: Quantity }[],
     actorId: Id,
-  ): Promise<{
-    validIds: Id[];
-    notFoundIds: Id[];
-    deletedIds: Id[];
-    availableStockIds: Id[];
-    buyableIds: Id[];
-    inventoriesReadModel: InventoryReadModel[];
-  }> {
+  ): Promise<InventoryReservationResult> {
     const variantIds = inventoryItems.map((item) => Id.create(item.variantId.value));
     const inventories = await this.inventoryRepo.FindByVariantIds(variantIds);
+    const inventoryByVariant = new Map(
+      inventories.map((inventory) => [inventory.variantId.value, inventory] as const),
+    );
+
+    const lines: InventoryReservationLineResult[] = [];
+    // Keyed by variant so a variant requested twice is only saved once.
+    const reserved = new Map<string, (typeof inventories)[number]>();
+
+    for (const item of inventoryItems) {
+      const inventory = inventoryByVariant.get(item.variantId.value);
+      const reason: InventoryReservationFailureReason | null = !inventory
+        ? 'inventory_not_found'
+        : inventory.delete.deleted
+          ? 'inventory_deleted'
+          : inventory.available.value === 0
+            ? 'out_of_stock'
+            : inventory.available.value < item.quantity.value
+              ? 'insufficient_stock'
+              : null;
+
+      if (!inventory || reason) {
+        lines.push({ variantId: item.variantId, reserved: false, reason });
+        continue;
+      }
+
+      inventory.reserve(item.quantity, actorId);
+      reserved.set(inventory.variantId.value, inventory);
+      lines.push({ variantId: item.variantId, reserved: true, reason: null });
+    }
+
+    await this.inventoryRepo.SaveMany([...reserved.values()]);
+
     const validInventories = inventories.filter((inv) => !inv.delete.deleted);
     const validIdValues = new Set(validInventories.map((inv) => inv.variantId.value));
     const existingInventoryVariantIds = new Set(inventories.map((inv) => inv.variantId.value));
@@ -134,24 +172,11 @@ export class InventoryInternalServcie extends BaseService {
     const availableStockIds = validInventories
       .filter((inv) => inv.available.value > 0)
       .map((inv) => Id.create(inv.variantId.value));
-    const buyableIds = availableStockIds;
-    const buyableInventories = inventories.filter((inv) =>
-      buyableIds.some((id) => id.value === inv.variantId.value),
-    );
-
-    const itemsByVariant = new Map(
-      inventoryItems.map((item) => [item.variantId.value, item] as const),
-    );
-
-    for (const inventory of buyableInventories) {
-      const item = itemsByVariant.get(inventory.variantId.value);
-      if (!item) continue;
-      inventory.reserve(item.quantity, actorId);
-    }
-    await this.inventoryRepo.SaveMany(buyableInventories);
+    const buyableIds = lines.filter((line) => line.reserved).map((line) => line.variantId);
     const inventoriesReadModel = validInventories.map((inv) =>
       InventoryMapper.aggregateToReadModel(inv),
     );
+
     return {
       validIds,
       notFoundIds,
@@ -159,6 +184,7 @@ export class InventoryInternalServcie extends BaseService {
       availableStockIds,
       buyableIds,
       inventoriesReadModel,
+      lines,
     };
   }
 }

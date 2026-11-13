@@ -55,6 +55,16 @@ OrderRoutes.post(
   orderController.refundOrder,
 );
 OrderRoutes.post('/cancel/my/:id', authMiddleware, orderController.cancelMyOrder);
+OrderRoutes.post(
+  '/retry-items/my/:id',
+  authMiddleware,
+  orderController.retryMyOrderItems,
+);
+OrderRoutes.post(
+  '/retry-item/my/:id',
+  authMiddleware,
+  orderController.retryMyOrderItem,
+);
 OrderRoutes.get('/:id', authMiddleware, orderController.getMyOrderById);
 
   return OrderRoutes;

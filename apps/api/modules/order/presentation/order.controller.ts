@@ -87,6 +87,18 @@ export class OrderController extends BaseController<OrderApplicationService> {
     return this.ok(c, await this.service.deleteOrder(id, data, actor));
   };
 
+  retryMyOrderItems = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.retryMyOrderItems(id, actor));
+  };
+
+  retryMyOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.retryMyOrderItem(id, actor));
+  };
+
   recoverOrder = async (c: Context) => {
     const id = this.param(c, 'id', idSchema);
     const actor = c.get('user');

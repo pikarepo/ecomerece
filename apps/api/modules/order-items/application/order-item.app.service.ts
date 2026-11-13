@@ -85,12 +85,12 @@ export class OrderItemsApplicationService extends BaseService {
     return OrderItemsMessages.orderItemsCancelled(orderId, actorId, itemIds.length);
   }
 
-  /** Buyer: the items of one of their own orders. */
+  /** Buyer: the items of one of their own orders, rejected lines included. */
   async getMyOrderItemsByOrderId(orderId: string, actor: AuthActor) {
     const id = Id.create(orderId);
     const actorId = Id.create(actor._id);
     await this.assertOrderOwner(id, actorId);
-    return this.itemsInternalService.getOrderItemsByOrderId(id);
+    return this.itemsInternalService.listOrderItemsWithFailures(id);
   }
 
   /** Any authenticated caller: one item by id. */
@@ -116,7 +116,7 @@ export class OrderItemsApplicationService extends BaseService {
       direction: query.direction,
     });
     return {
-      data: result.data.map((item) => OrderItemsMapper.aggregateToReadModel(item)),
+      data: result.data,
       meta: result.meta,
     };
   }

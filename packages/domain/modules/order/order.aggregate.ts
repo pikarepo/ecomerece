@@ -5,7 +5,7 @@ import {
   EffectiveDate,
   type FullAddressVO,
   type Id,
-  type Money,
+  Money,
   Quantity,
   type Reason,
 } from '../../value-objects';
@@ -146,6 +146,36 @@ export class OrderAggregate extends AggregateRoot {
     this.ensureNotDeleted();
     this._totalPrice = totalPrice;
     this._address = address;
+    this.raise(new OrderUpdatedEvent({ orderId: this._id, actorId }));
+  }
+
+  /**
+   * Permission: an order belongs to the buyer who placed it, so only that buyer
+   * may read-change or retry it. Admin-only ops are separate use cases.
+   */
+  ensureOwnedBy(buyerId: Id): void {
+    if (!this._buyerId.equals(buyerId)) {
+      throw new BadRequestError('You do not own this order.');
+    }
+  }
+
+  /**
+   * Re-prices the order after failed lines were restored as real items.
+   *
+   * Only an order that can still change may be re-priced, and the totals passed
+   * in are the per-item totals of every line that is now real. The rule itself
+   * lives in `OrderStatusVO`, so no caller can re-price a closed order.
+   */
+  applyRecoveredItems(itemTotals: Money[], actorId: Id) {
+    this.ensureNotDeleted();
+    this._status.ensureItemsRetryable();
+    if (itemTotals.length === 0) {
+      throw new BadRequestError('An order needs at least one item to be re-priced.');
+    }
+    this._totalPrice = itemTotals.reduce(
+      (total, itemTotal) => total.addMoney(itemTotal),
+      Money.zero(),
+    );
     this.raise(new OrderUpdatedEvent({ orderId: this._id, actorId }));
   }
 

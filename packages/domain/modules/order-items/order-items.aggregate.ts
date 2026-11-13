@@ -1,4 +1,5 @@
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import {
   DeleteInfoVO,
   EffectiveDate,
@@ -16,6 +17,7 @@ import { OrderItemRefundedEvent } from './events/order-item-refunded.event';
 import { OrderItemReturnedEvent } from './events/order-item-returned.event';
 import { OrderItemUpdatedEvent } from './events/order-item-updated.event';
 import { StatusVo } from './value-objects/status.vo';
+import type { OrderItemFailureReason } from './value-objects/failure-reason';
 
 export type createOrderProps = {
   id: Id;
@@ -153,6 +155,62 @@ export class OrderItemsAggregate extends AggregateRoot {
       _version,
       _createdAt,
     );
+  }
+
+  /**
+   * Turns a previously rejected cart line back into a real order item.
+   *
+   * The rules are domain rules: the stored line must still be `failed` and must
+   * carry a failure reason, the status may only go `failed -> pending`
+   * (enforced by `StatusVo.restore`), and the restored line needs a real price.
+   */
+  static restoreFromFailure(props: {
+    id: Id;
+    orderId: Id;
+    variantId: Id;
+    quantity: Quantity;
+    waitingTime: ExpirationDate;
+    status: string;
+    failureReason: OrderItemFailureReason | null;
+    productId: Id;
+    vendorId: Id;
+    price: Money;
+    version: Quantity;
+    createdAt: EffectiveDate;
+  }): OrderItemsAggregate {
+    if (!props.failureReason) {
+      throw new BadRequestError('Only a failed order item can be restored.');
+    }
+    // Throws unless the stored status is `failed`.
+    StatusVo.fromString(props.status).restore();
+
+    const orderItem = new OrderItemsAggregate(
+      props.id,
+      props.orderId,
+      props.vendorId,
+      props.productId,
+      props.variantId,
+      props.quantity,
+      props.waitingTime,
+      StatusVo.pending(),
+      Money.create(props.quantity.value * props.price.value),
+      props.price,
+      DeleteInfoVO.none(),
+      props.version,
+      props.createdAt,
+    );
+    orderItem.raise(
+      new OrderItemUpdatedEvent({
+        orderItemId: orderItem._id,
+        orderId: orderItem._orderId,
+        quantity: orderItem._quantity,
+        waitingTime: orderItem._waitingTime,
+        price: orderItem._price,
+        totalPrice: orderItem._totalPrice,
+      }),
+    );
+
+    return orderItem;
   }
 
   confirm() {

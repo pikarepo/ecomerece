@@ -8,6 +8,8 @@ export const StatusEnum = {
   RETURNED: 'returned',
   REFUNDED: 'refunded',
   CANCELLED: 'cancelled',
+  /** A rejected cart line: stored with a failure reason and no price. */
+  FAILED: 'failed',
 } as const;
 
 export type StatusType = (typeof StatusEnum)[keyof typeof StatusEnum];
@@ -47,6 +49,10 @@ export class StatusVo extends StringVO {
 
   static cancelled(): StatusVo {
     return new StatusVo(StatusEnum.CANCELLED);
+  }
+
+  static failed(): StatusVo {
+    return new StatusVo(StatusEnum.FAILED);
   }
 
   static fromString(value: string): StatusVo {
@@ -131,6 +137,23 @@ export class StatusVo extends StringVO {
   }
   isCancelled(): boolean {
     return this.value === StatusEnum.CANCELLED;
+  }
+
+  isFailed(): boolean {
+    return this.value === StatusEnum.FAILED;
+  }
+
+  /**
+   * Reopens a rejected line: `failed` is the only status that may be restored,
+   * and it always comes back as `pending`, never straight into a later stage.
+   */
+  restore(): StatusVo {
+    if (this.value !== StatusEnum.FAILED) {
+      throw new BadRequestError(
+        `Only a failed status can be restored (current: ${this.value})`,
+      );
+    }
+    return StatusVo.pending();
   }
 
   toString(): string {

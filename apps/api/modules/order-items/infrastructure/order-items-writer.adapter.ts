@@ -1,7 +1,9 @@
 import type {
   IOrderItemsWriter,
   OrderItemCancelInput,
+  OrderItemFailureInput,
   OrderItemInput,
+  OrderItemRestoreInput,
   OrderItemUpdateInput,
 } from '@ecomerece/contracts';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
@@ -31,5 +33,11 @@ export class OrderItemsWriterAdapter implements IOrderItemsWriter {
   }
   refund(items: { id: Id }[]): Promise<IEvent[]> {
     return this.itemsService.refundOrderItems(items);
+  }
+  recordFailures(items: OrderItemFailureInput[]): Promise<IEvent[]> {
+    return this.itemsService.recordOrderItemFailures(items);
+  }
+  restoreFailures(items: OrderItemRestoreInput[]): Promise<IEvent[]> {
+    return this.itemsService.restoreOrderItemFailures(items);
   }
 }

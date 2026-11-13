@@ -88,6 +88,13 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
     },
   };
 
+  const orderItemsQueries = {
+    getByOrderId: async () => {
+      calls.push('read-items');
+      return [{ _id: id(30), variantId: id(2), quantity: 2 } as never];
+    },
+  };
+
   const unitOfWork = {
     transaction: async <T>(callback: () => Promise<T>): Promise<T> => {
       calls.push('begin');

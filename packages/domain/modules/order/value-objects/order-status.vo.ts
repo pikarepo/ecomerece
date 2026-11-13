@@ -96,4 +96,20 @@ export class OrderStatusVO extends StringVO {
   get status(): OrderStatusType {
     return this.value as OrderStatusType;
   }
+
+  /**
+   * Permission for retrying rejected items: only an order that can still change
+   * may be re-priced. A completed, cancelled, returned or refunded order is
+   * final, so its total must never move again.
+   */
+  ensureItemsRetryable(): void {
+    if (
+      this.value === OrderStatusEnum.COMPLETED ||
+      this.value === OrderStatusEnum.CANCELLED ||
+      this.value === OrderStatusEnum.RETURNED ||
+      this.value === OrderStatusEnum.REFUNDED
+    ) {
+      throw new BadRequestError(`Cannot retry items on a ${this.value} order.`);
+    }
+  }
 }

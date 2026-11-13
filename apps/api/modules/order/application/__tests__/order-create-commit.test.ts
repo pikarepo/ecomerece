@@ -16,22 +16,29 @@ const actor = {
 const orderInput: createMyOrderDtoType = {
   idempotentKey: id(10),
   addressId: id(11),
-  waitingTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  safeOrder: false,
+  // Order creation caps waiting time at 4 hours.
+  waitingTime: new Date(Date.now() + 2 * 60 * 60 * 1000),
   items: [{ variantId: id(2), quantity: 3 }],
 };
 
-function buildService(options: { saveFails?: boolean } = {}) {
+function buildService(
+  options: { saveFails?: boolean; rejectLine?: boolean } = {},
+) {
   const calls: string[] = [];
   const published: IEvent[] = [];
+  const createdTotals: number[] = [];
+  const recordedFailures: { variantId: { value: string }; reason: string }[] = [];
   const itemEvent = { type: 'order-item.created', payload: {} } as IEvent;
 
   const orderRepo = {
     EnsureUniqueImpodentKey: async () => {
       calls.push('ensure-unique');
     },
-    Create: async () => {
+    Create: async (order: { totalPrice: { value: number } }) => {
       if (options.saveFails) throw new Error('db down');
       calls.push('save-order');
+      createdTotals.push(order.totalPrice.value);
     },
   };
 
@@ -68,6 +75,9 @@ function buildService(options: { saveFails?: boolean } = {}) {
   const variantQueries = {
     verifyAndGet: async () => ({
       variantReadModel: [{ id: id(2), productId: id(3), price: 10, discountedPrice: 10 }],
+      notFoundIds: [],
+      deletedIds: [],
+      nonActiveIds: [],
     }),
   };
 
@@ -76,16 +86,29 @@ function buildService(options: { saveFails?: boolean } = {}) {
   };
 
   const inventoryReservation = {
-    reserve: async () => {
+    reserve: async (lines: { variantId: Id }[]) => {
       calls.push('reserve');
-      return { buyableIds: [Id.create(id(2))] };
+      return {
+        buyableIds: options.rejectLine ? [] : [Id.create(id(2))],
+        lines: lines.map((line) => ({
+          variantId: line.variantId,
+          reserved: !options.rejectLine,
+          reason: options.rejectLine ? 'insufficient_stock' : null,
+        })),
+      };
     },
   };
 
   const orderItemsWriter = {
-    create: async () => {
+    create: async (items: { id: Id }[]) => {
       calls.push('write-items');
-      return [itemEvent];
+      // Mirrors the real writer: no items means no events.
+      return items.length === 0 ? [] : [itemEvent];
+    },
+    recordFailures: async (items: typeof recordedFailures) => {
+      calls.push('record-failures');
+      recordedFailures.push(...items);
+      return [];
     },
   };
 
@@ -105,7 +128,7 @@ function buildService(options: { saveFails?: boolean } = {}) {
     unitOfWork as never,
   );
 
-  return { service, calls, published, itemEvent };
+  return { service, calls, published, itemEvent, createdTotals, recordedFailures };
 }
 
 describe('OrderApplicationService.createMyOrder', () => {
@@ -135,5 +158,48 @@ describe('OrderApplicationService.createMyOrder', () => {
 
     expect(calls).toEqual(['begin', 'ensure-unique', 'reserve', 'write-items', 'abort']);
     expect(published).toHaveLength(0);
+  });
+
+  it('aborts the whole order when safeOrder is on and a line is rejected', async () => {
+    const { service, calls, published, createdTotals, recordedFailures } = buildService({
+      rejectLine: true,
+    });
+
+    await expect(service.createMyOrder({ ...orderInput, safeOrder: true }, actor)).rejects.toThrow(
+      'Order rejected: 1 item(s) could not be fulfilled (insufficient_stock).',
+    );
+
+    // Nothing was written: no item rows, no failure rows, no order, no events.
+    expect(calls).toEqual(['begin', 'ensure-unique', 'reserve', 'abort']);
+    expect(createdTotals).toEqual([]);
+    expect(recordedFailures).toEqual([]);
+    expect(published).toHaveLength(0);
+  });
+
+  it('records the failure reason and charges nothing when safeOrder is off', async () => {
+    const { service, calls, published, createdTotals, recordedFailures } = buildService({
+      rejectLine: true,
+    });
+
+    await service.createMyOrder({ ...orderInput, safeOrder: false }, actor);
+
+    expect(calls).toEqual([
+      'begin',
+      'ensure-unique',
+      'reserve',
+      'write-items',
+      'record-failures',
+      'save-order',
+      'commit',
+      'publish',
+    ]);
+    // No buyable line, so the order total is zero.
+    expect(createdTotals).toEqual([0]);
+    expect(recordedFailures).toHaveLength(1);
+    expect(recordedFailures[0]).toMatchObject({
+      variantId: { value: id(2) },
+      reason: 'insufficient_stock',
+    });
+    expect(published).toHaveLength(1);
   });
 });

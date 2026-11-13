@@ -1,4 +1,9 @@
-import { StatusEnum, type StatusType } from '@ecomerece/domain';
+import {
+  OrderItemFailureReasonEnum,
+  StatusEnum,
+  type OrderItemFailureReason,
+  type StatusType,
+} from '@ecomerece/domain';
 import mongoose, { type HydratedDocument } from 'mongoose';
 
 const deletedSchema = new mongoose.Schema(
@@ -17,11 +22,16 @@ export interface OrderItemsPersistence {
   waitingTime: Date;
   status: StatusType;
   totalPrice: number;
-  price: number;
+  /** Null only for rejected lines: no price was ever agreed. */
+  price: number | null;
   orderId: string;
-  vendorId: string;
-  productId: string;
+  /** Null only for rejected lines, which were never resolved to a vendor. */
+  vendorId: string | null;
+  /** Null only for rejected lines, which were never resolved to a product. */
+  productId: string | null;
   variantId: string;
+  /** Set only when the line was rejected instead of bought. */
+  failureReason: OrderItemFailureReason | null;
   version: number;
   deleted: {
     deleted: boolean;
@@ -58,7 +68,7 @@ const OrderItemsModelSchema = new mongoose.Schema<OrderItemsPersistence>(
     },
     price: {
       type: Number,
-      required: true,
+      default: null,
     },
     orderId: {
       type: String,
@@ -66,15 +76,20 @@ const OrderItemsModelSchema = new mongoose.Schema<OrderItemsPersistence>(
     },
     vendorId: {
       type: String,
-      required: true,
+      default: null,
     },
     productId: {
       type: String,
-      required: true,
+      default: null,
     },
     variantId: {
       type: String,
       required: true,
+    },
+    failureReason: {
+      type: String,
+      enum: [...Object.values(OrderItemFailureReasonEnum), null],
+      default: null,
     },
     version: {
       type: Number,

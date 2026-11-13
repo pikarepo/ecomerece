@@ -30,6 +30,19 @@ export const OrderMessages = {
       message: `Order ${orderId.value} was deleted by ${actorId.value} on ${EffectiveDate.today().value}. Reason: ${reason.value}.`,
     };
   },
+  orderItemsRetried(
+    orderId: Id,
+    actorId: Id,
+    restoredCount: number,
+    remainingCount: number,
+    totalPrice: number,
+    updatedData: OrderResponseReadModel,
+  ): OrderMessagesType {
+    return {
+      updatedData,
+      message: `Order ${orderId.value}: ${restoredCount} item(s) restored, ${remainingCount} still unfulfilled, by ${actorId.value} on ${EffectiveDate.today().value}. New total: ${totalPrice}.`,
+    };
+  },
   orderRecovered(orderId: Id, actorId: Id): OrderMessagesType {
     return {
       message: `Order ${orderId.value} was recovered by ${actorId.value} on ${EffectiveDate.today().value}.`,

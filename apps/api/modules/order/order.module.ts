@@ -1,6 +1,7 @@
 import type {
   IAddressQueries,
   IInventoryReservation,
+  IOrderItemsQueries,
   IOrderItemsWriter,
   IProductQueries,
   IProductVariantQueries,
@@ -16,6 +17,7 @@ import { OrderController } from './presentation/order.controller';
 interface OrderModuleDeps extends Buses {
   inventoryReservation: IInventoryReservation;
   orderItemsWriter: IOrderItemsWriter;
+  orderItemsQueries: IOrderItemsQueries;
   addressQueries: IAddressQueries;
   variantQueries: IProductVariantQueries;
   productQueries: IProductQueries;
@@ -26,6 +28,7 @@ export function createOrder({
   eventBus,
   inventoryReservation,
   orderItemsWriter,
+  orderItemsQueries,
   addressQueries,
   variantQueries,
   productQueries,
@@ -41,7 +44,7 @@ export function createOrder({
     eventBus,
     inventoryReservation,
     orderItemsWriter,
-    new OrderQueryAdapter(orderInternalService),
+    orderItemsQueries,
     unitOfWork,
   );
   const orderController = new OrderController(orderApplicationService);

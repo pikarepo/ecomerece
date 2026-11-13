@@ -2,6 +2,20 @@ import type { InventoryReadModel } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 
+/** Why a single requested line could not be reserved. */
+export type InventoryReservationFailureReason =
+  | 'inventory_not_found'
+  | 'inventory_deleted'
+  | 'out_of_stock'
+  | 'insufficient_stock';
+
+/** Per-line outcome of a reservation request, so callers can explain drops. */
+export interface InventoryReservationLineResult {
+  variantId: Id;
+  reserved: boolean;
+  reason: InventoryReservationFailureReason | null;
+}
+
 export interface InventoryReservationResult {
   validIds: Id[];
   notFoundIds: Id[];
@@ -9,6 +23,7 @@ export interface InventoryReservationResult {
   availableStockIds: Id[];
   buyableIds: Id[];
   inventoriesReadModel: InventoryReadModel[];
+  lines: InventoryReservationLineResult[];
 }
 
 export interface IInventoryReservation {
