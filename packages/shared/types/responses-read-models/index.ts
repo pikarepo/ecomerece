@@ -1,4 +1,5 @@
 export * from './address.response-read-models';
+export * from './cart.response-read-model';
 export * from './category.response-read-models';
 export * from './home.response-read-model';
 export * from './inventory.response-read-model';

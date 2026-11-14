@@ -13,7 +13,7 @@ import type { InventoryReposityory } from '../infrastructure/inventory.repositor
 
 type InventorySummary = Pick<
   InventoryReservationResult,
-  'validIds' | 'notFoundIds' | 'deletedIds' | 'availableStockIds' | 'inventoriesReadModel'
+  'validIds' | 'notFoundIds' | 'deletedIds' | 'availableStockIds' | 'soldOutIds' | 'inventoriesReadModel'
 >;
 
 export class InventoryInternalServcie extends BaseService {
@@ -33,11 +33,49 @@ export class InventoryInternalServcie extends BaseService {
     return InventoryMapper.aggregateToReadModel(inventory);
   }
 
+  async getSoldOutInventoryByVariantId(variantId: Id): Promise<InventoryReadModel | null> {
+    const inventory = await this.inventoryRepo.FindByVariantId(variantId);
+    if (!inventory || inventory.soldOut.value === 0) return null;
+    return InventoryMapper.aggregateToReadModel(inventory);
+  }
+
+  async soldOutInventory(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void> {
+    if (items.length === 0) return;
+    const inventories = await this.inventoryRepo.FindByVariantIds(
+      items.map((item) => item.variantId),
+    );
+    const itemsByVariant = new Map(items.map((item) => [item.variantId.value, item] as const));
+    const changed = inventories.flatMap((inventory) => {
+      const item = itemsByVariant.get(inventory.variantId.value);
+      return item ? [{ inventory, item }] : [];
+    });
+    for (const { inventory, item } of changed) {
+      inventory.markSoldOut(item.quantity, actorId);
+    }
+    await this.inventoryRepo.SaveMany(changed.map(({ inventory }) => inventory));
+  }
+
+  async unsoldInventory(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void> {
+    if (items.length === 0) return;
+    const inventories = await this.inventoryRepo.FindByVariantIds(
+      items.map((item) => item.variantId),
+    );
+    const itemsByVariant = new Map(items.map((item) => [item.variantId.value, item] as const));
+    const changed = inventories.flatMap((inventory) => {
+      const item = itemsByVariant.get(inventory.variantId.value);
+      return item ? [{ inventory, item }] : [];
+    });
+    for (const { inventory, item } of changed) {
+      inventory.unsold(item.quantity, actorId);
+    }
+    await this.inventoryRepo.SaveMany(changed.map(({ inventory }) => inventory));
+  }
+
   async verifyInventoriesItemsGet(
     inventoryItems: OrderItem[],
   ): Promise<InventorySummary & { buyableIds: Id[] }> {
-    const variantIds = inventoryItems.map((item) => Id.create(item.variantId.value));
-    const inventories = await this.inventoryRepo.FindByVariantIds(variantIds);
+    const variantIds = inventoryItems.map((item) => item.variantId);
+    const inventories = (await this.inventoryRepo.FindByVariantIds(variantIds)) ?? [];
     const summary = this.summarizeInventories(inventories, variantIds);
 
     return { ...summary, buyableIds: summary.availableStockIds };
@@ -48,22 +86,37 @@ export class InventoryInternalServcie extends BaseService {
     inventories: InventoryAggregate[],
     requestedVariantIds: Id[],
   ): InventorySummary {
-    const validInventories = inventories.filter((inventory) => !inventory.delete.deleted);
-    const existingVariantIds = new Set(inventories.map((inventory) => inventory.variantId.value));
-    const validVariantIds = new Set(validInventories.map((inventory) => inventory.variantId.value));
+    const validInventories = (inventories ?? []).filter(
+      (inventory) => !inventory?.delete.deleted,
+    );
+    const existingVariantIds = new Set(
+      (inventories ?? []).map((i) => i.variantId.value),
+    );
+    const validVariantIds = new Set(
+      (validInventories ?? []).map((i) => i.variantId.value),
+    );
 
     return {
       validIds: requestedVariantIds.filter((id) => validVariantIds.has(id.value)),
       notFoundIds: requestedVariantIds.filter((id) => !existingVariantIds.has(id.value)),
-      deletedIds: inventories
-        .filter((inventory) => inventory.delete.deleted)
+      deletedIds: (inventories ?? [])
+        .filter((inventory) => inventory?.delete.deleted === true)
         .map((inventory) => Id.create(inventory.variantId.value)),
       availableStockIds: validInventories
         .filter((inventory) => inventory.available.value > 0)
         .map((inventory) => Id.create(inventory.variantId.value)),
-      inventoriesReadModel: validInventories.map((inventory) =>
-        InventoryMapper.aggregateToReadModel(inventory),
-      ),
+      soldOutIds: validInventories
+        .filter((inventory) => inventory.soldOut.value > 0)
+        .map((inventory) => Id.create(inventory.variantId.value)),
+      inventoriesReadModel: (validInventories ?? [])
+        .map((inventory) => {
+          try {
+            return InventoryMapper.aggregateToReadModel(inventory);
+          } catch {
+            return null;
+          }
+        })
+        .filter((model): model is InventoryReadModel => model !== null),
     };
   }
   /**
@@ -129,15 +182,15 @@ export class InventoryInternalServcie extends BaseService {
     inventoryItems: { variantId: Id; quantity: Quantity }[],
     actorId: Id,
   ): Promise<InventoryReservationResult> {
-    const variantIds = inventoryItems.map((item) => Id.create(item.variantId.value));
-    const inventories = await this.inventoryRepo.FindByVariantIds(variantIds);
+    const variantIds = inventoryItems.map((item) => item.variantId);
+    const inventories = (await this.inventoryRepo.FindByVariantIds(variantIds)) ?? [];
     const inventoryByVariant = new Map(
       inventories.map((inventory) => [inventory.variantId.value, inventory] as const),
     );
 
     const lines: InventoryReservationLineResult[] = [];
     // Keyed by variant so a variant requested twice is only saved once.
-    const reserved = new Map<string, (typeof inventories)[number]>();
+    const reserved = new Map<string, InventoryAggregate>();
 
     for (const item of inventoryItems) {
       const inventory = inventoryByVariant.get(item.variantId.value);

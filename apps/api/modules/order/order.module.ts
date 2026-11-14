@@ -13,6 +13,7 @@ import { OrderApplicationService } from './application/order.app.service';
 import { OrderInternalService } from './application/order.internal.service';
 import { OrderRepository } from './infrastructure/order.repository';
 import { OrderQueryAdapter } from './infrastructure/order-query.adapter';
+import { OrderWriterAdapter } from './infrastructure/order-writer.adapter';
 import { OrderController } from './presentation/order.controller';
 
 interface OrderModuleDeps extends Buses {
@@ -53,5 +54,9 @@ export function createOrder({
   );
   const orderController = new OrderController(orderApplicationService);
   const queries = new OrderQueryAdapter(orderInternalService);
-  return { orderController, queries };
+  // The write side other modules are allowed to use: cart checkout asks for
+  // one order covering every selected line.
+  const orderWriter = new OrderWriterAdapter(orderApplicationService);
+
+  return { orderController, queries, orderWriter };
 }

@@ -7,12 +7,12 @@ import type {
 } from '@ecomerece/domain';
 import { StatusEnum } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
-import type { OrderItemResponseReadModel } from '@ecomerece/shared';
-import type { FilterQuery } from 'mongoose';
 import { MongoRepository } from '../../../core/repository/mongo.repository';
 import { BadRequestError, ConcurrencyError } from '../../../errors/app-error';
 import { OrderItemsMapper } from './order-item.mapper';
 import { OrderItemsModel, type OrderItemsPersistence } from './order-item.model';
+import type { OrderItemResponseReadModel } from '@ecomerece/shared';
+import type { FilterQuery } from 'mongoose';
 
 /**
  * `failureReason: null` filters rejected cart lines out of aggregate loads:
@@ -20,11 +20,7 @@ import { OrderItemsModel, type OrderItemsPersistence } from './order-item.model'
  * be rehydrated into an `OrderItemsAggregate` or drive a state transition.
  */
 const VALID_LINE = { failureReason: null } as const;
-
-export class OrderItemsRepository
-  extends MongoRepository<OrderItemsPersistence>
-  implements IOrderItemsRepository
-{
+export class OrderItemsRepository extends MongoRepository<OrderItemsPersistence> {
   constructor() {
     super(OrderItemsModel);
   }

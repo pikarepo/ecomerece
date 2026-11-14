@@ -1,4 +1,5 @@
 import {
+  buyNowOrderDto,
   createMyOrderDto,
   getAdminPaginatedOrdersQuerySchema,
   getMyOrdersQuerySchema,
@@ -17,6 +18,12 @@ export class OrderController extends BaseController<OrderApplicationService> {
 
     const actor = c.get('user');
     return this.ok(c, await this.service.createMyOrder(data, actor));
+  };
+
+  buyNow = async (c: Context) => {
+    const data = await this.body(c, buyNowOrderDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.buyNow(data, actor));
   };
 
   getMyOrders = async (c: Context) => {

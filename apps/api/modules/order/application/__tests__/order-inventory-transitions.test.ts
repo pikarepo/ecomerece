@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import { OrderAggregate } from '@ecomerece/domain/modules/order/order.aggregate';
+import { OrderTypeVO } from '@ecomerece/domain/modules/order/value-objects/order-type.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { OrderApplicationService } from '../order.app.service';
 
@@ -15,6 +16,8 @@ function buildOrder(status: 'pending' | 'confirmed' | 'completed' | 'returned') 
     idempotentKey: Id.create(id(21)),
     totalPrice: { value: 300 } as never,
     buyerId,
+    vendorIds: [Id.create(id(4))],
+    orderType: OrderTypeVO.single(),
     address: { fullAddress: '123 Main Street, Springfield' } as never,
   });
   if (status !== 'pending') order.confirmOrder(buyerId);
@@ -62,6 +65,18 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
         lines.map((line) => ({ variantId: line.variantId.value, quantity: line.quantity.value })),
       );
     },
+    soldOut: async (lines: { variantId: Id; quantity: { value: number } }[]) => {
+      calls.push('inventory:soldOut');
+      inventoryLines.push(
+        lines.map((line) => ({ variantId: line.variantId.value, quantity: line.quantity.value })),
+      );
+    },
+    unsold: async (lines: { variantId: Id; quantity: { value: number } }[]) => {
+      calls.push('inventory:unsold');
+      inventoryLines.push(
+        lines.map((line) => ({ variantId: line.variantId.value, quantity: line.quantity.value })),
+      );
+    },
   };
 
   const orderItemsWriter = {
@@ -85,6 +100,10 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
       calls.push('write-items:refund');
       return [itemEvent];
     },
+  };
+
+  const vendorQueries = {
+    ensureActiveByUserId: async () => ({ vendor: { id: id(1) }, active: true }),
   };
 
   const orderItemsQueries = {
@@ -125,7 +144,7 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
     orderItemsWriter as never,
     orderItemsQueries as never,
     unitOfWork as never,
-    {} as never,
+    vendorQueries as never,
   );
 
   return { service, calls, published, inventoryLines };
@@ -168,24 +187,31 @@ describe('OrderApplicationService inventory contract', () => {
     expect(calls).not.toContain('inventory:release');
   });
 
-  it('releases held stock when a confirmed order is returned', async () => {
+  it('marks stock as sold-out when an order is confirmed', async () => {
+    const { service, calls, inventoryLines } = buildService('pending');
+
+    await service.confirmOrder(id(20), actor);
+
+    expect(calls).toContain('inventory:soldOut');
+    expect(inventoryLines).toEqual([[{ variantId: id(2), quantity: 2 }]]);
+  });
+
+  it('moves sold-out stock to available when a confirmed order is returned', async () => {
     const { service, calls } = buildService('confirmed');
 
     await service.returnOrder(id(20), { reason: 'damaged in transit' }, actor);
 
-    expect(calls).toContain('inventory:release');
+    expect(calls).toContain('inventory:unsold');
     expect(calls).not.toContain('inventory:restock');
   });
 
-  it('does not touch stock on a refund', async () => {
+  it('moves sold-out stock to available on refund', async () => {
     const { service, calls } = buildService('returned');
 
     await service.refundOrder(id(20), { reason: 'approved by support' }, actor);
 
     expect(calls).toContain('write-items:refund');
-    expect(calls).not.toContain('inventory:complete');
-    expect(calls).not.toContain('inventory:release');
-    expect(calls).not.toContain('inventory:restock');
+    expect(calls).toContain('inventory:unsold');
   });
 
   it('does not change stock or publish events when the status transition is rejected', async () => {

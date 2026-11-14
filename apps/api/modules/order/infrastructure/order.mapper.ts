@@ -1,4 +1,4 @@
-import { OrderAggregate, type OrderReadModel, OrderStatusVO } from '@ecomerece/domain';
+import { OrderAggregate, type OrderReadModel, OrderStatusVO, OrderTypeVO } from '@ecomerece/domain';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -15,6 +15,8 @@ export const OrderMapper = {
       Id.create(doc.idempotentKey),
       Id.create(doc._id),
       Id.create(doc.buyerId),
+      doc.vendorIds.map((vendorId) => Id.create(vendorId)),
+      OrderTypeVO.fromString(doc.orderType ?? 'single'),
       Money.rehydrate(doc.totalPrice),
       FullAddressVO.create(doc.address),
       OrderStatusVO.fromString(doc.status ?? 'pending'),
@@ -33,6 +35,8 @@ export const OrderMapper = {
       _id: order.id.value,
       idempotentKey: order.idempotentKey.value,
       buyerId: order.buyerId.value,
+      vendorIds: order.vendorIds.map((vendorId) => vendorId.value),
+      orderType: order.orderType.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
       status: order.status.value,
@@ -50,6 +54,8 @@ export const OrderMapper = {
     return {
       id: order.id.value,
       buyerId: order.buyerId.value,
+      vendorIds: order.vendorIds.map((vendorId) => vendorId.value),
+      orderType: order.orderType.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
       status: order.status.value,
@@ -66,6 +72,8 @@ export const OrderMapper = {
     return {
       id: doc._id,
       buyerId: doc.buyerId,
+      vendorIds: doc.vendorIds,
+      orderType: doc.orderType ?? 'single',
       totalPrice: doc.totalPrice,
 
       address: doc.address,
@@ -84,6 +92,8 @@ export const OrderMapper = {
     return {
       id: order.id.value,
       buyerId: order.buyerId.value,
+      vendorIds: order.vendorIds.map((vendorId) => vendorId.value),
+      orderType: order.orderType.value,
       totalPrice: order.totalPrice.value,
       address: order.address.value,
       status: order.status.value,

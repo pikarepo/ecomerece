@@ -4,6 +4,7 @@ import { configureAuthUserLookup } from './middleware/auth';
 import { configureStatsAccess } from './middleware/statsAccessGuard';
 import { configureStatsViewGuard } from './middleware/statsViewGuard.middleware';
 import { createAddressModule } from './modules/address/address.module';
+import { createCartModule } from './modules/cart/cart.module';
 import { createCategoryModule } from './modules/category/category.module';
 import { createHomeModule } from './modules/home/home.module';
 import { createImageStorageModule } from './modules/image-storage/image-storage.module';
@@ -69,12 +70,15 @@ export function createApplication() {
     vendorQueries: vendor.queries,
     unitOfWork,
   });
+  // Cart checkout calls the order module's write port, so it is built after order.
+  const cart = createCartModule({ eventBus, orderWriter: order.orderWriter });
   const orderItems = createOrderItemsApplication({
     core: orderItemsCore,
     orderQueries: order.queries,
     vendorQueries: vendor.queries,
     eventBus,
     unitOfWork,
+    inventoryReservation: inventory.inventoryReservation,
   });
 
   const reviews = createReviewModule({
@@ -103,6 +107,7 @@ export function createApplication() {
     unitOfWork,
     modules: {
       address,
+      cart,
       category,
       home,
       inventory,

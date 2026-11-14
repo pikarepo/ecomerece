@@ -1,4 +1,4 @@
-import type { IOrderQueries, IVendorQueries } from '@ecomerece/contracts';
+import type { IInventoryReservation, IOrderQueries, IVendorQueries } from '@ecomerece/contracts';
 import type { UnitOfWork } from '../../core/database/unit-of-work';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { OrderItemsApplicationService } from './application/order-item.app.service';
@@ -29,6 +29,7 @@ interface OrderItemsApplicationDeps extends Buses {
   orderQueries: IOrderQueries;
   vendorQueries: IVendorQueries;
   unitOfWork: UnitOfWork;
+  inventoryReservation?: IInventoryReservation;
 }
 
 /** Order-items presentation/use cases, built after the order module exists. */
@@ -38,6 +39,7 @@ export function createOrderItemsApplication({
   vendorQueries,
   eventBus,
   unitOfWork,
+  inventoryReservation,
 }: OrderItemsApplicationDeps) {
   const applicationService = new OrderItemsApplicationService(
     core.internalService,
@@ -46,6 +48,7 @@ export function createOrderItemsApplication({
     vendorQueries,
     eventBus,
     unitOfWork,
+    inventoryReservation,
   );
   const orderItemsController = new OrderItemsController(applicationService);
 

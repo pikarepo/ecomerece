@@ -43,6 +43,12 @@ export class InventoryReposityory
     return InventoryMapper.persistenceToAggregate(doc);
   }
 
+  async FindBySoldOutId(_id: Id): Promise<InventoryAggregate | null> {
+    const doc = await super.findOne({ soldOut: { $gt: 0 } });
+    if (!doc) return null;
+    return InventoryMapper.persistenceToAggregate(doc);
+  }
+
   async Save(inventory: InventoryAggregate): Promise<void> {
     const data = InventoryMapper.aggregateToPersistence(inventory);
     const result = await super.updateOne(

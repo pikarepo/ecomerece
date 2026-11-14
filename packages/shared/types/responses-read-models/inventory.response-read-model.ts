@@ -3,6 +3,7 @@ export interface InventoryResponseReadModel {
   variantId: string;
   available: number;
   reserved: number;
+  soldOut: number;
   lowStockThreshold: number;
   createdAt: Date;
 }

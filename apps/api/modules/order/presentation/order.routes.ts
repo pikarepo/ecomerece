@@ -9,6 +9,7 @@ export function createOrderRoutes(orderController: OrderController) {
   const OrderRoutes = new Hono();
 
   OrderRoutes.post('/create/my', authMiddleware, orderController.createMyOrder);
+  OrderRoutes.post('/create/buy-now', authMiddleware, orderController.buyNow);
   OrderRoutes.get('/my', authMiddleware, orderController.getMyOrders);
   OrderRoutes.get(
     '/admin/all',
@@ -19,32 +20,20 @@ export function createOrderRoutes(orderController: OrderController) {
   OrderRoutes.get('/admin/:id', authMiddleware, adminMiddleware, orderController.getAdminOrderById);
   OrderRoutes.patch('/admin/:id', authMiddleware, adminMiddleware, orderController.updateOrder);
   OrderRoutes.delete('/admin/:id', authMiddleware, adminMiddleware, orderController.deleteOrder);
-  OrderRoutes.patch(
-    '/admin/:id/recover',
-    authMiddleware,
-    adminMiddleware,
-    orderController.recoverOrder,
-  );
+  OrderRoutes.patch('/admin/:id/recover', authMiddleware, adminMiddleware, orderController.recoverOrder);
+  OrderRoutes.post('/vendor/:id/confirm', authMiddleware, orderController.confirmOrder);
   OrderRoutes.post(
-    '/admin/:id/confirm',
+    '/vendor/:id/complete',
     authMiddleware,
-    adminMiddleware,
-    orderController.confirmOrder,
-  );
-  OrderRoutes.post(
-    '/admin/:id/complete',
-    authMiddleware,
-    adminMiddleware,
     orderController.completeOrder,
   );
   OrderRoutes.post(
-    '/admin/:id/return',
+    '/vendor/:id/return',
     authMiddleware,
-    adminMiddleware,
     orderController.returnOrder,
   );
   OrderRoutes.post(
-    '/admin/:id/refund',
+    '/vendor/:id/refund',
     authMiddleware,
     adminMiddleware,
     orderController.refundOrder,
@@ -60,7 +49,7 @@ export function createOrderRoutes(orderController: OrderController) {
   OrderRoutes.post('/cancel/my/:id', authMiddleware, orderController.cancelMyOrder);
   OrderRoutes.post('/retry-items/my/:id', authMiddleware, orderController.retryMyOrderItems);
   OrderRoutes.post('/retry-item/my/:id', authMiddleware, orderController.retryMyOrderItem);
-  OrderRoutes.get('/:id', authMiddleware, orderController.getMyOrderById);
+  OrderRoutes.get('/my/:id', authMiddleware, orderController.getMyOrderById);
 
   return OrderRoutes;
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { OrderAggregate } from '@ecomerece/domain';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import { OrderStatusVO } from '@ecomerece/domain/modules/order/value-objects/order-status.vo';
+import { OrderTypeVO } from '@ecomerece/domain/modules/order/value-objects/order-type.vo';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -19,6 +20,8 @@ function buildOrder(status: string, totalPrice: number, buyerId: string = id(1))
     Id.create(id(10)),
     Id.create(id(20)),
     Id.create(buyerId),
+    [Id.create(id(4))],
+    OrderTypeVO.single(),
     Money.create(totalPrice),
     FullAddressVO.create('123 Main Street, Springfield'),
     OrderStatusVO.fromString(status),

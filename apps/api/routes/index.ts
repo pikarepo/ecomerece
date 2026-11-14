@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import type { Application } from '../composition-root';
 import { createAddressRoutes } from '../modules/address/presentation/address.route';
+import { createCartRoutes } from '../modules/cart/presentation/cart.routes';
 import { createCategoryRoutes } from '../modules/category/presentation/category.routes';
 import { createHomeRoutes } from '../modules/home/presentation/home.routes';
 import { createInventoryRoutes } from '../modules/inventory/presentation/inventory.routes';
@@ -21,6 +22,7 @@ export function createRoutes({ modules }: Application) {
   routes.route('/review', createReviewRoutes(modules.reviews.controller));
   routes.route('/product-inventory', createInventoryRoutes(modules.inventory.inventoryController));
   routes.route('/order', createOrderRoutes(modules.order.orderController));
+  routes.route('/cart', createCartRoutes(modules.cart.cartController));
   routes.route('/order-items', createOrderItemsRoutes(modules.orderItems.orderItemsController));
   routes.route('/category', createCategoryRoutes(modules.category.categoryController));
   routes.route('/address', createAddressRoutes(modules.address.addressController));

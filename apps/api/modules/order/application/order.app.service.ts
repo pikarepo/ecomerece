@@ -1,5 +1,7 @@
 import type {
   AuthActor,
+  CartOrderResult,
+  CreateCartOrderInput,
   IAddressQueries,
   IInventoryReservation,
   IOrderItemsQueries,
@@ -9,7 +11,7 @@ import type {
   IVendorQueries,
   OrderItemRestoreInput,
 } from '@ecomerece/contracts';
-import { OrderAggregate, type OrderItemFailureReason } from '@ecomerece/domain';
+import { OrderAggregate, type OrderItemFailureReason, OrderTypeVO } from '@ecomerece/domain';
 import type { IEvent, IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import type { OrderItemReadModel } from '@ecomerece/domain/modules/order-items/read-models/order-items.read-model';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
@@ -19,6 +21,7 @@ import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import { FullAddressVO } from '@ecomerece/domain/value-objects/street-address.vo';
 import type {
+  buyNowOrderDtoType,
   createMyOrderDtoType,
   GetAdminPaginatedOrdersQueryDto,
   GetMyOrdersQueryDto,
@@ -60,7 +63,16 @@ type RejectedOrderItem = {
   reason: OrderItemFailureReason;
 };
 
-/** Everything `createMyOrder` derives from its DTO before touching the DB. */
+/** Raw body shared by every create use case, before value objects are built. */
+type CreateOrderDto = {
+  idempotentKey: string;
+  addressId: string;
+  waitingTime: Date;
+  safeOrder: boolean;
+  items: { variantId: string; quantity: number }[];
+};
+
+/** Everything a create use case derives from its DTO before touching the DB. */
 type CreateOrderInput = {
   orderId: Id;
   idempotentKey: Id;
@@ -68,6 +80,8 @@ type CreateOrderInput = {
   actorId: Id;
   waitingTime: ExpirationDate;
   safeOrder: boolean;
+  /** `null` derives the type from the vendors of the buyable lines. */
+  orderType: OrderTypeVO | null;
   items: OrderItemRequest[];
 };
 
@@ -77,7 +91,7 @@ type OrderListQuery = {
   direction?: 'next' | 'prev';
 };
 
-type InventoryTransition = 'complete' | 'release' | 'restock';
+type InventoryTransition = 'complete' | 'release' | 'restock' | 'soldOut' | 'unsold';
 
 type RetryFailedLinesResult = {
   order: OrderAggregate;
@@ -89,11 +103,16 @@ type RetryFailedLinesResult = {
 /**
  * Order use cases.
  *
- * `createMyOrder` is the only write path that spans several modules: it
- * validates the cart through contract queries, reserves stock through
- * `IInventoryReservation`, writes items through `IOrderItemsWriter`, and saves
- * the order aggregate inside one `UnitOfWork.transaction`. Item and order
- * events are published only after that transaction commits.
+ * Three create paths share one flow: `createMyOrder` (listed items),
+ * `buyNow` (one item, type `single`) and `createFromCart` (cart checkout, type
+ * `cart`). All of them reserve stock through `IInventoryReservation`, write
+ * items through `IOrderItemsWriter`, and save one order aggregate inside a
+ * `UnitOfWork.transaction`; item and order events are published only after
+ * that transaction commits.
+ *
+ * An order always names every vendor it buys from in `vendorIds`, so a cart
+ * checkout with lines from several vendors is still a single order and a
+ * single idempotency key.
  */
 export class OrderApplicationService extends BaseService {
   constructor(
@@ -121,41 +140,73 @@ export class OrderApplicationService extends BaseService {
   }
 
   /**
-   * Creates an order for the authenticated buyer.
+   * Creates an order for the listed items of the authenticated buyer.
    *
-   * Flow:
-   * 1. build value objects from the DTO (new ids are always generated server-side),
-   * 2. reject a missing/inactive address before opening a transaction,
-   * 3. inside the transaction: enforce the idempotency key, resolve + reserve
-   *    items, create the order and item rows, and raise `order.created`,
-   * 4. after commit: publish item and order events together.
+   * The order type follows the vendors it ends up spanning: one vendor makes
+   * it `single`, several make it `cart` (still one order, one idempotency key).
    *
    * `data.safeOrder` decides what a rejected line does: `true` throws, which
    * rolls back the reservation, the item rows and the order itself; `false`
    * records the line on the order with its failure reason and zero cost.
-   *
-   * Publishing after the transaction is deliberate: consumers must never react
-   * to an order that rolled back (covered by `order-create-commit.test.ts`).
    */
   async createMyOrder(data: createMyOrderDtoType, actor: AuthActor) {
-    const input = this.buildCreateOrderInput(data, actor);
-    const fullAddress = await this.ensureUsableAddress(input.addressId, input.actorId);
-
-    const { order, itemEvents } = await this.unitOfWork.transaction(() =>
-      this.createOrderInTransaction(input, fullAddress),
-    );
-
-    await this.publish([...itemEvents, ...order.pullEvents()]);
-
-    return OrderMessages.orderCreated(
-      input.orderId,
-      input.actorId,
-      input.addressId,
-      OrderMapper.aggregateToResponseReadModel(order),
-    );
+    const input = this.buildCreateOrderInput(data, Id.create(actor._id));
+    const order = await this.placeOrder(input);
+    return this.orderCreatedMessage(order, input);
   }
 
-  private buildCreateOrderInput(data: createMyOrderDtoType, actor: AuthActor): CreateOrderInput {
+  /** Buys one order item immediately: always type `single`, always one vendor. */
+  async buyNow(data: buyNowOrderDtoType, actor: AuthActor) {
+    const input = this.buildCreateOrderInput(
+      {
+        idempotentKey: data.idempotentKey,
+        addressId: data.addressId,
+        safeOrder: true,
+        waitingTime: data.waitingTime,
+        items: [{ variantId: data.variantId, quantity: data.quantity }],
+      },
+      Id.create(actor._id),
+      OrderTypeVO.single(),
+    );
+    const order = await this.placeOrder(input);
+
+    return this.orderCreatedMessage(order, input);
+  }
+
+  /**
+   * Cross-module entry point used by the cart module.
+   *
+   * The cart only sends the selected lines; prices, stock and vendors are
+   * resolved here. Every selected line becomes part of exactly one order, so
+   * `vendorIds` holds every vendor involved and nothing is split per vendor.
+   * Checkout is all-or-nothing, so any rejected line aborts the whole order.
+   */
+  async createFromCart(data: CreateCartOrderInput): Promise<CartOrderResult> {
+    const order = await this.placeOrder({
+      orderId: Id.create(),
+      idempotentKey: data.idempotentKey,
+      addressId: data.addressId,
+      actorId: data.buyerId,
+      waitingTime: data.waitingTime,
+      safeOrder: true,
+      orderType: OrderTypeVO.cart(),
+      items: data.items,
+    });
+
+    return {
+      orderId: order.id,
+      orderType: order.orderType.value,
+      vendorIds: order.vendorIds.map((vendorId) => vendorId.value),
+      totalPrice: order.totalPrice.value,
+      createdAt: order.createdAt.value,
+    };
+  }
+
+  private buildCreateOrderInput(
+    data: CreateOrderDto,
+    buyerId: Id,
+    orderType: OrderTypeVO | null = null,
+  ): CreateOrderInput {
     const waitingTime = ExpirationDate.create(data.waitingTime);
     if (waitingTime.remainingHours > MAX_WAITING_TIME_HOURS) {
       throw new BadRequestError('Waiting time must not be far in the future.');
@@ -165,14 +216,41 @@ export class OrderApplicationService extends BaseService {
       orderId: Id.create(),
       idempotentKey: Id.create(data.idempotentKey),
       addressId: Id.create(data.addressId),
-      actorId: Id.create(actor._id),
+      actorId: buyerId,
       waitingTime,
       safeOrder: data.safeOrder,
+      orderType,
       items: data.items.map((item) => ({
         variantId: Id.create(item.variantId),
         quantity: Quantity.create(item.quantity),
       })),
     };
+  }
+
+  /**
+   * Runs one create use case: address guard, transaction, then events.
+   *
+   * Publishing after the transaction is deliberate: consumers must never react
+   * to an order that rolled back (covered by `order-create-commit.test.ts`).
+   */
+  private async placeOrder(input: CreateOrderInput): Promise<OrderAggregate> {
+    const fullAddress = await this.ensureUsableAddress(input.addressId, input.actorId);
+
+    const { order, itemEvents } = await this.unitOfWork.transaction(() =>
+      this.createOrderInTransaction(input, fullAddress),
+    );
+
+    await this.publish([...itemEvents, ...order.pullEvents()]);
+    return order;
+  }
+
+  private orderCreatedMessage(order: OrderAggregate, input: CreateOrderInput) {
+    return OrderMessages.orderCreated(
+      order.id,
+      input.actorId,
+      input.addressId,
+      OrderMapper.aggregateToResponseReadModel(order),
+    );
   }
 
   /** Address is only a guard, so it is read before the transaction to fail fast. */
@@ -187,23 +265,24 @@ export class OrderApplicationService extends BaseService {
     fullAddress: string,
   ): Promise<{ order: OrderAggregate; itemEvents: IEvent[] }> {
     await this.orderRepo.EnsureUniqueImpodentKey(input.idempotentKey);
-
     const { buyable, rejected } = await this.resolveOrderItems(input.items, input.actorId);
+    if (buyable.length === 0) throw new BadRequestError('All items in the order were rejected. No order was created.');
     if (input.safeOrder) this.assertAllItemsFulfillable(rejected);
-
-    const order = this.buildOrderAggregate(input, buyable, fullAddress);
+    // Only buyable lines can name a vendor: a rejected line has no product, so
+    // it must never add a vendor to the order.
+    const vendorIds = this.resolveVendorIds(buyable);
+    const order = this.buildOrderAggregate(input, buyable, vendorIds, fullAddress);
     const itemEvents = await this.writeOrderItems(input, buyable, rejected);
-
     // The aggregate raises `order.created`; events stay buffered until commit.
     order.createOrder();
     await this.orderRepo.Create(order);
-
     return { order, itemEvents };
   }
 
   private buildOrderAggregate(
     input: CreateOrderInput,
     items: ResolvedOrderItem[],
+    vendorIds: Id[],
     fullAddress: string,
   ): OrderAggregate {
     return OrderAggregate.create({
@@ -211,8 +290,23 @@ export class OrderApplicationService extends BaseService {
       idempotentKey: input.idempotentKey,
       totalPrice: this.calculateTotal(items),
       buyerId: input.actorId,
+      vendorIds,
+      orderType: input.orderType ?? OrderTypeVO.forVendors(vendorIds.length),
       address: FullAddressVO.create(fullAddress),
     });
+  }
+
+  /** Distinct vendors in first-seen order: one entry per vendor, never repeated. */
+  private resolveVendorIds(items: ResolvedOrderItem[]): Id[] {
+    const vendorIds: Id[] = [];
+
+    for (const item of items) {
+      if (!vendorIds.some((vendorId) => vendorId.equals(item.vendorId))) {
+        vendorIds.push(item.vendorId);
+      }
+    }
+
+    return vendorIds;
   }
 
   private calculateTotal(items: ResolvedOrderItem[]): Money {
@@ -604,14 +698,15 @@ export class OrderApplicationService extends BaseService {
     return OrderMessages.orderCancelled(orderId, actorId, reason);
   }
 
-  /** Vendor: own non-deleted orders, i.e. those holding at least one of their items. */
+  /**
+   * Vendor: own non-deleted orders. `vendorIds` is indexed, so this filters the
+   * order rows directly instead of first collecting order ids from every item.
+   */
   async findVendorPaginatedOrders(query: GetVendorPaginatedOrdersQueryDto, actor: AuthActor) {
     const vendorId = await this.resolveVendorId(Id.create(actor._id));
-    const vendorItems = await this.orderItemsQueries.getByVendorId(vendorId);
-    const orderIds = [...new Set(vendorItems.map((item) => item.orderId))];
 
     const filter: FilterQuery<OrderPersistence> = {
-      _id: { $in: orderIds },
+      vendorIds: vendorId.value,
       'deleted.deleted': false,
     };
     if (query.status) filter.status = query.status;
@@ -626,27 +721,29 @@ export class OrderApplicationService extends BaseService {
     const order = await this.orderRepo.FindByIdOrThrow(orderId);
     if (order.delete.isDeleted) throw new NotFoundError('Order not found.');
 
-    const items = await this.orderItemsQueries.getByOrderId(orderId);
-    const vendorItems = items.filter((item) => item.vendorId === vendorId.value);
-    if (vendorItems.length === 0) {
+    // The order lists its vendors, so membership is checked without reading items.
+    if (!order.hasVendor(vendorId)) {
       throw new ForbiddenError('This order does not contain your items.');
     }
 
+    const items = await this.orderItemsQueries.getByOrderId(orderId);
+
     return {
       order: OrderMapper.aggregateToResponseReadModel(order),
-      items: vendorItems,
+      items: items.filter((item) => item.vendorId === vendorId.value),
     };
   }
 
   async confirmOrder(id: string, actor: AuthActor) {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
-
+    await this.resolveVendorId(actorId);
     await this.transitionOrder(
       orderId,
       actorId,
       (order) => order.confirmOrder(actorId),
       (items) => this.orderItemsWriter.confirm(items),
+      () => null, // inventory is already held, so no transition is needed
     );
 
     return OrderMessages.orderConfirmed(orderId, actorId);
@@ -655,7 +752,7 @@ export class OrderApplicationService extends BaseService {
   async completeOrder(id: string, actor: AuthActor) {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
-
+    await this.resolveVendorId(actorId);
     await this.transitionOrder(
       orderId,
       actorId,
@@ -677,9 +774,7 @@ export class OrderApplicationService extends BaseService {
       actorId,
       (order) => order.returnOrder(reason, actorId),
       (items) => this.orderItemsWriter.returnItems(items),
-      // A completed order has already consumed its reservation; a confirmed
-      // one still holds it, so it is released instead of restocked.
-      (order) => (order.status.status === 'completed' ? 'restock' : 'release'),
+      (order) => (order.status.status === 'completed' ? 'restock' : 'unsold'),
     );
 
     return OrderMessages.orderReturned(orderId, actorId, reason);
@@ -695,9 +790,7 @@ export class OrderApplicationService extends BaseService {
       actorId,
       (order) => order.refundOrder(reason, actorId),
       (items) => this.orderItemsWriter.refund(items),
-      // A refund is financial only: stock already came back through a return,
-      // or never left the shelf.
-      () => null,
+      () => 'unsold',
     );
 
     return OrderMessages.orderRefunded(orderId, actorId, reason);
@@ -803,6 +896,12 @@ export class OrderApplicationService extends BaseService {
         break;
       case 'restock':
         await this.inventoryReservation.restock(lines, actorId);
+        break;
+      case 'soldOut':
+        await this.inventoryReservation.soldOut(lines, actorId);
+        break;
+      case 'unsold':
+        await this.inventoryReservation.unsold(lines, actorId);
         break;
     }
   }

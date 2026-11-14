@@ -8,12 +8,19 @@ import { InventoryInternalServcie } from '../inventory.internal.service';
 
 const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
 
-function inventory(variantNumber: number, available: number, reserved: number, deleted = false) {
+function inventory(
+  variantNumber: number,
+  available: number,
+  reserved: number,
+  soldOut = 0,
+  deleted = false,
+) {
   return InventoryAggregate.rehydrate(
     id(100 + variantNumber),
     id(variantNumber),
     Quantity.create(available),
     Quantity.create(reserved),
+    Quantity.create(soldOut),
     Quantity.create(2),
     deleted ? DeleteInfoVO.rehydrate(null, true, null, null) : DeleteInfoVO.none(),
     Quantity.none(),
@@ -28,6 +35,8 @@ function buildService(inventories: InventoryAggregate[]) {
       inventories.filter((item) =>
         variantIds.some((variantId) => variantId.value === item.variantId.value),
       ),
+    FindByVariantId: async (variantId: Id) =>
+      inventories.find((item) => item.variantId.value === variantId.value) ?? null,
     SaveMany: async (items: InventoryAggregate[]) => {
       saved.push(...items);
     },
@@ -77,7 +86,7 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
   it('applies each line to its own variant', async () => {
     const first = inventory(2, 10, 5);
     const second = inventory(3, 4, 2);
-    const { service } = buildService([first, second]);
+    const { service, saved } = buildService([first, second]);
 
     await service.releaseInventories(
       [
@@ -95,7 +104,7 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
 
   it('skips deleted inventories and does not persist them', async () => {
     const live = inventory(2, 10, 5);
-    const deleted = inventory(3, 4, 2, true);
+    const deleted = inventory(3, 4, 2, 0, true);
     const { service, saved } = buildService([live, deleted]);
 
     await service.releaseInventories(
@@ -124,7 +133,7 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
 describe('InventoryInternalServcie.reserveInventories', () => {
   it('reports the precise reason each line could not be reserved', async () => {
     const { service } = buildService([
-      inventory(2, 10, 0, true),
+      inventory(2, 10, 0, 0, true),
       inventory(3, 0, 0),
       inventory(4, 1, 0),
     ]);
@@ -162,5 +171,38 @@ describe('InventoryInternalServcie.reserveInventories', () => {
     expect(available.reserved.value).toBe(3);
     expect(available.available.value).toBe(7);
     expect(saved).toEqual([available]);
+  });
+});
+
+describe('InventoryInternalServcie sold-out and unsold transitions', () => {
+  it('moves sold-out stock back to available on unsoldInventory', async () => {
+    const stock = inventory(2, 5, 0, 5);
+    const { service, saved } = buildService([stock]);
+
+    await service.unsoldInventory(
+      [{ variantId: id(2), quantity: Quantity.create(3) }],
+      actorId,
+    );
+
+    expect(stock.soldOut.value).toBe(2);
+    expect(stock.available.value).toBe(8);
+    expect(saved).toEqual([stock]);
+  });
+
+  it('returns sold-out read model when soldOut > 0', async () => {
+    const stock = inventory(2, 5, 0, 3);
+    const { service } = buildService([stock]);
+
+    const result = await service.getSoldOutInventoryByVariantId(id(2));
+    expect(result).not.toBeNull();
+    expect(result?.soldOut).toBe(3);
+  });
+
+  it('returns null for getSoldOutInventoryByVariantId when soldOut is 0', async () => {
+    const stock = inventory(2, 5, 0, 0);
+    const { service } = buildService([stock]);
+
+    const result = await service.getSoldOutInventoryByVariantId(id(2));
+    expect(result).toBeNull();
   });
 });

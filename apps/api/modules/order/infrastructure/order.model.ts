@@ -25,6 +25,19 @@ const OrderModelSchema = new Schema(
       type: String,
       required: true,
     },
+    // One entry per vendor: a single order buys from one vendor, a cart order
+    // may buy from several, but it is still one order row.
+    vendorIds: {
+      type: [String],
+      required: true,
+      index: true,
+    },
+    orderType: {
+      type: String,
+      required: true,
+      default: 'single',
+      enum: ['single', 'cart'],
+    },
     totalPrice: {
       type: Number,
       required: true,
@@ -55,6 +68,8 @@ export interface OrderPersistence {
   idempotentKey: string;
   version: number;
   buyerId: string;
+  vendorIds: string[];
+  orderType: string;
   totalPrice: number;
   address: string;
   status: string;

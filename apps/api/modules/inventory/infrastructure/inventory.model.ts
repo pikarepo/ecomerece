@@ -38,6 +38,11 @@ const InventoryModelSchema = new Schema(
       default: 0,
       min: 0,
     },
+    soldOut: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     lowStockThreshold: {
       type: Number,
       default: 0,

@@ -43,12 +43,17 @@ function orderItem(vendorId: Id) {
 type DeleteCall = { itemId: Id; reason: Reason; actorId: Id };
 type PaginateParams = { filter: Record<string, unknown> };
 
-function buildService(item: OrderItemsAggregate) {
+function buildService(item: OrderItemsAggregate, inventoryReservation?: unknown) {
   const filters: Record<string, unknown>[] = [];
   const published: unknown[][] = [];
   const deleteCalls: DeleteCall[] = [];
   const recoverCalls: DeleteCall[] = [];
   let confirmCalls = 0;
+  let returnCalls = 0;
+  let refundCalls = 0;
+  let reserveCalls = 0;
+  let reserveCalls = 0;
+
 
   const internalService = {
     deleteOrderItem: async (itemId: Id, reason: Reason, actorId: Id) => {
@@ -61,7 +66,15 @@ function buildService(item: OrderItemsAggregate) {
     },
     confirmOrderItems: async () => {
       confirmCalls += 1;
-      return [];
+      return [{ type: 'order-item.confirmed' }];
+    },
+    returnOrderItems: async () => {
+      returnCalls += 1;
+      return [{ type: 'order-item.returned' }];
+    },
+    refundOrderItems: async () => {
+      refundCalls += 1;
+      return [{ type: 'order-item.refunded' }];
     },
   };
 
@@ -70,6 +83,7 @@ function buildService(item: OrderItemsAggregate) {
       filters.push(params.filter);
       return { data: [], meta: { nextCursor: null, prevCursor: null, hasMore: false } };
     },
+    FindById: async () => item,
     FindReadModelById: async () => OrderItemsMapper.aggregateToReadModel(item),
     FindResponseById: async () => OrderItemsMapper.aggregateToResponseReadModel(item),
   };
@@ -93,6 +107,7 @@ function buildService(item: OrderItemsAggregate) {
     vendorQueries as never,
     eventBus as never,
     unitOfWork as never,
+    inventoryReservation as never,
   );
 
   return {
@@ -102,6 +117,8 @@ function buildService(item: OrderItemsAggregate) {
     deleteCalls,
     recoverCalls,
     confirmCalls: () => confirmCalls,
+    returnCalls: () => returnCalls,
+    refundCalls: () => refundCalls,
   };
 }
 
@@ -177,5 +194,64 @@ describe('OrderItemsApplicationService admin delete and recover', () => {
 
     expect(recoverCalls[0]?.itemId.value).toBe(ITEM_ID.value);
     expect(published).toHaveLength(1);
+  });
+});
+
+describe('OrderItemsApplicationService soldOut and unsold inventory transitions', () => {
+  it('moves stock to unsold on item return when inventoryReservation is wired', async () => {
+    const unsoldCalls: { variantId: string; quantity: number }[][] = [];
+    const inventoryReservation = {
+      unsold: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        unsoldCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+      soldOut: async () => {},
+    };
+
+    const { service, returnCalls } = buildService(orderItem(VENDOR_ID), inventoryReservation);
+
+    await service.returnOrderItem(ITEM_ID.value, actor);
+
+    expect(returnCalls()).toBe(1);
+    expect(unsoldCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
+  });
+
+  it('moves stock to unsold on item refund when inventoryReservation is wired', async () => {
+    const unsoldCalls: { variantId: string; quantity: number }[][] = [];
+    const inventoryReservation = {
+      unsold: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        unsoldCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+      soldOut: async () => {},
+    };
+
+    const { service, refundCalls } = buildService(orderItem(VENDOR_ID), inventoryReservation);
+
+    await service.refundOrderItem(ITEM_ID.value, actor);
+
+    expect(refundCalls()).toBe(1);
+    expect(unsoldCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
+  });
+
+  it('moves stock to soldOut on vendor confirm when inventoryReservation is wired', async () => {
+    const soldOutCalls: { variantId: string; quantity: number }[][] = [];
+    const inventoryReservation = {
+      soldOut: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        soldOutCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+      unsold: async () => {},
+    };
+
+    const { service, confirmCalls } = buildService(orderItem(VENDOR_ID), inventoryReservation);
+
+    await service.vendorConfirmOrderItem(ITEM_ID.value, actor);
+
+    expect(confirmCalls()).toBe(1);
+    expect(soldOutCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
   });
 });

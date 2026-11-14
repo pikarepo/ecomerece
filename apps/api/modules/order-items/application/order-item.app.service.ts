@@ -1,4 +1,9 @@
-import type { AuthActor, IOrderQueries, IVendorQueries } from '@ecomerece/contracts';
+import type {
+  AuthActor,
+  IInventoryReservation,
+  IOrderQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import type { IEvent, IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -37,6 +42,7 @@ export class OrderItemsApplicationService extends BaseService {
     private readonly vendorQueries: IVendorQueries,
     private readonly eventBus: IEventBus,
     private readonly unitOfWork: UnitOfWork,
+    private readonly inventoryReservation?: IInventoryReservation,
   ) {
     super();
   }
@@ -75,7 +81,21 @@ export class OrderItemsApplicationService extends BaseService {
     run: (items: { id: Id }[]) => Promise<IEvent[]>,
     status: string,
   ) {
-    const events = await this.unitOfWork.transaction(() => run([{ id: itemId }]));
+    const events = await this.unitOfWork.transaction(async () => {
+      const item = await this.itemsRepo.FindById(itemId);
+      const events = await run([{ id: itemId }]);
+      if (this.inventoryReservation && item) {
+        const line = [{ variantId: item.variantId, quantity: item.quantity }];
+        if (status === 'confirmed') {
+          await this.inventoryReservation.reserve(line, actorId);
+        } else if (status === 'completed') {
+          await this.inventoryReservation.soldOut(line, actorId);
+        } else if (status === 'returned' || status === 'refunded') {
+          await this.inventoryReservation.unsold(line, actorId);
+        }
+      }
+      return events;
+    });
     if (events.length > 0) await this.eventBus.publish(events);
     return OrderItemsMessages.orderItemStatusChanged(itemId, actorId, status);
   }

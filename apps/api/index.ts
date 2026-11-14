@@ -13,7 +13,7 @@ import { createRoutes } from './routes';
 const application = createApplication();
 const { productStatsSyncScheduler } = application.modules.stats;
 
-const corsOrigins = process.env.CORS_ORIGIN.split(',').map((o) => o.trim());
+const corsOrigins = (process.env.CORS_ORIGIN ?? '').split(',').filter((o) => o).map((o) => o.trim());
 app.use(logger());
 //  middleware
 app.use(

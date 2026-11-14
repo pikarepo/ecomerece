@@ -3,6 +3,7 @@ export * from './modules/category';
 export * from './modules/inventory';
 export * from './modules/order';
 export * from './modules/order-items';
+export * from './modules/order-request';
 export * from './modules/product';
 export * from './modules/product-variant';
 export * from './modules/stats';

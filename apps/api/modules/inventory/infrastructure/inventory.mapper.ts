@@ -13,6 +13,7 @@ export const InventoryMapper = {
       Id.rehydrate(doc.variantId),
       Quantity.rehydrate(doc.available),
       Quantity.rehydrate(doc.reserved),
+      Quantity.rehydrate(doc.soldOut ?? 0),
       Quantity.rehydrate(doc.lowStockThreshold),
       DeleteInfoVO.rehydrate(
         doc.deleted.deletedBy ? Id.create(doc.deleted.deletedBy) : null,
@@ -30,6 +31,7 @@ export const InventoryMapper = {
       variantId: inventory.variantId.value,
       available: inventory.available.value,
       reserved: inventory.reserved.value,
+      soldOut: inventory.soldOut.value,
       lowStockThreshold: inventory.lowStockThreshold.value,
       inStock: inventory.available.value > 0,
       deleted: {
@@ -48,6 +50,7 @@ export const InventoryMapper = {
       variantId: inventory.variantId.value,
       available: inventory.available.value,
       reserved: inventory.reserved.value,
+      soldOut: inventory.soldOut.value,
       lowStockThreshold: inventory.lowStockThreshold.value,
       deleted: {
         deleted: inventory.delete.deleted,
@@ -65,6 +68,7 @@ export const InventoryMapper = {
       variantId: inventory.variantId,
       available: inventory.available,
       reserved: inventory.reserved,
+      soldOut: inventory.soldOut ?? 0,
       lowStockThreshold: inventory.lowStockThreshold,
       deleted: {
         deleted: inventory.deleted.deleted,
@@ -81,6 +85,7 @@ export const InventoryMapper = {
       variantId: inventory.variantId.value,
       available: inventory.available.value,
       reserved: inventory.reserved.value,
+      soldOut: inventory.soldOut.value,
       lowStockThreshold: inventory.lowStockThreshold.value,
       createdAt: inventory.createdAt.value,
     };

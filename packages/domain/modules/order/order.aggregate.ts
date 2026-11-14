@@ -19,12 +19,15 @@ import { OrderRefundedEvent } from './events/order-refunded.event';
 import { OrderReturnedEvent } from './events/order-returned.event';
 import { OrderUpdatedEvent } from './events/order-updated.event';
 import { OrderStatusVO } from './value-objects/order-status.vo';
+import { OrderTypeVO } from './value-objects/order-type.vo';
 
-export type createOrderPros = {
+export type CreateOrderProps = {
   id: Id;
   idempotentKey: Id;
   totalPrice: Money;
   buyerId: Id;
+  vendorIds: Id[];
+  orderType: OrderTypeVO;
   address: FullAddressVO;
 };
 
@@ -33,6 +36,8 @@ export class OrderAggregate extends AggregateRoot {
     private readonly _idempotentKey: Id,
     private readonly _id: Id,
     private readonly _buyerId: Id,
+    private readonly _vendorIds: Id[],
+    private readonly _orderType: OrderTypeVO,
     private _totalPrice: Money,
     private _address: FullAddressVO,
     private _status: OrderStatusVO,
@@ -41,6 +46,7 @@ export class OrderAggregate extends AggregateRoot {
     private readonly _createdAt: EffectiveDate,
   ) {
     super();
+    OrderAggregate.ensureVendorsMatchType(_vendorIds, _orderType);
   }
   get idempotentKey() {
     return this._idempotentKey;
@@ -50,6 +56,13 @@ export class OrderAggregate extends AggregateRoot {
   }
   get buyerId() {
     return this._buyerId;
+  }
+  /** Every vendor this order buys from; a single order has exactly one. */
+  get vendorIds(): Id[] {
+    return [...this._vendorIds];
+  }
+  get orderType() {
+    return this._orderType;
   }
   get totalPrice() {
     return this._totalPrice;
@@ -70,11 +83,13 @@ export class OrderAggregate extends AggregateRoot {
     return this._createdAt;
   }
 
-  static create(data: createOrderPros): OrderAggregate {
+  static create(data: CreateOrderProps): OrderAggregate {
     return new OrderAggregate(
       data.idempotentKey,
       data.id,
       data.buyerId,
+      data.vendorIds,
+      data.orderType,
       data.totalPrice,
       data.address,
       OrderStatusVO.pending(),
@@ -88,6 +103,8 @@ export class OrderAggregate extends AggregateRoot {
     _idempotentKey: Id,
     _id: Id,
     _buyerId: Id,
+    _vendorIds: Id[],
+    _orderType: OrderTypeVO,
     _totalPrice: Money,
     _address: FullAddressVO,
     _status: OrderStatusVO,
@@ -99,6 +116,8 @@ export class OrderAggregate extends AggregateRoot {
       _idempotentKey,
       _id,
       _buyerId,
+      _vendorIds,
+      _orderType,
       _totalPrice,
       _address,
       _status,
@@ -107,12 +126,26 @@ export class OrderAggregate extends AggregateRoot {
       _createdAt,
     );
   }
+
+  /**
+   * The order type is a promise about its vendors: a single order buys from
+   * exactly one vendor, while a cart order may buy from many.
+   */
+  private static ensureVendorsMatchType(vendorIds: Id[], orderType: OrderTypeVO): void {
+    if (vendorIds.length === 0) {
+      throw new BadRequestError('An order needs at least one vendor.');
+    }
+    if (orderType.orderType === 'single' && vendorIds.length !== 1) {
+      throw new BadRequestError('A single order can only belong to one vendor.');
+    }
+  }
   createOrder() {
     this.raise(new OrderCreatedEvent({ orderId: this.id, actorId: this.buyerId }));
   }
 
   confirmOrder(actorId: Id) {
     this.ensureNotDeleted();
+
     this._status = this._status.confirm();
     this.raise(new OrderConfirmedEvent({ orderId: this._id, actorId }));
   }
@@ -158,6 +191,11 @@ export class OrderAggregate extends AggregateRoot {
     }
   }
 
+  /** Permission: a vendor may only read orders that buy from it. */
+  hasVendor(vendorId: Id): boolean {
+    return this._vendorIds.some((id) => id.equals(vendorId));
+  }
+
   /**
    * Re-prices the order after failed lines were restored as real items.
    *
@@ -181,6 +219,9 @@ export class OrderAggregate extends AggregateRoot {
   deleteOrder(reason: Reason, actorId: Id) {
     if (this._delete.isDeleted) {
       throw new BadRequestError('Order is already deleted.');
+    }
+    if (this._status.status !== 'completed' && this._status.status !== 'cancelled' && this._status.status !== 'refunded' && this._status.status !== 'returned') {
+      throw new BadRequestError('Only completed, cancelled, refunded, or returned orders can be deleted.');
     }
     this._delete = DeleteInfoVO.create(actorId, reason);
     this.raise(new OrderDeletedEvent({ orderId: this._id, actorId, deletionInfo: this._delete }));

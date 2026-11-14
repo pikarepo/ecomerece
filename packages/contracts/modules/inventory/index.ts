@@ -21,6 +21,7 @@ export interface InventoryReservationResult {
   notFoundIds: Id[];
   deletedIds: Id[];
   availableStockIds: Id[];
+  soldOutIds: Id[];
   buyableIds: Id[];
   inventoriesReadModel: InventoryReadModel[];
   lines: InventoryReservationLineResult[];
@@ -40,4 +41,10 @@ export interface IInventoryReservation {
 
   /** Returns fulfilled stock to available stock (return after fulfilment). */
   restock(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void>;
+
+  /** Marks confirmed units as sold out. */
+  soldOut(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void>;
+
+  /** Returns sold out units back to available stock on refund/return. */
+  unsold(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void>;
 }

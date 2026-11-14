@@ -9,6 +9,7 @@ import { InventoryLowStockThresholdUpdatedEvent } from './events/inventory-low-s
 import { InventoryReleasedEvent } from './events/inventory-released.event';
 import { InventoryReservedEvent } from './events/inventory-reserved.event';
 import { InventoryRestockedEvent } from './events/inventory-restocked.event';
+import { InventorySoldOutEvent } from './events/inventory-sold-out.event';
 import { InventoryStockRemovedEvent } from './events/inventory-stock-removed.event';
 
 type createInventoryProps = {
@@ -24,6 +25,7 @@ export class InventoryAggregate extends AggregateRoot {
     private readonly _variantId: Id,
     private _available: Quantity,
     private _reserved: Quantity,
+    private _soldOut: Quantity,
     private _lowStockThreshold: Quantity,
     private _delete: DeleteInfoVO,
     private readonly _version: Quantity,
@@ -43,6 +45,9 @@ export class InventoryAggregate extends AggregateRoot {
   }
   get reserved() {
     return this._reserved;
+  }
+  get soldOut() {
+    return this._soldOut;
   }
   get lowStockThreshold() {
     return this._lowStockThreshold;
@@ -64,6 +69,7 @@ export class InventoryAggregate extends AggregateRoot {
       data.available,
 
       Quantity.none(),
+      Quantity.none(),
       data.lowStockThreshold,
       DeleteInfoVO.none(),
       Quantity.none(),
@@ -81,7 +87,7 @@ export class InventoryAggregate extends AggregateRoot {
     _variantId: Id,
     _available: Quantity,
     _reserved: Quantity,
-
+    _soldOut: Quantity,
     _lowStockThreshold: Quantity,
     _delete: DeleteInfoVO,
     _version: Quantity,
@@ -92,7 +98,35 @@ export class InventoryAggregate extends AggregateRoot {
       _variantId,
       _available,
       _reserved,
+      _soldOut,
+      _lowStockThreshold,
+      _delete,
+      _version,
+      _createdAt,
+    );
+  }
 
+  /**
+   * Rehydrates an inventory row created before sold-out tracking existed.
+   * Old rows have no sold-out units, because sold out is derived from confirm
+   * and refunded/returned transitions going forward.
+   */
+  static rehydrateLegacy(
+    _id: Id,
+    _variantId: Id,
+    _available: Quantity,
+    _reserved: Quantity,
+    _lowStockThreshold: Quantity,
+    _delete: DeleteInfoVO,
+    _version: Quantity,
+    _createdAt: EffectiveDate,
+  ): InventoryAggregate {
+    return InventoryAggregate.rehydrate(
+      _id,
+      _variantId,
+      _available,
+      _reserved,
+      Quantity.none(),
       _lowStockThreshold,
       _delete,
       _version,
@@ -109,10 +143,26 @@ export class InventoryAggregate extends AggregateRoot {
     );
   }
 
+  /**
+   * Marks units as sold out once the owning order items are confirmed.
+   * A sold-out unit is no longer available and no longer reserved.
+   */
+  markSoldOut(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
+    // Move items from reserved to sold‑out. The reservation already reduced `available`.
+    this._soldOut = this._soldOut.increase(quantity.value);
+    this._reserved = this._reserved.decrease(quantity.value);
+    this.raise(
+      new InventorySoldOutEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
+    );
+  }
+
   /** Consumes held stock once an order is fulfilled (reserved leaves the shelf). */
   complete(quantity: Quantity, _actorId: Id) {
     this.ensureNotDeleted();
+    // Move items from reserved to sold‑out when the order is fulfilled.
     this._reserved = this._reserved.decrease(quantity.value);
+    this._soldOut = this._soldOut.increase(quantity.value);
     this.raise(
       new InventoryCompletedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
@@ -136,6 +186,18 @@ export class InventoryAggregate extends AggregateRoot {
       new InventoryRestockedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
   }
+
+  /** Moves sold-out units back to available when items are refunded or returned. */
+  unsold(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
+    this._soldOut = this._soldOut.decrease(quantity.value);
+    this._available = this._available.increase(quantity.value);
+    this.raise(
+      new InventoryRestockedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
+    );
+  }
+
+
 
   buy(quantity: Quantity, _actorId: Id) {
     this.ensureNotDeleted();
@@ -174,6 +236,8 @@ export class InventoryAggregate extends AggregateRoot {
       throw new BadRequestError('Clear the available stock before deleting this inventory.');
     if (!this._reserved.isZero)
       throw new BadRequestError('Clear the reserved stock before deleting this inventory.');
+    if (!this._soldOut.isZero)
+      throw new BadRequestError('Clear the sold-out stock before deleting this inventory.');
     this._delete = DeleteInfoVO.create(actorId, reason);
     this.raise(
       new InventoryDeletedEvent({

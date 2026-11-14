@@ -25,6 +25,7 @@ function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {
   const calls: string[] = [];
   const published: IEvent[] = [];
   const createdTotals: number[] = [];
+  const createdOrders: { vendorIds: string[]; orderType: string }[] = [];
   const recordedFailures: { variantId: { value: string }; reason: string }[] = [];
   const itemEvent = { type: 'order-item.created', payload: {} } as IEvent;
 
@@ -32,10 +33,18 @@ function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {
     EnsureUniqueImpodentKey: async () => {
       calls.push('ensure-unique');
     },
-    Create: async (order: { totalPrice: { value: number } }) => {
+    Create: async (order: {
+      totalPrice: { value: number };
+      vendorIds: { value: string }[];
+      orderType: { value: string };
+    }) => {
       if (options.saveFails) throw new Error('db down');
       calls.push('save-order');
       createdTotals.push(order.totalPrice.value);
+      createdOrders.push({
+        vendorIds: order.vendorIds.map((vendorId) => vendorId.value),
+        orderType: order.orderType.value,
+      });
     },
   };
 
@@ -126,12 +135,12 @@ function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {
     {} as never,
   );
 
-  return { service, calls, published, itemEvent, createdTotals, recordedFailures };
+  return { service, calls, published, itemEvent, createdTotals, createdOrders, recordedFailures };
 }
 
 describe('OrderApplicationService.createMyOrder', () => {
   it('publishes item and order events only after the transaction commits', async () => {
-    const { service, calls, published, itemEvent } = buildService();
+    const { service, calls, published, itemEvent, createdOrders } = buildService();
 
     await service.createMyOrder(orderInput, actor);
 
@@ -147,6 +156,8 @@ describe('OrderApplicationService.createMyOrder', () => {
     expect(published).toHaveLength(2);
     expect(published[0]).toBe(itemEvent);
     expect(published[1]).toMatchObject({ type: 'order.created' });
+    // One vendor means a single order holding exactly that vendor.
+    expect(createdOrders).toEqual([{ vendorIds: [id(4)], orderType: 'single' }]);
   });
 
   it('does not publish events when the transaction callback fails', async () => {
@@ -174,30 +185,19 @@ describe('OrderApplicationService.createMyOrder', () => {
     expect(published).toHaveLength(0);
   });
 
-  it('records the failure reason and charges nothing when safeOrder is off', async () => {
+  it('refuses an order whose every line was rejected, because it would name no vendor', async () => {
     const { service, calls, published, createdTotals, recordedFailures } = buildService({
       rejectLine: true,
     });
 
-    await service.createMyOrder({ ...orderInput, safeOrder: false }, actor);
+    await expect(service.createMyOrder({ ...orderInput, safeOrder: false }, actor)).rejects.toThrow(
+      'An order needs at least one vendor.',
+    );
 
-    expect(calls).toEqual([
-      'begin',
-      'ensure-unique',
-      'reserve',
-      'write-items',
-      'record-failures',
-      'save-order',
-      'commit',
-      'publish',
-    ]);
-    // No buyable line, so the order total is zero.
-    expect(createdTotals).toEqual([0]);
-    expect(recordedFailures).toHaveLength(1);
-    expect(recordedFailures[0]).toMatchObject({
-      variantId: { value: id(2) },
-      reason: 'insufficient_stock',
-    });
-    expect(published).toHaveLength(1);
+    // An order must name at least one vendor, so nothing is written or published.
+    expect(calls).toEqual(['begin', 'ensure-unique', 'reserve', 'abort']);
+    expect(createdTotals).toEqual([]);
+    expect(recordedFailures).toEqual([]);
+    expect(published).toHaveLength(0);
   });
 });

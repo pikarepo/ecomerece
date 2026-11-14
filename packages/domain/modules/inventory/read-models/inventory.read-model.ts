@@ -3,6 +3,7 @@ export interface InventoryReadModel {
   variantId: string;
   available: number;
   reserved: number;
+  soldOut: number;
   lowStockThreshold: number;
   deleted: {
     deleted: boolean;
