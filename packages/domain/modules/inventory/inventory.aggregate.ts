@@ -190,6 +190,7 @@ export class InventoryAggregate extends AggregateRoot {
   /** Moves sold-out units back to available when items are refunded or returned. */
   unsold(quantity: Quantity, _actorId: Id) {
     this.ensureNotDeleted();
+
     this._soldOut = this._soldOut.decrease(quantity.value);
     this._available = this._available.increase(quantity.value);
     this.raise(

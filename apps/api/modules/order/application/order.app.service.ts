@@ -774,7 +774,7 @@ export class OrderApplicationService extends BaseService {
       actorId,
       (order) => order.returnOrder(reason, actorId),
       (items) => this.orderItemsWriter.returnItems(items),
-      (order) => (order.status.status === 'completed' ? 'restock' : 'unsold'),
+      (order) => 'unsold',
     );
 
     return OrderMessages.orderReturned(orderId, actorId, reason);
