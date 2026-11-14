@@ -1,7 +1,7 @@
 import {
+  type OrderItemFailureReason,
   OrderItemFailureReasonEnum,
   StatusEnum,
-  type OrderItemFailureReason,
   type StatusType,
 } from '@ecomerece/domain';
 import mongoose, { type HydratedDocument } from 'mongoose';

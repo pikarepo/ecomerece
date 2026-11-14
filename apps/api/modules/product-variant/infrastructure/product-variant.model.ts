@@ -1,4 +1,4 @@
-import mongoose, { type HydratedDocument, type InferSchemaType, model, Schema } from 'mongoose';
+import mongoose, { type HydratedDocument, type InferSchemaType, Schema } from 'mongoose';
 
 const deletedSchema = new mongoose.Schema(
   {

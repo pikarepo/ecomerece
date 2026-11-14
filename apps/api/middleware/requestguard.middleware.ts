@@ -156,7 +156,9 @@ function findJsonComplexityViolation(
   let nodeCount = 0;
 
   while (stack.length > 0) {
-    const { value, depth } = stack.pop()!;
+    const entry = stack.pop();
+    if (!entry) break;
+    const { value, depth } = entry;
 
     if (depth > maxDepth) {
       return { type: 'depth', limit: maxDepth };

@@ -437,6 +437,114 @@ const order = OrderAggregate.create({
 states the cross-module flow, the method JSDoc lists the steps, and inline comments only cover
 transaction and event-ordering rules.
 
+### 8.6 Engineering standards for large TypeScript changes
+
+These rules adapt the "How to Write and Maintain Large TypeScript Code" playbook to this repo. They
+are the standard for new and changed code. Existing deviations are tracked in §22 and are not a
+reason to copy them.
+
+**Priority order:** correctness → clarity → simplicity → consistency → small changes → honesty.
+Never trade maintainability for fewer lines.
+
+**Operating protocol**
+
+1. Discover — read the target file completely, then its imports, tests, callers, contract
+   interfaces, and 2–3 existing examples of the same pattern. Note side effects (DB writes, events,
+   cross-module calls) before editing.
+2. Plan — for anything larger than one function, list steps that each compile and could be merged
+   alone. Order: types/contracts → pure logic → persistence → orchestration → wiring → tests.
+3. Implement — prefer targeted edits. Write the top-level workflow as named steps, then fill each
+   step. Do not rewrite a large file in one shot.
+4. Verify — run the relevant tests, then `bun run typecheck` and `bun run arch`. `bun run lint`
+   covers `apps/web` only; format API files with Biome explicitly.
+5. Report — use the change-description format at the end of this section.
+
+**Layers and dependencies**
+
+| Layer | Owns | Must not |
+|---|---|---|
+| Route | URL + middleware | contain business logic |
+| Controller | parse request, call ONE app-service method, shape response | rules, repositories |
+| Application service | use-case orchestration: load → domain → save → publish | ORM/query details, domain rules |
+| Domain (aggregates, VOs) | invariants and state transitions | infrastructure imports, I/O |
+| Internal service | logic shared by 2+ use cases in one module | become a dumping ground |
+| Repository | persistence and query details | contain business decisions |
+
+Dependencies point inward. ORM types (`FilterQuery`, `*Persistence`, Mongoose schemas) belong in
+`infrastructure/`, not in `application/`. Modules communicate only through `packages/contracts`.
+No circular dependencies.
+
+**File and function shape**
+
+- One reason to change per file. Soft limits: ~300 lines for a service, ~200 for a
+  controller/repository (excluding type-only blocks). Past the limit, look for a second
+  responsibility; do not split by line count alone.
+- Functions: 10–30 lines, review over 40. Max 3 parameters or one named object. Max 2 nesting
+  levels; use guard clauses and keep the happy path left-aligned.
+- No boolean flag parameters that switch behavior; write two functions instead.
+- No mutating parameters. One return shape per function. Keep pure decisions separate from I/O.
+- Within a file: imports → constants → local types → public class/function → private helpers in the
+  order they are called.
+- Extract a helper only when 2+ flows need it, it is a distinct responsibility, or it can be tested
+  independently. Do not extract one-use trivial helpers.
+
+**Naming and types**
+
+- Name business intent (`reserveInventory`, `verifyProductOwnership`), never `processData`,
+  `handle`, `data`, `util`. Booleans use `is/has/can/should`; units appear in names (`timeoutMs`).
+- Maps are named by key (`variantById`); collections are plural. Spell names correctly; report
+  existing typos instead of copying them.
+- `strict` is on. Do not add `any`, `!`, `@ts-ignore`, or `@ts-expect-error` in new code. Isolate an
+  unavoidable cast in one parse function with a comment.
+- Use value objects for ids and money; do not pass raw `string`/`number` for domain concepts that
+  can be confused. Derive types instead of duplicating them.
+
+**Errors, transactions, events**
+
+- Domain error classes with meaningful messages; expected business outcomes returned as typed
+  results. Never swallow errors; preserve `cause` when rethrowing.
+- Do not change error classes, HTTP statuses, or messages as a side effect of a refactor.
+- The application service owns the transaction boundary. Domain events stay buffered on the
+  aggregate; publish only after the transaction commits, never inside the callback.
+
+**Comments**
+
+- Explain why (invariant, ordering, trade-off), not what. Public methods get a short JSDoc stating
+  purpose, rules, and transaction/event guarantees. No banners, no commented-out code, no stale
+  TODOs (use a tracked issue). §8.5 is the detailed convention.
+
+**Hard stops — ask before doing**
+
+- Changing a public API, DB schema, event payload, or error contract.
+- Deleting or weakening tests.
+- Adding a dependency, layer, base class, or wrapper.
+- Touching files outside the requested scope.
+
+**Project-specific deviations (existing code wins until migrated)**
+
+1. `biome.json` keeps `noExplicitAny` off, and `BaseService` uses `any`. Do not copy that into new
+   code; new code should be `any`-free.
+2. `bun run lint` runs Next.js ESLint for `apps/web` only. API/domain correctness is covered by
+   `bun run typecheck`, `bun run arch`, and Biome formatting; there is no API ESLint config.
+3. `bun run format` formats `apps/web` and `packages` only. Format API files with
+   `bunx biome format --write apps/api/modules/<name>/...`.
+4. Root `tsconfig.json` enables `strict` but not `noUncheckedIndexedAccess` or
+   `exactOptionalPropertyTypes`. Enabling them is a repo-wide change, not a drive-by edit.
+5. The complexity/max-lines ESLint rules from the generic playbook are not installed; enforce the
+   limits in review until tooling is added.
+
+**Change report format**
+
+```
+Summary: one or two sentences.
+Changes: problem -> fix, one line each.
+Files touched: list.
+Needs decision: behavior-changing findings NOT applied.
+Follow-ups: unrelated issues noticed.
+Checks: typecheck / lint / tests -> pass | fail | not run (reason).
+Assumptions: anything you guessed.
+```
+
 ---
 
 ## 9. Domain model catalog
@@ -1302,12 +1410,13 @@ against a database you care about, and never point them at production.
 
 ## 20. Testing
 
-`bun test` runs 13 test files (78 tests at the last verified run, all passing) using `bun:test`.
-They concentrate on pure domain behaviour (value objects, aggregates, `FanOut`/`TimeWindows` stat
-expansion, image-storage errors, stats denormalization handlers) plus the order-create
-post-commit event ordering (`apps/api/modules/order/application/__tests__/order-create-commit.test.ts`)
-rather than HTTP integration; there is no test database harness (the order transaction smoke needs a
-MongoDB replica set).
+`bun test` runs 19 test files (115 tests at the last verified run on 2026-11-14, all passing) using
+`bun:test`. They concentrate on pure domain behaviour (value objects, aggregates,
+`FanOut`/`TimeWindows` stat expansion, image-storage errors, stats denormalization handlers) plus the
+order post-commit event ordering, order ↔ inventory transitions, item retries, reservation reason
+mapping, and order-item update/restore matching
+(`apps/api/modules/{order,order-items,inventory}/application/__tests__/`). There is no HTTP
+integration harness or test database (the order transaction smoke needs a MongoDB replica set).
 
 ```bash
 bun test                         # all
@@ -1406,16 +1515,93 @@ These are real issues observed in the code, not TODOs invented for this document
 
 **Naming / housekeeping**
 
-18. `AGENTS.md` documents mapper methods `toDocument`/`updatePayload`/`fromDocument`; the code uses
-    `persistenceToAggregate`/`aggregateToPersistence`/`aggregateToReadModel`.
-19. The root `README.md` describes an older state of the system (including a “900-line” doc and
+18. The root `README.md` describes an older state of the system (including a “900-line” doc and
     claims about unwired reviews/stats). This file supersedes it.
-20. Product `my/...` routes are registered without a leading slash; Hono normalises them when mounted
+19. Product `my/...` routes are registered without a leading slash; Hono normalises them when mounted
     under `/product`, but do not copy that style.
-21. Persistent typos in API surface and filenames: `product-varaint.routes.ts`,
+20. Persistent typos in API surface and filenames: `product-varaint.routes.ts`,
     `/product-variant/my/appereance/toggle`, `cloudnary-image.type.ts`, `order.returnded`,
-    `user.logged-in` vs `user.signed-in`, and the placeholder address deletion reason.
-22. `apps/api/dist/` exists as a local build artifact; do not edit or review it as source.
+    `user.logged-in` vs `user.signed-in`, and the placeholder address deletion reason. The inventory
+    module also has `InventoryReposityory`, `InventoryInternalServcie`, `getInventoryByVarientId`,
+    and `inventoryReaponseReadModel`; they are harmless but spread across presentation, application,
+    and infrastructure, so rename them in a dedicated change.
+21. `apps/api/dist/` exists as a local build artifact; do not edit or review it as source.
+
+**Standards audit (2026-11-14, all API and package modules)**
+
+Safe corrections applied under §8.6:
+
+Order / order-items / inventory:
+- Removed the non-null assertion in `inventory.internal.service.ts` (`transitionReserved` now carries
+  the matching line with its inventory).
+- Replaced the four-level nested ternary in `reserveInventories` with
+  `reservationFailureReason(...)`.
+- Extracted `summarizeInventories(...)` so `verifyInventoriesItemsGet` and `reserveInventories` share
+  one id-set calculation instead of duplicating it.
+- Replaced `.find(...)` inside `.map(...)` in `order-item.internal.ts` (`updateOrderItems`,
+  `restoreOrderItemFailures`) with `Map` lookups, and reused the contract `OrderItemInput` type.
+- Removed decorative section banners from `order.app.service.ts` (§8.5).
+- Added tests for reservation reason mapping and order-item update/restore/create matching.
+
+Repo-wide pass (`apps/api` and `packages/domain`; `packages/frontend`, `packages/contracts`, and
+`packages/shared` are intentionally untouched):
+- Applied Biome safe fixes across the in-scope module directories: formatting, import order, and
+  unused imports/variables.
+- Cleared the remaining `bunx biome check` diagnostics: unused imports/params, non-null assertions,
+  optional-chain findings, shadowed `valueOf`, `==`, side-effect `.map` calls, and a missing local
+  type (`let price` in product-variant).
+- Removed `as any` casts on search filters in product, product-variant, and user; the Mongoose
+  filter types accept the `$regex`/`$options` shape directly.
+- Typed Cloudinary JSON response bodies and narrowed the abort `catch` from `any`.
+- Removed decorative section banners from `home` (aggregate, app service, controller, model) and
+  `cloudinary.adapter.ts`.
+- Home's persistence mapper now returns `HomePersistence`; the plain subdocument payload is cast
+  once through `unknown` because Mongoose types the arrays as `DocumentArray`.
+- Replaced env-var non-null assertions with explicit checks in `apps/api/lib/jwt.ts` and
+  `apps/api/lib/supabase.ts` (a missing secret now fails loudly instead of encoding the string
+  `"undefined"`).
+- Removed the `stack.pop()!` assertion in `requestguard.middleware.ts`, used `Number.isNaN`, and
+  split the `??=` assignment in `BaseService.groupBy`.
+- `bunx biome check apps/api` and `packages/domain` are clean; 115 tests pass; typecheck reports
+  only the pre-existing `apps/api/index.ts:16` error.
+
+Not applied — needs a decision:
+
+- ORM types still leak into application services (`FilterQuery` and `*Persistence` imports):
+  `address.app.service.ts:152`, `category.app.service.ts:197,221`,
+  `inventory.app.service.ts:202`, `order.app.service.ts:519,526`,
+  `order-item.app.service.ts:101`, `product.app.service.ts:522,548,582`,
+  `product-variant.app.service.ts:234`, `review.app.service.ts:67,91`,
+  `user.app.service.ts:217,239`, `vendor.app.service.ts:245,279`. `UserPersistence` is also the
+  actor type across `user.app.service.ts`. Moving these behind repository-facing filter types
+  changes repository contracts, so it is a separate architectural change.
+- Files over the soft limits: `order.app.service.ts` (~755), `product.app.service.ts` (~606),
+  `home.app.service.ts` (~479), `vendor.app.service.ts` (~392),
+  `cloudinary.adapter.ts` (~494), `product.aggregate.ts` (~477),
+  `product.repository.ts` (~270), `order-item.repository.ts` (~227). Splitting them by
+  responsibility is behavior-risky and needs a per-module plan.
+- `data: any` remains in domain ports: `category/ports/i-category.ports.ts`,
+  `reviews/ports/i-reviews-repository.ts`, `product/ports/i-product-repository.ts`,
+  `vendor/ports/i-vendor-repository.ts`. Typing them is a contract change.
+- `cloudinary.adapter.ts` still pushes `err as any` into `BatchItemResult.error`, whose declared
+  type is `ImageStorageError`; the batch runner cannot know a provider error's concrete class, so
+  this needs a contract decision (generic error wrapper vs widened result type).
+- Frontend `useAddressManager.ts` keeps `any` on the callback/mutation payload and `err`; fixing it
+  needs a typed overload for the mutation union.
+- Identifier typos are spread across public DTOs, routes, and ports (`ProductVaraintMessages`,
+  `toggleVariantApperaaracneDto`, `upadteMyVariantMetaDto`, `InventoryReposityory`,
+  `InventoryInternalServcie`, `getInventoryByVarientId`, `inventoryReaponseReadModel`,
+  `desclaimerItem`, `category.read-modle.ts`, `CategoryMessags`). Renaming them changes published
+  names, so they are listed rather than renamed silently.
+
+**Tooling**
+
+- The `arch` script in `package.json` points at `scripts/arch-check.ts`, but that file is not in the
+  tree, so `bun run arch` currently fails with "Module not found". Restore the checker or remove the
+  command from `AGENTS.md` and `README.md`; until then, treat architecture boundaries as
+  review-enforced.
+- `bun run typecheck` fails on the pre-existing `apps/api/index.ts:16` (`CORS_ORIGIN` possibly
+  `undefined`), unrelated to the order/inventory modules.
 
 ---
 
@@ -1450,7 +1636,9 @@ These are real issues observed in the code, not TODOs invented for this document
   onboarding path, so a stale sample there costs more than a stale paragraph here.
 - When you change a flow, update the *why* comments in the owning app service in the same change; a
   comment that restates code is worse than none. Conventions are in §8.5.
-- Verified against the tree on 2026-11-09 (post cross-module refactor): 13 API modules, 12 Mongoose
-  models, 124 mounted routes + `/health`, 11 aggregates, 30 value objects, 110 event classes,
-  14 contract queries, 8 contract ports, 127 SDK hooks, 27 web pages, 13 test files (78 tests).
+- Keep §8.6 and the Engineering Standards section in `AGENTS.md` in sync. This document is
+  authoritative; the agent file is the condensed, always-loaded version.
+- Verified against the tree on 2026-11-14: 13 API modules, 12 Mongoose models, 124 mounted routes +
+  `/health`, 11 aggregates, 30 value objects, 110 event classes, 14 contract queries, 8 contract
+  ports, 127 SDK hooks, 27 web pages, 19 test files (115 tests).
 

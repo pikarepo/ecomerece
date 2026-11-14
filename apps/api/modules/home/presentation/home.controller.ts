@@ -24,12 +24,10 @@ import { BaseController } from '../../../core/controller/base.controller';
 import type { HomeAppService } from '../application/home.app.service';
 
 export class HomeController extends BaseController<HomeAppService> {
-  // --- Public Storefront Layout ---
   getHome = async (c: Context) => {
     return this.ok(c, await this.service.getHome());
   };
 
-  // --- Categories ---
   addCategory = async (c: Context) => {
     const actor = c.get('user');
     const data = await this.body(c, createHomeCategoryDtoSchema);
@@ -51,7 +49,6 @@ export class HomeController extends BaseController<HomeAppService> {
     return this.ok(c, await this.service.reorderCategories(data, actor?._id ?? 'admin'));
   };
 
-  // --- Slides ---
   addSlide = async (c: Context) => {
     const actor = c.get('user');
     const data = await this.body(c, createSlideDtoSchema);
@@ -73,7 +70,6 @@ export class HomeController extends BaseController<HomeAppService> {
     return this.ok(c, await this.service.reorderSlides(data, actor?._id ?? 'admin'));
   };
 
-  // --- Promos ---
   addPromo = async (c: Context) => {
     const actor = c.get('user');
     const data = await this.body(c, createPromoDtoSchema);
@@ -90,7 +86,6 @@ export class HomeController extends BaseController<HomeAppService> {
     return this.ok(c, await this.service.removePromo(data, actor?._id ?? 'admin'));
   };
 
-  // --- Features ---
   addFeature = async (c: Context) => {
     const actor = c.get('user');
     const data = await this.body(c, createFeatureDtoSchema);
@@ -112,7 +107,6 @@ export class HomeController extends BaseController<HomeAppService> {
     return this.ok(c, await this.service.setFeatures(data, actor?._id ?? 'admin'));
   };
 
-  // --- Product Containers ---
   addContainer = async (c: Context) => {
     const actor = c.get('user');
     const data = await this.body(c, createProductContainerDtoSchema);

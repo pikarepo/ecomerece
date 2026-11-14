@@ -1,4 +1,6 @@
+import type { IVendorQueries } from '@ecomerece/contracts';
 import { getISOWeek, getTimeWindows, Id } from '@ecomerece/domain';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import {
   type AggregationLevel,
   type EntityType,
@@ -9,11 +11,9 @@ import {
   type Metrics,
   updateProductStatsSettingsSchema,
 } from '@ecomerece/shared';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import type { ViewEntityType } from '../../../middleware/statsViewGuard';
-import type { IVendorQueries } from '@ecomerece/contracts';
 import { requestVendorStatsForceRefresh } from '../application/event-handlers/vendor-stats-force-refresh.handler';
 import { triggerProductStatsDenormalization } from '../application/ProductStatsSyncScheduler';
 import { statsBufferService } from '../application/StatsBufferService';
@@ -127,9 +127,9 @@ export class StatsController {
     const series = exposeFull
       ? rawSeries
       : rawSeries.map((point) => ({
-        ...point,
-        metrics: this.maskFinancialMetrics(point.metrics as Metrics),
-      }));
+          ...point,
+          metrics: this.maskFinancialMetrics(point.metrics as Metrics),
+        }));
 
     return c.json({ entityType, entityId, aggregation, from, to, series });
   };

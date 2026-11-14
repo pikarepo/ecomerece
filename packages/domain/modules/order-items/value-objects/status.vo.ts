@@ -149,9 +149,7 @@ export class StatusVo extends StringVO {
    */
   restore(): StatusVo {
     if (this.value !== StatusEnum.FAILED) {
-      throw new BadRequestError(
-        `Only a failed status can be restored (current: ${this.value})`,
-      );
+      throw new BadRequestError(`Only a failed status can be restored (current: ${this.value})`);
     }
     return StatusVo.pending();
   }

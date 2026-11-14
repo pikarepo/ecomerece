@@ -1,8 +1,8 @@
 import { type IUserRepository, type UserReadModel, UserRoleVO } from '@ecomerece/domain';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import type { EmailVO } from '@ecomerece/domain/value-objects/email.vo';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { UserMapper } from '../infrastructure/user.mapper';
 

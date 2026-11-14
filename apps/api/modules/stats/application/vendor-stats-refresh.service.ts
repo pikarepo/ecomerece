@@ -179,5 +179,3 @@ export class VendorStatsRefreshService {
     await this.refreshCategories(categoryIds);
   }
 }
-
-

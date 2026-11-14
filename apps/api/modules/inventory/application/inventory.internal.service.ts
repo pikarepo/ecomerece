@@ -1,15 +1,20 @@
-import type { InventoryReadModel } from '@ecomerece/domain';
 import type {
   InventoryReservationFailureReason,
   InventoryReservationLineResult,
   InventoryReservationResult,
 } from '@ecomerece/contracts';
+import type { InventoryAggregate, InventoryReadModel } from '@ecomerece/domain';
 import type { OrderItem } from '@ecomerece/domain/modules/order/value-objects/order-item.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { BaseService } from '../../../core/services/base.services';
 import { InventoryMapper } from '../infrastructure/inventory.mapper';
 import type { InventoryReposityory } from '../infrastructure/inventory.repository';
+
+type InventorySummary = Pick<
+  InventoryReservationResult,
+  'validIds' | 'notFoundIds' | 'deletedIds' | 'availableStockIds' | 'inventoriesReadModel'
+>;
 
 export class InventoryInternalServcie extends BaseService {
   constructor(private readonly inventoryRepo: InventoryReposityory) {
@@ -28,39 +33,37 @@ export class InventoryInternalServcie extends BaseService {
     return InventoryMapper.aggregateToReadModel(inventory);
   }
 
-  async verifyInventoriesItemsGet(inventoryItems: OrderItem[]): Promise<{
-    validIds: Id[];
-    notFoundIds: Id[];
-    deletedIds: Id[];
-    availableStockIds: Id[];
-    buyableIds: Id[];
-    inventoriesReadModel: InventoryReadModel[];
-  }> {
+  async verifyInventoriesItemsGet(
+    inventoryItems: OrderItem[],
+  ): Promise<InventorySummary & { buyableIds: Id[] }> {
     const variantIds = inventoryItems.map((item) => Id.create(item.variantId.value));
     const inventories = await this.inventoryRepo.FindByVariantIds(variantIds);
-    const validInventories = inventories.filter((inv) => !inv.delete.deleted);
-    const validIdValues = new Set(validInventories.map((inv) => inv.variantId.value));
-    const existingInventoryVariantIds = new Set(inventories.map((inv) => inv.variantId.value));
-    const foundIds = variantIds.filter((id) => existingInventoryVariantIds.has(id.value));
-    const notFoundIds = variantIds.filter((id) => !existingInventoryVariantIds.has(id.value));
-    const deletedIds = inventories
-      .filter((inv) => inv.delete.deleted)
-      .map((inv) => Id.create(inv.variantId.value));
-    const validIds = foundIds.filter((id) => validIdValues.has(id.value));
-    const availableStockIds = validInventories
-      .filter((inv) => inv.available.value > 0)
-      .map((inv) => Id.create(inv.variantId.value));
-    const buyableIds = availableStockIds;
-    const inventoriesReadModel = validInventories.map((inv) =>
-      InventoryMapper.aggregateToReadModel(inv),
-    );
+    const summary = this.summarizeInventories(inventories, variantIds);
+
+    return { ...summary, buyableIds: summary.availableStockIds };
+  }
+
+  /** Splits a batch read into the id sets every inventory consumer needs. */
+  private summarizeInventories(
+    inventories: InventoryAggregate[],
+    requestedVariantIds: Id[],
+  ): InventorySummary {
+    const validInventories = inventories.filter((inventory) => !inventory.delete.deleted);
+    const existingVariantIds = new Set(inventories.map((inventory) => inventory.variantId.value));
+    const validVariantIds = new Set(validInventories.map((inventory) => inventory.variantId.value));
+
     return {
-      validIds,
-      notFoundIds,
-      deletedIds,
-      availableStockIds,
-      buyableIds,
-      inventoriesReadModel,
+      validIds: requestedVariantIds.filter((id) => validVariantIds.has(id.value)),
+      notFoundIds: requestedVariantIds.filter((id) => !existingVariantIds.has(id.value)),
+      deletedIds: inventories
+        .filter((inventory) => inventory.delete.deleted)
+        .map((inventory) => Id.create(inventory.variantId.value)),
+      availableStockIds: validInventories
+        .filter((inventory) => inventory.available.value > 0)
+        .map((inventory) => Id.create(inventory.variantId.value)),
+      inventoriesReadModel: validInventories.map((inventory) =>
+        InventoryMapper.aggregateToReadModel(inventory),
+      ),
     };
   }
   /**
@@ -78,19 +81,19 @@ export class InventoryInternalServcie extends BaseService {
       items.map((item) => item.variantId),
     );
     const itemsByVariant = new Map(items.map((item) => [item.variantId.value, item] as const));
-    const changed = inventories.filter((inventory) => {
+    const changed = inventories.flatMap((inventory) => {
       const item = itemsByVariant.get(inventory.variantId.value);
-      return Boolean(item) && !inventory.delete.deleted;
+      return item && !inventory.delete.deleted ? [{ inventory, item }] : [];
     });
 
-    for (const inventory of changed) {
-      const item = itemsByVariant.get(inventory.variantId.value)!;
+    for (const { inventory, item } of changed) {
       if (apply === 'complete') inventory.complete(item.quantity, actorId);
       else if (apply === 'release') inventory.release(item.quantity, actorId);
       else inventory.restock(item.quantity, actorId);
     }
-    await this.inventoryRepo.SaveMany(changed);
-    return changed.map((inventory) => InventoryMapper.aggregateToReadModel(inventory));
+
+    await this.inventoryRepo.SaveMany(changed.map(({ inventory }) => inventory));
+    return changed.map(({ inventory }) => InventoryMapper.aggregateToReadModel(inventory));
   }
 
   completeInventories(
@@ -138,15 +141,7 @@ export class InventoryInternalServcie extends BaseService {
 
     for (const item of inventoryItems) {
       const inventory = inventoryByVariant.get(item.variantId.value);
-      const reason: InventoryReservationFailureReason | null = !inventory
-        ? 'inventory_not_found'
-        : inventory.delete.deleted
-          ? 'inventory_deleted'
-          : inventory.available.value === 0
-            ? 'out_of_stock'
-            : inventory.available.value < item.quantity.value
-              ? 'insufficient_stock'
-              : null;
+      const reason = this.reservationFailureReason(inventory, item.quantity);
 
       if (!inventory || reason) {
         lines.push({ variantId: item.variantId, reserved: false, reason });
@@ -160,31 +155,24 @@ export class InventoryInternalServcie extends BaseService {
 
     await this.inventoryRepo.SaveMany([...reserved.values()]);
 
-    const validInventories = inventories.filter((inv) => !inv.delete.deleted);
-    const validIdValues = new Set(validInventories.map((inv) => inv.variantId.value));
-    const existingInventoryVariantIds = new Set(inventories.map((inv) => inv.variantId.value));
-    const foundIds = variantIds.filter((id) => existingInventoryVariantIds.has(id.value));
-    const notFoundIds = variantIds.filter((id) => !existingInventoryVariantIds.has(id.value));
-    const deletedIds = inventories
-      .filter((inv) => inv.delete.deleted)
-      .map((inv) => Id.create(inv.variantId.value));
-    const validIds = foundIds.filter((id) => validIdValues.has(id.value));
-    const availableStockIds = validInventories
-      .filter((inv) => inv.available.value > 0)
-      .map((inv) => Id.create(inv.variantId.value));
+    const summary = this.summarizeInventories(inventories, variantIds);
     const buyableIds = lines.filter((line) => line.reserved).map((line) => line.variantId);
-    const inventoriesReadModel = validInventories.map((inv) =>
-      InventoryMapper.aggregateToReadModel(inv),
-    );
 
     return {
-      validIds,
-      notFoundIds,
-      deletedIds,
-      availableStockIds,
+      ...summary,
       buyableIds,
-      inventoriesReadModel,
       lines,
     };
+  }
+
+  private reservationFailureReason(
+    inventory: InventoryAggregate | undefined,
+    quantity: Quantity,
+  ): InventoryReservationFailureReason | null {
+    if (!inventory) return 'inventory_not_found';
+    if (inventory.delete.deleted) return 'inventory_deleted';
+    if (inventory.available.value === 0) return 'out_of_stock';
+    if (inventory.available.value < quantity.value) return 'insufficient_stock';
+    return null;
   }
 }

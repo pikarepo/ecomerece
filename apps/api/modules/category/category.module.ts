@@ -2,8 +2,8 @@ import type { IImageStoragePort } from '@ecomerece/domain';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { CategoryAppService } from './application/category.app.service';
 import { CategoryInternalServcie } from './application/category.internal.service';
-import { CategoryQueryAdapter } from './infrastructure/category-query.adapter';
 import { CategoryRepository } from './infrastructure/category.repository';
+import { CategoryQueryAdapter } from './infrastructure/category-query.adapter';
 import { CategoryStatsAccessAdapter } from './infrastructure/category-stats-access.adapter';
 import { CategoryController } from './presentation/category.controller';
 

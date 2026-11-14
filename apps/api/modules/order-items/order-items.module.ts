@@ -1,10 +1,10 @@
 import type { IOrderQueries } from '@ecomerece/contracts';
-import type { Buses } from '../../core/infrastructure/buses/buses';
 import type { UnitOfWork } from '../../core/database/unit-of-work';
+import type { Buses } from '../../core/infrastructure/buses/buses';
 import { OrderItemsApplicationService } from './application/order-item.app.service';
 import { OrderItemsInternalService } from './application/order-item.internal';
-import { OrderItemsQueryAdapter } from './infrastructure/order-items-query.adapter';
 import { OrderItemsRepository } from './infrastructure/order-item.repository';
+import { OrderItemsQueryAdapter } from './infrastructure/order-items-query.adapter';
 import { OrderItemsWriterAdapter } from './infrastructure/order-items-writer.adapter';
 import { OrderItemsController } from './presentation/order-items.controller';
 

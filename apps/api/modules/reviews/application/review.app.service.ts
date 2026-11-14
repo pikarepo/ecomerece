@@ -1,3 +1,9 @@
+import type {
+  AuthActor,
+  IOrderQueries,
+  IProductQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import { Name } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { ReviewAggregate } from '@ecomerece/domain/modules/reviews/reviews.aggregate';
@@ -22,12 +28,6 @@ import type { FilterQuery } from 'mongoose';
 import type { ReviewResponseReadModel } from '../../../../../packages/shared/types/responses-read-models/review.response-read-model';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type {
-  IOrderQueries,
-  IProductQueries,
-  IVendorQueries,
-} from '@ecomerece/contracts';
-import type { AuthActor } from '@ecomerece/contracts';
 import { reviewMapper } from '../infrastructure/review.mapper';
 import type { ReviewPersistence } from '../infrastructure/review.model';
 import type { ReviewRepository } from '../infrastructure/review.repository';
@@ -109,10 +109,7 @@ export class ReviewApplicationService extends BaseService {
     };
   }
 
-  async createReview(
-    data: createMyReviewDtoType,
-    actor: AuthActor,
-  ): Promise<ReviewMessagesType> {
+  async createReview(data: createMyReviewDtoType, actor: AuthActor): Promise<ReviewMessagesType> {
     const reviewId = Id.create();
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
@@ -127,7 +124,7 @@ export class ReviewApplicationService extends BaseService {
     if (orderId) {
       const activeOrder = await this.orderQueries.ensureActiveById(orderId);
 
-      if (activeOrder.active) if (activeOrder.order?.buyerId == actorId.value) verified = true;
+      if (activeOrder.active) if (activeOrder.order?.buyerId === actorId.value) verified = true;
     }
     const review = ReviewAggregate.create({
       id: reviewId,

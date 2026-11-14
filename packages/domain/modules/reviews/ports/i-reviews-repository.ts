@@ -14,7 +14,7 @@ export interface IReviewRepository {
   Exists(id: Id): Promise<boolean>;
   ExistsByAuthorAndProduct(authorId: Id, productId: Id): Promise<boolean>;
   FindPaginated(params: {
-    filter?: {};
+    filter?: Record<string, unknown>;
     cursor?: Id;
     limit?: Quantity;
     direction?: 'next' | 'prev';

@@ -124,13 +124,11 @@ export class HomeAppService extends BaseService {
     }
   }
 
-  // --- Read Storefront Layout ---
   async getHome(): Promise<HomeResponseReadModel> {
     const home = await this.getHomeAggregate();
     return HomeMapper.aggregateToResponseDto(home);
   }
 
-  // --- Categories ---
   async addCategory(data: CreateHomeCategoryDtoType, actorId: string): Promise<HomeMessagesType> {
     const home = await this.getHomeAggregate();
     const categoryId = Id.create();
@@ -204,7 +202,6 @@ export class HomeAppService extends BaseService {
     return HomeMessages.categoriesReordered(actorId);
   }
 
-  // --- Slides ---
   async addSlide(data: CreateSlideDtoType, actorId: string): Promise<HomeMessagesType> {
     const home = await this.getHomeAggregate();
     const slideId = Id.create();
@@ -278,7 +275,6 @@ export class HomeAppService extends BaseService {
     return HomeMessages.slidesReordered(actorId);
   }
 
-  // --- Promos ---
   async addPromo(data: CreatePromoDtoType, actorId: string): Promise<HomeMessagesType> {
     const home = await this.getHomeAggregate();
     const promoId = Id.create();
@@ -336,7 +332,6 @@ export class HomeAppService extends BaseService {
     return HomeMessages.promoRemoved(data.id, actorId);
   }
 
-  // --- Features ---
   async addFeature(data: CreateFeatureDtoType, actorId: string): Promise<HomeMessagesType> {
     const home = await this.getHomeAggregate();
     const featureId = Id.create();
@@ -395,7 +390,6 @@ export class HomeAppService extends BaseService {
     return HomeMessages.featuresSet(actorId);
   }
 
-  // --- Product Containers ---
   async addProductContainer(
     data: CreateProductContainerDtoType,
     actorId: string,
@@ -440,12 +434,12 @@ export class HomeAppService extends BaseService {
       subTitle: data.subTitle !== undefined ? Title.create(data.subTitle) : existing.subTitle,
       query: data.query
         ? BaseQueryVO.create({
-          filter: data.query.filter as Record<string, unknown> | undefined,
-          cursor: data.query.cursor,
-          limit: data.query.limit !== undefined ? Quantity.create(data.query.limit) : undefined,
-          direction: data.query.direction,
-          sort: data.query.sort as Record<string, 1 | -1> | null | undefined,
-        })
+            filter: data.query.filter as Record<string, unknown> | undefined,
+            cursor: data.query.cursor,
+            limit: data.query.limit !== undefined ? Quantity.create(data.query.limit) : undefined,
+            direction: data.query.direction,
+            sort: data.query.sort as Record<string, 1 | -1> | null | undefined,
+          })
         : existing.query,
       displayOrder:
         data.displayOrder !== undefined

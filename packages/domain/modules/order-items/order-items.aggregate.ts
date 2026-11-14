@@ -16,8 +16,8 @@ import type { OrderItemEventPayload } from './events/order-item-event-payload';
 import { OrderItemRefundedEvent } from './events/order-item-refunded.event';
 import { OrderItemReturnedEvent } from './events/order-item-returned.event';
 import { OrderItemUpdatedEvent } from './events/order-item-updated.event';
-import { StatusVo } from './value-objects/status.vo';
 import type { OrderItemFailureReason } from './value-objects/failure-reason';
+import { StatusVo } from './value-objects/status.vo';
 
 export type createOrderProps = {
   id: Id;
@@ -244,11 +244,7 @@ export class OrderItemsAggregate extends AggregateRoot {
     return this;
   }
 
-  update(data: {
-    quantity: Quantity;
-    waitingTime: ExpirationDate;
-    price: Money;
-  }) {
+  update(data: { quantity: Quantity; waitingTime: ExpirationDate; price: Money }) {
     this._quantity = data.quantity;
     this._waitingTime = data.waitingTime;
     this._price = data.price;

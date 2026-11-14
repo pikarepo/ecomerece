@@ -6,7 +6,6 @@ import {
   ExtendBanDTOSchema,
   getAdminPaginatedUsersQuerySchema,
   getPaginatedUsersQuerySchema,
-  idSchema,
   ObjUserIdDTOSchema,
   UserRoleDtoSchema,
 } from '@ecomerece/shared';

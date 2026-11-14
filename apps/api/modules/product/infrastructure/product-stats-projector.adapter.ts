@@ -1,7 +1,4 @@
-import type {
-  IProductStatsProjector,
-  ProductCategoryPair,
-} from '@ecomerece/contracts';
+import type { IProductStatsProjector, ProductCategoryPair } from '@ecomerece/contracts';
 import { ProductModel } from './product.model';
 
 export class ProductStatsProjector implements IProductStatsProjector {

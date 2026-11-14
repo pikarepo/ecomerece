@@ -1,5 +1,5 @@
-import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import {
   type AddressVO,
   DeleteInfoVO,

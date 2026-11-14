@@ -66,10 +66,7 @@ export class OrderStatusVO extends StringVO {
   }
 
   return(): OrderStatusVO {
-    if (
-      this.value !== OrderStatusEnum.CONFIRMED &&
-      this.value !== OrderStatusEnum.COMPLETED
-    ) {
+    if (this.value !== OrderStatusEnum.CONFIRMED && this.value !== OrderStatusEnum.COMPLETED) {
       throw new BadRequestError(
         `Cannot return an order that is not confirmed or completed (current: ${this.value})`,
       );

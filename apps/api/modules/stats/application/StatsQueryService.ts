@@ -17,10 +17,6 @@ function sumMetrics(docs: { metrics?: Metrics }[]): Metrics {
   return total;
 }
 
-function monthKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
 function backMonths(months: number, fromMonth: string): string[] {
   const [yearStr, monthStr] = fromMonth.split('-');
   let year = Number(yearStr);

@@ -1,3 +1,4 @@
+import type { AuthActor, ICategoryQueries, IVendorQueries } from '@ecomerece/contracts';
 import {
   DisclaimerVO,
   type IImageStoragePort,
@@ -20,8 +21,8 @@ import { UrlVO } from '@ecomerece/domain/value-objects/url.vo';
 import type {
   blockLiftProductDtoType,
   blockProductDtoType,
-  clearIngredientsDtoType,
   CreateMyProductDto,
+  clearIngredientsDtoType,
   deafultImageDtoType,
   disclaimerItemsDtoType,
   GetAdminPaginatedProductsQueryDto,
@@ -42,8 +43,6 @@ import type {
 import type { FilterQuery } from 'mongoose';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { AuthActor } from '@ecomerece/contracts';
-import type { ICategoryQueries, IVendorQueries } from '@ecomerece/contracts';
 import { ProductMapper } from '../infrastructure/product.mapper';
 import type { ProductPersistence } from '../infrastructure/product.model';
 import type { ProductRepository } from '../infrastructure/product.repository';
@@ -114,10 +113,7 @@ export class ProductApplicationService extends BaseService {
     return ProductMapper.aggregateToResponseReadModel(product);
   }
 
-  async createMyProduct(
-    data: CreateMyProductDto,
-    actor: AuthActor,
-  ): Promise<productMessagesType> {
+  async createMyProduct(data: CreateMyProductDto, actor: AuthActor): Promise<productMessagesType> {
     const id = Id.create();
     const actorId = Id.create(actor._id);
     const vendor = this.ensureFound(
@@ -208,10 +204,7 @@ export class ProductApplicationService extends BaseService {
     return productMessages.productRecovered(productId, actorId);
   }
 
-  async blockProduct(
-    data: blockProductDtoType,
-    actor: AuthActor,
-  ): Promise<productMessagesType> {
+  async blockProduct(data: blockProductDtoType, actor: AuthActor): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
     const reason = Reason.create(data.reason);
@@ -347,10 +340,7 @@ export class ProductApplicationService extends BaseService {
     return productMessages.disclaimerUpdated(productId, actorId);
   }
 
-  async addMyProductImages(
-    data: imagesDtoType,
-    actor: AuthActor,
-  ): Promise<productMessagesType> {
+  async addMyProductImages(data: imagesDtoType, actor: AuthActor): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
     const vendor = this.ensureFound(
@@ -395,10 +385,7 @@ export class ProductApplicationService extends BaseService {
     return productMessages.imageDefault(index, productId, actorId);
   }
 
-  async removeMyProductImages(
-    data: imagesDtoType,
-    actor: AuthActor,
-  ): Promise<productMessagesType> {
+  async removeMyProductImages(data: imagesDtoType, actor: AuthActor): Promise<productMessagesType> {
     const actorId = Id.create(actor._id);
     const productId = Id.create(data.productId);
     const vendor = this.ensureFound(
@@ -540,7 +527,7 @@ export class ProductApplicationService extends BaseService {
     if (query.categoryId) filter.categoryId = query.categoryId;
     if (query.vendorId) filter.vendorId = query.vendorId;
     if (query.search) {
-      filter.title = { $regex: query.search, $options: 'i' } as any;
+      filter.title = { $regex: query.search, $options: 'i' };
     }
 
     const result = await this.productRepo.FindPaginatedSorted({
@@ -563,7 +550,7 @@ export class ProductApplicationService extends BaseService {
     if (query.vendorId) filter.vendorId = query.vendorId;
     if (query.appearance) filter.appearance = query.appearance;
     if (query.search) {
-      filter.title = { $regex: query.search, $options: 'i' } as any;
+      filter.title = { $regex: query.search, $options: 'i' };
     }
     if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
     if (query.blocked !== undefined) filter['block.blocked'] = query.blocked;
@@ -599,7 +586,7 @@ export class ProductApplicationService extends BaseService {
     if (query.categoryId) filter.categoryId = query.categoryId;
     if (query.appearance) filter.appearance = query.appearance;
     if (query.search) {
-      filter.title = { $regex: query.search, $options: 'i' } as any;
+      filter.title = { $regex: query.search, $options: 'i' };
     }
 
     const result = await this.productRepo.FindPaginatedSorted({

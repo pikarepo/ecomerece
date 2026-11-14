@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { NotFoundError } from '../errors/app-error';
 
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseSecretKey = process.env.SUPABASE_SECRET_KEY;
+if (!supabaseUrl || !supabaseSecretKey) {
+  throw new Error('Missing SUPABASE_URL or SUPABASE_SECRET_KEY.');
+}
+
 // Initialize the Supabase admin client using the Service Role Key
-export const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SECRET_KEY!, // Never expose this on the client!
-  { auth: { persistSession: false } },
-);
+export const supabaseAdmin = createClient(supabaseUrl, supabaseSecretKey, {
+  auth: { persistSession: false },
+});
 
 // Fetch user by their unique ID
 export async function getUserById(userId: string) {

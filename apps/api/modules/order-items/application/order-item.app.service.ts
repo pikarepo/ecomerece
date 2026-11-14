@@ -1,20 +1,18 @@
+import type { AuthActor, IOrderQueries } from '@ecomerece/contracts';
+import type { IEvent, IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
-import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import type { AuthActor, IOrderQueries } from '@ecomerece/contracts';
 import type {
   CancelMyOrderItemsDto,
   GetAdminPaginatedOrderItemsQueryDto,
   UpdateOrderItemDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import { BaseService } from '../../../core/services/base.services';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
+import { BaseService } from '../../../core/services/base.services';
 import { ForbiddenError, NotFoundError } from '../../../errors/app-error';
-import { OrderItemsMapper } from '../infrastructure/order-item.mapper';
 import type { OrderItemsPersistence } from '../infrastructure/order-item.model';
 import type { OrderItemsRepository } from '../infrastructure/order-item.repository';
 import { OrderItemsMessages } from '../presentation/order-items.messages';
@@ -75,9 +73,7 @@ export class OrderItemsApplicationService extends BaseService {
     await this.assertOrderOwner(orderId, actorId);
 
     const events = await this.unitOfWork.transaction(() =>
-      this.itemsInternalService.cancelOrderItems(
-        itemIds.map((id) => ({ id, orderId })),
-      ),
+      this.itemsInternalService.cancelOrderItems(itemIds.map((id) => ({ id, orderId }))),
     );
 
     if (events.length > 0) await this.eventBus.publish(events);

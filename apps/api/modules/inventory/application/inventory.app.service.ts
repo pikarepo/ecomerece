@@ -1,3 +1,11 @@
+import type {
+  AuthActor,
+  IProductQueries,
+  IProductStockUpdater,
+  IProductVariantQueries,
+  IUserQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import { InventoryAggregate } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -16,14 +24,6 @@ import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { AuthActor } from '@ecomerece/contracts';
-import type { IProductStockUpdater } from '@ecomerece/contracts';
-import type {
-  IProductQueries,
-  IProductVariantQueries,
-  IUserQueries,
-  IVendorQueries,
-} from '@ecomerece/contracts';
 import { InventoryMapper } from '../infrastructure/inventory.mapper';
 import type { InventoryPersistence } from '../infrastructure/inventory.model';
 import type { InventoryReposityory } from '../infrastructure/inventory.repository';
@@ -42,11 +42,7 @@ export class InventoryApplicationService extends BaseService {
     super();
   }
 
-  private async syncProductStock(
-    variantId: Id,
-    inStock: boolean,
-    actorId: Id,
-  ): Promise<void> {
+  private async syncProductStock(variantId: Id, inStock: boolean, actorId: Id): Promise<void> {
     const activeVariant = await this.variantQueries.ensureActiveById(variantId);
     if (!activeVariant.variant) return;
     await this.productStock.setInStock(

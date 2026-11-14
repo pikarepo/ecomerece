@@ -1,11 +1,10 @@
+import { describe, expect, it } from 'bun:test';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import { OrderAggregate } from '@ecomerece/domain/modules/order/order.aggregate';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
-import { describe, expect, it } from 'bun:test';
 import { OrderApplicationService } from '../order.app.service';
 
-const id = (n: number) =>
-  Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
+const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
 
 const actor = { _id: id(1), image: '', name: { fullName: 'Test Buyer' } };
 const buyerId = Id.create(actor._id);

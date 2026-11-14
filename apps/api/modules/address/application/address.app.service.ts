@@ -1,3 +1,4 @@
+import type { AuthActor, IUserQueries } from '@ecomerece/contracts';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { AddressAggregate } from '@ecomerece/domain/modules/address/address.aggregate';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -20,8 +21,6 @@ import type {
 import type { updateMyAddressDtoType } from '../../../../../packages/shared/request-dtos/address/update-address.dto';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { IUserQueries } from '@ecomerece/contracts';
-import type { AuthActor } from '@ecomerece/contracts';
 import { AddressMapper } from '../infrastructure/address.mapper';
 import type { AddressPersistence } from '../infrastructure/address.models';
 import type { AddressRepository } from '../infrastructure/address.repository';

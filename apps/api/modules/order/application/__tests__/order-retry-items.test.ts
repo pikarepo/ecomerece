@@ -1,17 +1,16 @@
+import { describe, expect, it } from 'bun:test';
 import { OrderAggregate } from '@ecomerece/domain';
+import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
+import { OrderStatusVO } from '@ecomerece/domain/modules/order/value-objects/order-status.vo';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
+import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { FullAddressVO } from '@ecomerece/domain/value-objects/street-address.vo';
-import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
-import { Id } from '@ecomerece/domain/value-objects/id.vo';
-import { OrderStatusVO } from '@ecomerece/domain/modules/order/value-objects/order-status.vo';
-import { describe, expect, it } from 'bun:test';
 import { OrderApplicationService } from '../order.app.service';
 
-const id = (n: number) =>
-  Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
+const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
 
 const actor = { _id: id(1), image: '', name: { fullName: 'Test Buyer' } };
 
@@ -29,14 +28,16 @@ function buildOrder(status: string, totalPrice: number, buyerId: string = id(1))
   );
 }
 
-function buildService(options: {
-  status?: string;
-  failedItems?: { _id: string; variantId: string; quantity: number }[];
-  canReserve?: boolean;
-  noFailures?: boolean;
-  buyerId?: string;
-  itemNotFound?: boolean;
-} = {}) {
+function buildService(
+  options: {
+    status?: string;
+    failedItems?: { _id: string; variantId: string; quantity: number }[];
+    canReserve?: boolean;
+    noFailures?: boolean;
+    buyerId?: string;
+    itemNotFound?: boolean;
+  } = {},
+) {
   const calls: string[] = [];
   const published: IEvent[] = [];
   const savedTotals: number[] = [];
@@ -44,8 +45,7 @@ function buildService(options: {
   const itemEvent = { type: 'order-item.updated', payload: {} } as IEvent;
 
   const orderRepo = {
-    FindByIdOrThrow: async () =>
-      buildOrder(options.status ?? 'pending', 20, options.buyerId),
+    FindByIdOrThrow: async () => buildOrder(options.status ?? 'pending', 20, options.buyerId),
     Save: async (order: { totalPrice: { value: number } }) => {
       calls.push('save-order');
       savedTotals.push(order.totalPrice.value);
@@ -201,7 +201,7 @@ describe('OrderApplicationService.retryMyOrderItems', () => {
     expect(calls).toEqual(['begin', 'read-failed', 'abort']);
   });
 
-  it('refuses another buyer\'s order before reading or reserving anything', async () => {
+  it("refuses another buyer's order before reading or reserving anything", async () => {
     // The order belongs to buyer 2, while the actor is buyer 1.
     const { service, calls, quotes } = buildService({ buyerId: id(2) });
 

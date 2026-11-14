@@ -1,18 +1,16 @@
-import { type OrderItemReadModel, OrderItemsAggregate } from '@ecomerece/domain';
-import type { OrderItemResponseReadModel } from '@ecomerece/shared';
-import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
-import type { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
-import type { Id } from '@ecomerece/domain/value-objects/id.vo';
-import type { Money } from '@ecomerece/domain/value-objects/money.vo';
-import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import type {
   OrderItemCancelInput,
   OrderItemFailureInput,
+  OrderItemInput,
   OrderItemRestoreInput,
   OrderItemUpdateInput,
 } from '@ecomerece/contracts';
-import { BadRequestError } from '../../../errors/app-error';
+import { type OrderItemReadModel, OrderItemsAggregate } from '@ecomerece/domain';
+import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
+import type { Id } from '@ecomerece/domain/value-objects/id.vo';
+import type { OrderItemResponseReadModel } from '@ecomerece/shared';
 import { BaseService } from '../../../core/services/base.services';
+import { BadRequestError } from '../../../errors/app-error';
 import { OrderItemsMapper } from '../infrastructure/order-item.mapper';
 import type { OrderItemsRepository } from '../infrastructure/order-item.repository';
 
@@ -71,9 +69,10 @@ export class OrderItemsInternalService extends BaseService {
 
   async updateOrderItems(items: OrderItemUpdateInput[]): Promise<IEvent[]> {
     const existingItems = await this.loadItems(items);
+    const updateById = new Map(items.map((item) => [item.id.value, item]));
 
     const updatedItems = existingItems.map((item) => {
-      const updateData = items.find((value) => value.id.equals(item.id));
+      const updateData = updateById.get(item.id.value);
       if (!updateData) {
         throw new BadRequestError('Update data not found for item.');
       }
@@ -130,8 +129,9 @@ export class OrderItemsInternalService extends BaseService {
       throw new BadRequestError('Some failed order items not found.');
     }
 
+    const quoteById = new Map(items.map((item) => [item.id.value, item]));
     const restoredItems = docs.map((doc) => {
-      const quote = items.find((value) => value.id.value === doc._id);
+      const quote = quoteById.get(doc._id);
       if (!quote) {
         throw new BadRequestError('Restore data not found for item.');
       }
@@ -152,33 +152,11 @@ export class OrderItemsInternalService extends BaseService {
     return [];
   }
 
-  async createOrderItems(
-    items: {
-      id: Id;
-      orderId: Id;
-      vendorId: Id;
-      productId: Id;
-      variantId: Id;
-      quantity: Quantity;
-      waitingTime: ExpirationDate;
-      price: Money;
-    }[],
-  ): Promise<IEvent[]> {
-    const item = items.map((value) =>
-      OrderItemsAggregate.create({
-        id: value.id,
-        orderId: value.orderId,
-        vendorId: value.vendorId,
-        productId: value.productId,
-        variantId: value.variantId,
-        quantity: value.quantity,
-        waitingTime: value.waitingTime,
-        price: value.price,
-      }),
-    );
+  async createOrderItems(items: OrderItemInput[]): Promise<IEvent[]> {
+    const aggregates = items.map((item) => OrderItemsAggregate.create(item));
 
-    await this.itemsRepo.createMany(item);
+    await this.itemsRepo.createMany(aggregates);
 
-    return item.flatMap((value) => value.pullEvents());
+    return aggregates.flatMap((value) => value.pullEvents());
   }
 }

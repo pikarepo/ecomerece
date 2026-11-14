@@ -1,8 +1,13 @@
-import type { OrderItemReadModel, IOrderItemsRepository, OrderItemsAggregate, Quantity } from '@ecomerece/domain';
-import { StatusEnum } from '@ecomerece/domain';
 import type { OrderItemFailureInput } from '@ecomerece/contracts';
-import type { OrderItemResponseReadModel } from '@ecomerece/shared';
+import type {
+  IOrderItemsRepository,
+  OrderItemReadModel,
+  OrderItemsAggregate,
+  Quantity,
+} from '@ecomerece/domain';
+import { StatusEnum } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
+import type { OrderItemResponseReadModel } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import { MongoRepository } from '../../../core/repository/mongo.repository';
 import { BadRequestError, ConcurrencyError } from '../../../errors/app-error';
@@ -18,7 +23,8 @@ const VALID_LINE = { failureReason: null } as const;
 
 export class OrderItemsRepository
   extends MongoRepository<OrderItemsPersistence>
-  implements IOrderItemsRepository {
+  implements IOrderItemsRepository
+{
   constructor() {
     super(OrderItemsModel);
   }
@@ -81,7 +87,7 @@ export class OrderItemsRepository
   /** One rejected line, or null when the id is not a failed line. */
   async FindFailedReadModelById(id: Id): Promise<OrderItemReadModel | null> {
     const doc = await super.findById(id.value);
-    if (!doc || !doc.failureReason) return null;
+    if (!doc?.failureReason) return null;
     return OrderItemsMapper.persistenceToReadModel(doc);
   }
 

@@ -5,8 +5,8 @@ import { VendorRejectedHandler } from './application/event-handlers/vendor-rejec
 import { VendorVerifiedHandler } from './application/event-handlers/vendor-verified.handler';
 import { UserAppService } from './application/user.app.service';
 import { UserInternalService } from './application/user.internal.service';
-import { UserQueryAdapter } from './infrastructure/user-query.adapter';
 import { UserRepository } from './infrastructure/user.repository';
+import { UserQueryAdapter } from './infrastructure/user-query.adapter';
 import { UserController } from './presentation/user.controller';
 
 export function createUserModule({ eventBus }: Buses) {

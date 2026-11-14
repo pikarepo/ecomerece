@@ -25,7 +25,9 @@ export interface VendorStatsDenormalizationDeps {
  * handler already covers all categories on the same event. The vendor
  * force-refresh path (its own event) does include categories for its vendor.
  */
-export class VendorStatsDenormalizationHandler implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
+export class VendorStatsDenormalizationHandler
+  implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']>
+{
   private readonly deps: VendorStatsDenormalizationDeps;
 
   constructor(deps: Partial<VendorStatsDenormalizationDeps> = {}) {

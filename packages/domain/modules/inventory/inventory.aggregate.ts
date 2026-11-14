@@ -1,5 +1,5 @@
-import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import { DeleteInfoVO, EffectiveDate, type Id, Quantity, type Reason } from '../../value-objects';
 import { InventoryBoughtEvent } from './events/inventory-bought.event';
 import { InventoryCompletedEvent } from './events/inventory-completed.event';
@@ -100,7 +100,7 @@ export class InventoryAggregate extends AggregateRoot {
     );
   }
 
-  reserve(quantity: Quantity, actorId: Id) {
+  reserve(quantity: Quantity, _actorId: Id) {
     this._reserved = this._reserved.increase(quantity.value);
     this._available = this._available.decrease(quantity.value);
     this.raise(
@@ -109,7 +109,7 @@ export class InventoryAggregate extends AggregateRoot {
   }
 
   /** Consumes held stock once an order is fulfilled (reserved leaves the shelf). */
-  complete(quantity: Quantity, actorId: Id) {
+  complete(quantity: Quantity, _actorId: Id) {
     this._reserved = this._reserved.decrease(quantity.value);
     this.raise(
       new InventoryCompletedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
@@ -117,7 +117,7 @@ export class InventoryAggregate extends AggregateRoot {
   }
 
   /** Puts a held reservation back on the shelf (order cancelled before fulfilment). */
-  release(quantity: Quantity, actorId: Id) {
+  release(quantity: Quantity, _actorId: Id) {
     this._reserved = this._reserved.decrease(quantity.value);
     this._available = this._available.increase(quantity.value);
     this.raise(
@@ -126,20 +126,20 @@ export class InventoryAggregate extends AggregateRoot {
   }
 
   /** Puts already-consumed stock back on the shelf (a return). */
-  restock(quantity: Quantity, actorId: Id) {
+  restock(quantity: Quantity, _actorId: Id) {
     this._available = this._available.increase(quantity.value);
     this.raise(
       new InventoryRestockedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
   }
 
-  buy(quantity: Quantity, actorId: Id) {
+  buy(quantity: Quantity, _actorId: Id) {
     this._available = this._available.increase(quantity.value);
     this.raise(
       new InventoryBoughtEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
   }
-  updateLowStockThreshold(quantity: Quantity, actorId: Id) {
+  updateLowStockThreshold(quantity: Quantity, _actorId: Id) {
     this._lowStockThreshold = quantity;
     this.raise(
       new InventoryLowStockThresholdUpdatedEvent({
@@ -149,7 +149,7 @@ export class InventoryAggregate extends AggregateRoot {
       }),
     );
   }
-  removeStock(quantity: Quantity, actorId: Id) {
+  removeStock(quantity: Quantity, _actorId: Id) {
     this._available = this._available.decrease(quantity.value);
     this.raise(
       new InventoryStockRemovedEvent({

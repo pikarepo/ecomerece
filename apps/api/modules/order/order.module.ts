@@ -6,12 +6,12 @@ import type {
   IProductQueries,
   IProductVariantQueries,
 } from '@ecomerece/contracts';
-import type { Buses } from '../../core/infrastructure/buses/buses';
 import type { UnitOfWork } from '../../core/database/unit-of-work';
+import type { Buses } from '../../core/infrastructure/buses/buses';
 import { OrderApplicationService } from './application/order.app.service';
 import { OrderInternalService } from './application/order.internal.service';
-import { OrderQueryAdapter } from './infrastructure/order-query.adapter';
 import { OrderRepository } from './infrastructure/order.repository';
+import { OrderQueryAdapter } from './infrastructure/order-query.adapter';
 import { OrderController } from './presentation/order.controller';
 
 interface OrderModuleDeps extends Buses {

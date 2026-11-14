@@ -1,3 +1,4 @@
+import type { AuthActor } from '@ecomerece/contracts';
 import {
   ContactInfoVO,
   type IImageStoragePort,
@@ -6,6 +7,7 @@ import {
   ImageSource,
   VendorAggregate,
 } from '@ecomerece/domain';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { Description } from '@ecomerece/domain/value-objects/description.vo';
 import { EmailVO } from '@ecomerece/domain/value-objects/email.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
@@ -39,9 +41,7 @@ import type {
   VerifyVendorDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
-import type { AuthActor } from '@ecomerece/contracts';
 import { VendorMapper } from '../infrastructure/vendor.mapper';
 import type { VendorPersistence } from '../infrastructure/vendor.models';
 import type { VendorRepository } from '../infrastructure/vendor.repository';
@@ -242,7 +242,6 @@ export class VendorAppService extends BaseService {
   }
 
   async findPaginatedVendors(query: GetPaginatedVendorsQueryDto) {
-
     const filter: FilterQuery<VendorPersistence> = {
       'deleted.deleted': false,
     };
@@ -381,10 +380,7 @@ export class VendorAppService extends BaseService {
     return VendorMessages.rejectVendorVerification(vendor.id, actorId);
   }
 
-  async updateMyStatsRefresh(
-    actor: AuthActor,
-    enabled: boolean,
-  ): Promise<VendorResponseReadModel> {
+  async updateMyStatsRefresh(actor: AuthActor, enabled: boolean): Promise<VendorResponseReadModel> {
     const actorId = Id.create(actor._id);
     const vendor = await this.vendorRepo.FindByOwnerIdOrThrow(actorId);
     vendor.setStatsRefreshEnabled(enabled);

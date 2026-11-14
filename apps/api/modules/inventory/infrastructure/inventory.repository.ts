@@ -8,7 +8,8 @@ import { InventoryModel, type InventoryPersistence } from './inventory.model';
 
 export class InventoryReposityory
   extends MongoRepository<InventoryPersistence>
-  implements IIventoryRepository {
+  implements IIventoryRepository
+{
   constructor() {
     super(InventoryModel);
   }

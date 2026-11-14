@@ -141,5 +141,4 @@ export class ExpirationDate extends DateVO {
     const diffMs = this.value.getTime() - Date.now();
     return Math.ceil(diffMs / (1000 * 60 * 60));
   }
-
 }

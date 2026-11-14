@@ -98,8 +98,10 @@ export const HomeMapper = {
     );
   },
 
-  aggregateToPersistence(home: HomeAggregate): any {
-    return {
+  // Mongoose models subdocument arrays, so the plain payload needs a cast to
+  // the persistence type; the schema still validates the document on write.
+  aggregateToPersistence(home: HomeAggregate): HomePersistence {
+    const payload = {
       _id: home.id.value,
       categories: home.categories.map((c) => ({
         id: c.id.value,
@@ -152,6 +154,7 @@ export const HomeMapper = {
       })),
       version: home.version.value,
     };
+    return payload as unknown as HomePersistence;
   },
 
   aggregateToReadModel(home: HomeAggregate): HomeReadModel {

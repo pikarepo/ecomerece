@@ -8,7 +8,8 @@ import { ProductModel, type ProductPersistence } from './product.model';
 
 export class ProductRepository
   extends MongoRepository<ProductPersistence>
-  implements IProductRepository {
+  implements IProductRepository
+{
   constructor() {
     super(ProductModel);
   }
@@ -201,17 +202,11 @@ export class ProductRepository
       const extra = metric
         ? goingForward
           ? {
-            $or: [
-              { [sortField]: { $lt: cur.v! } },
-              { [sortField]: cur.v!, _id: { $gt: cur.id } },
-            ],
-          }
+              $or: [{ [sortField]: { $lt: cur.v } }, { [sortField]: cur.v, _id: { $gt: cur.id } }],
+            }
           : {
-            $or: [
-              { [sortField]: { $gt: cur.v! } },
-              { [sortField]: cur.v!, _id: { $lt: cur.id } },
-            ],
-          }
+              $or: [{ [sortField]: { $gt: cur.v } }, { [sortField]: cur.v, _id: { $lt: cur.id } }],
+            }
         : goingForward
           ? dir === -1
             ? { _id: { $lt: cur.v } }
@@ -233,7 +228,7 @@ export class ProductRepository
     const isPrev = params.direction === 'prev';
 
     type SortedDoc = ProductPersistence & { _id: string };
-    const valueOf = (doc: SortedDoc): Cursor['v'] =>
+    const cursorValue = (doc: SortedDoc): Cursor['v'] =>
       metric ? ((doc.stats as Record<string, number> | undefined)?.[metric] ?? 0) : doc._id;
 
     const fwd = (await ProductModel.find(filterFor(isPrev ? null : cursor, true))
@@ -249,8 +244,8 @@ export class ProductRepository
       return {
         data: page.map((doc) => ProductMapper.persistenceToAggregate(doc)),
         meta: {
-          nextCursor: last && hasMore ? encodeCursor(valueOf(last), String(last._id)) : null,
-          prevCursor: first ? encodeCursor(valueOf(first), String(first._id)) : null,
+          nextCursor: last && hasMore ? encodeCursor(cursorValue(last), String(last._id)) : null,
+          prevCursor: first ? encodeCursor(cursorValue(first), String(first._id)) : null,
           hasMore,
         },
       };
@@ -266,7 +261,7 @@ export class ProductRepository
     return {
       data: page.map((doc) => ProductMapper.persistenceToAggregate(doc)),
       meta: {
-        nextCursor: last && hasMore ? encodeCursor(valueOf(last), String(last._id)) : null,
+        nextCursor: last && hasMore ? encodeCursor(cursorValue(last), String(last._id)) : null,
         prevCursor: cursor ? encodeCursor(cursor.v, cursor.id) : null,
         hasMore,
       },

@@ -1,7 +1,6 @@
-import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import {
-  AppearanceVO,
   BlockInfoVO,
   DeleteInfoVO,
   type Description,
@@ -217,9 +216,7 @@ export class ReviewAggregate extends AggregateRoot {
     }
     this._block = BlockInfoVO.create(actorId, reason);
     this.touch();
-    this.raise(
-      new ReviewBlockedEvent({ reviewId: this._id, actorId, blockInfo: this._block }),
-    );
+    this.raise(new ReviewBlockedEvent({ reviewId: this._id, actorId, blockInfo: this._block }));
   }
 
   public unblockReview(actorId: Id): void {

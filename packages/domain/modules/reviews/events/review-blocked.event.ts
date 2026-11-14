@@ -7,7 +7,5 @@ export class ReviewBlockedEvent
   readonly type = 'review.blocked';
   readonly occurredOn = EffectiveDate.today();
 
-  constructor(
-    public readonly payload: { reviewId: Id; actorId: Id; blockInfo: BlockInfoVO },
-  ) {}
+  constructor(public readonly payload: { reviewId: Id; actorId: Id; blockInfo: BlockInfoVO }) {}
 }

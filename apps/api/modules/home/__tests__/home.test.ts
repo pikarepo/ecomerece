@@ -18,22 +18,17 @@ import type {
 import {
   CategoryVO,
   ColorVO,
-  Description,
-  FeatureVO,
   HomeAggregate,
   Id,
   ImageKey,
   ImageMetadata,
   type ImageSource,
-  ProductContainerVO,
   PromoVO,
-  Quantity,
   SlideVO,
   Title,
   UrlVO,
 } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import { BaseQueryVO } from '@ecomerece/domain/value-objects/query.vo';
 import { HomeAppService } from '../application/home.app.service';
 
 class InMemoryHomeRepo implements IHomeRepository {
@@ -41,7 +36,7 @@ class InMemoryHomeRepo implements IHomeRepository {
   failSave = false;
 
   async findById(id: Id): Promise<HomeAggregate | null> {
-    return this.home && this.home.id.equals(id) ? this.home : null;
+    return this.home?.id.equals(id) ? this.home : null;
   }
 
   async getHomeMain(): Promise<HomeAggregate> {
@@ -62,9 +57,9 @@ class InMemoryHomeRepo implements IHomeRepository {
 }
 
 class InMemoryEventBus implements IEventBus {
-  register<T>(eventType: string): void {}
+  register<_T>(_eventType: string): void {}
 
-  async publish<T>(): Promise<void> {}
+  async publish<_T>(): Promise<void> {}
 
   clear(): void {}
 }

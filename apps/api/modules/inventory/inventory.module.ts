@@ -8,8 +8,8 @@ import type {
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { InventoryApplicationService } from './application/inventory.app.service';
 import { InventoryInternalServcie } from './application/inventory.internal.service';
-import { InventoryReservationAdapter } from './infrastructure/inventory-reservation.adapter';
 import { InventoryReposityory } from './infrastructure/inventory.repository';
+import { InventoryReservationAdapter } from './infrastructure/inventory-reservation.adapter';
 import { InventoryController } from './presentation/inventory.controller';
 
 interface InventoryModuleDeps extends Buses {

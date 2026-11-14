@@ -4,8 +4,8 @@ import { createAddressRoutes } from '../modules/address/presentation/address.rou
 import { createCategoryRoutes } from '../modules/category/presentation/category.routes';
 import { createHomeRoutes } from '../modules/home/presentation/home.routes';
 import { createInventoryRoutes } from '../modules/inventory/presentation/inventory.routes';
-import { createOrderItemsRoutes } from '../modules/order-items/presentation/order-items.routes';
 import { createOrderRoutes } from '../modules/order/presentation/order.routes';
+import { createOrderItemsRoutes } from '../modules/order-items/presentation/order-items.routes';
 import { createProductRoutes } from '../modules/product/presentation/product.routes';
 import { createProductVariantRoutes } from '../modules/product-variant/presentation/product-varaint.routes';
 import { createReviewRoutes } from '../modules/reviews/presentation/review.routes';
@@ -17,17 +17,11 @@ export function createRoutes({ modules }: Application) {
   const routes = new Hono();
 
   routes.route('/product', createProductRoutes(modules.product.productController));
-  routes.route(
-    '/product-variant',
-    createProductVariantRoutes(modules.productVariant.controller),
-  );
+  routes.route('/product-variant', createProductVariantRoutes(modules.productVariant.controller));
   routes.route('/review', createReviewRoutes(modules.reviews.controller));
   routes.route('/product-inventory', createInventoryRoutes(modules.inventory.inventoryController));
   routes.route('/order', createOrderRoutes(modules.order.orderController));
-  routes.route(
-    '/order-items',
-    createOrderItemsRoutes(modules.orderItems.orderItemsController),
-  );
+  routes.route('/order-items', createOrderItemsRoutes(modules.orderItems.orderItemsController));
   routes.route('/category', createCategoryRoutes(modules.category.categoryController));
   routes.route('/address', createAddressRoutes(modules.address.addressController));
   routes.route('/users', createUserRoutes(modules.user.userController));

@@ -7,8 +7,8 @@ import type {
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { productVariantInternalService } from './application/product-varaint.internal.service';
 import { productVariantApplicationService } from './application/product-variant.app.service';
-import { ProductVariantQueryAdapter } from './infrastructure/product-variant-query.adapter';
 import { ProductVariantRepository } from './infrastructure/product-variant.repository';
+import { ProductVariantQueryAdapter } from './infrastructure/product-variant-query.adapter';
 import { ProductVariantController } from './presentation/product-variant.controller';
 
 interface ProductVariantModuleDeps extends Buses {

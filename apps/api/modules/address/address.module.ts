@@ -2,8 +2,8 @@ import type { IUserQueries } from '@ecomerece/contracts';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { AddressInternalService } from './application/address.app.internal.service';
 import { AddressApplicationService } from './application/address.app.service';
-import { AddressQueryAdapter } from './infrastructure/address-query.adapter';
 import { AddressRepository } from './infrastructure/address.repository';
+import { AddressQueryAdapter } from './infrastructure/address-query.adapter';
 import { AddressController } from './presentation/address.controller';
 
 interface AddressModuleDeps extends Buses {

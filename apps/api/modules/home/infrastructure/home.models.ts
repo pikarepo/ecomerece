@@ -1,6 +1,5 @@
 import mongoose, { type HydratedDocument, type InferSchemaType, Schema } from 'mongoose';
 
-// --- Home Sub-Schemas ---
 const homeCategorySchema = new Schema(
   {
     id: { type: String, required: true },
@@ -75,7 +74,6 @@ const productContainerSchema = new Schema(
   { _id: false },
 );
 
-// --- Root Home Aggregate Schema ---
 export const HomeSchema = new Schema(
   {
     _id: { type: String, required: true },

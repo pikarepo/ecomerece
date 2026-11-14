@@ -1,13 +1,12 @@
+import { describe, expect, it } from 'bun:test';
 import { InventoryAggregate } from '@ecomerece/domain/modules/inventory/inventory.aggregate';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
-import { describe, expect, it } from 'bun:test';
 import { InventoryInternalServcie } from '../inventory.internal.service';
 
-const id = (n: number) =>
-  Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
+const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
 
 function inventory(variantNumber: number, available: number, reserved: number, deleted = false) {
   return InventoryAggregate.rehydrate(
@@ -57,10 +56,7 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
     const stock = inventory(2, 10, 5);
     const { service, saved } = buildService([stock]);
 
-    await service.releaseInventories(
-      [{ variantId: id(2), quantity: Quantity.create(2) }],
-      actorId,
-    );
+    await service.releaseInventories([{ variantId: id(2), quantity: Quantity.create(2) }], actorId);
 
     expect(stock.available.value).toBe(12);
     expect(stock.reserved.value).toBe(3);
@@ -71,10 +67,7 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
     const stock = inventory(2, 10, 0);
     const { service, saved } = buildService([stock]);
 
-    await service.restockInventories(
-      [{ variantId: id(2), quantity: Quantity.create(2) }],
-      actorId,
-    );
+    await service.restockInventories([{ variantId: id(2), quantity: Quantity.create(2) }], actorId);
 
     expect(stock.available.value).toBe(12);
     expect(stock.reserved.value).toBe(0);
@@ -125,5 +118,49 @@ describe('InventoryInternalServcie reserved-stock transitions', () => {
     await service.releaseInventories([], actorId);
 
     expect(saved).toHaveLength(0);
+  });
+});
+
+describe('InventoryInternalServcie.reserveInventories', () => {
+  it('reports the precise reason each line could not be reserved', async () => {
+    const { service } = buildService([
+      inventory(2, 10, 0, true),
+      inventory(3, 0, 0),
+      inventory(4, 1, 0),
+    ]);
+
+    const result = await service.reserveInventories(
+      [
+        { variantId: id(99), quantity: Quantity.create(1) },
+        { variantId: id(2), quantity: Quantity.create(1) },
+        { variantId: id(3), quantity: Quantity.create(1) },
+        { variantId: id(4), quantity: Quantity.create(2) },
+      ],
+      actorId,
+    );
+
+    expect(result.lines.map((line) => line.reason)).toEqual([
+      'inventory_not_found',
+      'inventory_deleted',
+      'out_of_stock',
+      'insufficient_stock',
+    ]);
+    expect(result.buyableIds).toEqual([]);
+  });
+
+  it('reserves only lines with enough stock and persists them', async () => {
+    const available = inventory(2, 10, 0);
+    const { service, saved } = buildService([available]);
+
+    const result = await service.reserveInventories(
+      [{ variantId: id(2), quantity: Quantity.create(3) }],
+      actorId,
+    );
+
+    expect(result.lines).toEqual([{ variantId: id(2), reserved: true, reason: null }]);
+    expect(result.buyableIds.map((variantId) => variantId.value)).toEqual([id(2).value]);
+    expect(available.reserved.value).toBe(3);
+    expect(available.available.value).toBe(7);
+    expect(saved).toEqual([available]);
   });
 });

@@ -1,13 +1,13 @@
-import type { IImageStoragePort } from '@ecomerece/domain';
 import type { ICategoryQueries, IVendorQueries } from '@ecomerece/contracts';
+import type { IImageStoragePort } from '@ecomerece/domain';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { ProductApplicationService } from './application/product.app.service';
 import { ProductInternelService } from './application/product.internel.service';
+import { ProductRepository } from './infrastructure/product.repository';
 import { ProductPricingAdapter } from './infrastructure/product-pricing.adapter';
 import { ProductQueryAdapter } from './infrastructure/product-query.adapter';
 import { ProductStatsAccessAdapter } from './infrastructure/product-stats-access.adapter';
 import { ProductStatsProjector } from './infrastructure/product-stats-projector.adapter';
-import { ProductRepository } from './infrastructure/product.repository';
 import { ProductStockAdapter } from './infrastructure/product-stock.adapter';
 import { ProductController } from './presentation/product.controller';
 

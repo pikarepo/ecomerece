@@ -1,4 +1,16 @@
+import type {
+  AuthActor,
+  IAddressQueries,
+  IInventoryReservation,
+  IOrderItemsQueries,
+  IOrderItemsWriter,
+  IProductQueries,
+  IProductVariantQueries,
+  OrderItemRestoreInput,
+} from '@ecomerece/contracts';
 import { OrderAggregate, type OrderItemFailureReason } from '@ecomerece/domain';
+import type { IEvent, IEventBus } from '@ecomerece/domain/events/event-bus.interface';
+import type { OrderItemReadModel } from '@ecomerece/domain/modules/order-items/read-models/order-items.read-model';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
@@ -13,31 +25,22 @@ import type {
   updateOrderDtoType,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-import type {
-  IAddressQueries,
-  IInventoryReservation,
-  IOrderItemsQueries,
-  IOrderItemsWriter,
-  IProductQueries,
-  IProductVariantQueries,
-  OrderItemRestoreInput,
-} from '@ecomerece/contracts';
-import type { OrderItemReadModel } from '@ecomerece/domain/modules/order-items/read-models/order-items.read-model';
-import { BaseService } from '../../../core/services/base.services';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
+import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { AuthActor } from '@ecomerece/contracts';
 import { OrderMapper } from '../infrastructure/order.mapper';
 import type { OrderPersistence } from '../infrastructure/order.model';
 import type { OrderRepository } from '../infrastructure/order.repository';
 import { OrderMessages } from '../presentation/order.messages';
 
+/** Orders cannot reserve stock further than this many hours ahead. */
+const MAX_WAITING_TIME_HOURS = 4;
+
 /** Order item fields needed to cascade a state change into inventory. */
 type OrderItemRef = { id: Id; orderId: Id; variantId: Id; quantity: Quantity };
 
-type InventoryTransition = 'complete' | 'release' | 'restock';
+/** A line requested by the client, before any validation. */
+type OrderItemRequest = { variantId: Id; quantity: Quantity };
 
 /** A cart line that survived product, variant and inventory validation. */
 type ResolvedOrderItem = {
@@ -53,6 +56,32 @@ type RejectedOrderItem = {
   variantId: Id;
   quantity: Quantity;
   reason: OrderItemFailureReason;
+};
+
+/** Everything `createMyOrder` derives from its DTO before touching the DB. */
+type CreateOrderInput = {
+  orderId: Id;
+  idempotentKey: Id;
+  addressId: Id;
+  actorId: Id;
+  waitingTime: ExpirationDate;
+  safeOrder: boolean;
+  items: OrderItemRequest[];
+};
+
+type OrderListQuery = {
+  cursor?: string;
+  limit?: number;
+  direction?: 'next' | 'prev';
+};
+
+type InventoryTransition = 'complete' | 'release' | 'restock';
+
+type RetryFailedLinesResult = {
+  order: OrderAggregate;
+  restored: OrderItemRestoreInput[];
+  remaining: RejectedOrderItem[];
+  itemEvents: IEvent[];
 };
 
 /**
@@ -80,85 +109,6 @@ export class OrderApplicationService extends BaseService {
   }
 
   /**
-   * Validates the cart and reserves stock, reporting why each line was rejected.
-   *
-   * The contract queries already return only active, non-deleted variants and
-   * non-deleted, non-blocked products, so no extra `validIds` filtering is
-   * needed. Every line that does not survive lands in `rejected` with a reason
-   * instead of being silently dropped, which is what `safeOrder` needs.
-   */
-  private async resolveOrderItems(
-    items: { variantId: Id; quantity: Quantity }[],
-    actorId: Id,
-  ): Promise<{ buyable: ResolvedOrderItem[]; rejected: RejectedOrderItem[] }> {
-    const variants = await this.variantQueries.verifyAndGet(
-      items.map((item) => item.variantId),
-    );
-    const products = await this.productQueries.verifyAndGet(
-      variants.variantReadModel.map((variant) => Id.create(variant.productId)),
-    );
-    const productById = new Map(products.productReadModel.map((product) => [product.id, product]));
-    const variantById = new Map(variants.variantReadModel.map((variant) => [variant.id, variant]));
-
-    // Join request lines with their variant + product read models. A missing
-    // entry means the variant or product became unavailable between requests.
-    const candidates: ResolvedOrderItem[] = [];
-    const rejected: RejectedOrderItem[] = [];
-    for (const item of items) {
-      const variant = variantById.get(item.variantId.value);
-      if (!variant) {
-        rejected.push({
-          variantId: item.variantId,
-          quantity: item.quantity,
-          reason: variants.notFoundIds.some((id) => id.equals(item.variantId))
-            ? 'variant_not_found'
-            : 'variant_unavailable',
-        });
-        continue;
-      }
-      const product = productById.get(variant.productId);
-      if (!product) {
-        rejected.push({
-          variantId: item.variantId,
-          quantity: item.quantity,
-          reason: 'product_unavailable',
-        });
-        continue;
-      }
-      candidates.push({
-        variantId: item.variantId,
-        productId: Id.create(variant.productId),
-        vendorId: Id.create(product.vendorId),
-        quantity: item.quantity,
-        price: variant.price,
-      });
-    }
-
-    // Reserve before building the order so the total only covers held stock.
-    const { lines } = await this.inventoryReservation.reserve(
-      candidates.map(({ variantId, quantity }) => ({ variantId, quantity })),
-      actorId,
-    );
-    const lineByVariant = new Map(lines.map((line) => [line.variantId.value, line]));
-
-    const buyable: ResolvedOrderItem[] = [];
-    for (const candidate of candidates) {
-      const line = lineByVariant.get(candidate.variantId.value);
-      if (line?.reserved) {
-        buyable.push(candidate);
-        continue;
-      }
-      rejected.push({
-        variantId: candidate.variantId,
-        quantity: candidate.quantity,
-        reason: line?.reason ?? 'inventory_not_found',
-      });
-    }
-
-    return { buyable, rejected };
-  }
-
-  /**
    * Creates an order for the authenticated buyer.
    *
    * Flow:
@@ -176,82 +126,230 @@ export class OrderApplicationService extends BaseService {
    * to an order that rolled back (covered by `order-create-commit.test.ts`).
    */
   async createMyOrder(data: createMyOrderDtoType, actor: AuthActor) {
-    const orderId = Id.create();
-    const idempotentKey = Id.create(data.idempotentKey);
-    const addressId = Id.create(data.addressId);
-    const actorId = Id.create(actor._id);
-    const waitingTime = ExpirationDate.create(data.waitingTime);
-    const items = data.items.map((value) => ({
-      variantId: Id.create(value.variantId),
-      quantity: Quantity.create(value.quantity),
-    }));
-    if (waitingTime.remainingHours > 4) throw new BadRequestError('Waiting time must not be far in the future.');
-    // Address is only a guard; read it before the transaction to fail fast.
-    const { address, active } = await this.addressQueries.ensureActiveById(addressId, actorId);
+    const input = this.buildCreateOrderInput(data, actor);
+    const fullAddress = await this.ensureUsableAddress(input.addressId, input.actorId);
 
-    if (!address || !active) throw new BadRequestError('Address not found or inactive.');
+    const { order, itemEvents } = await this.unitOfWork.transaction(() =>
+      this.createOrderInTransaction(input, fullAddress),
+    );
 
-    const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
-      await this.orderRepo.EnsureUniqueImpodentKey(idempotentKey);
-      const { buyable, rejected } = await this.resolveOrderItems(items, actorId);
+    await this.publish([...itemEvents, ...order.pullEvents()]);
 
-      // Safe order: one rejected line fails the whole order before any write.
-      if (data.safeOrder && rejected.length > 0) {
-        const reasons = [...new Set(rejected.map((item) => item.reason))].join(', ');
-        throw new BadRequestError(
-          `Order rejected: ${rejected.length} item(s) could not be fulfilled (${reasons}).`,
-        );
-      }
-
-      const order = OrderAggregate.create({
-        id: orderId,
-        idempotentKey,
-        totalPrice: Money.create(
-          buyable.reduce((sum, item) => sum + item.quantity.value * item.price, 0),
-        ),
-        buyerId: actorId,
-        address: FullAddressVO.create(address.fullAddress),
-      });
-      const itemEvents = await this.orderItemsWriter.create(
-        buyable.map((item) => ({
-          id: Id.create(),
-          orderId,
-          vendorId: item.vendorId,
-          productId: item.productId,
-          variantId: item.variantId,
-          quantity: item.quantity,
-          waitingTime,
-          price: Money.create(item.price),
-        })),
-      );
-      // Rejected lines are recorded with a reason, never priced or reserved.
-      const failureEvents =
-        rejected.length > 0
-          ? await this.orderItemsWriter.recordFailures(
-              rejected.map((item) => ({
-                id: Id.create(),
-                orderId,
-                variantId: item.variantId,
-                quantity: item.quantity,
-                waitingTime,
-                reason: item.reason,
-              })),
-            )
-          : [];
-      // Aggregate raises `order.created`; events stay buffered until commit.
-      order.createOrder();
-      await this.orderRepo.Create(order);
-      return { order, itemEvents: [...itemEvents, ...failureEvents] };
-    });
-
-    const events = [...itemEvents, ...order.pullEvents()];
-    if (events.length > 0) await this.eventBus.publish(events);
     return OrderMessages.orderCreated(
-      orderId,
-      actorId,
-      addressId,
+      input.orderId,
+      input.actorId,
+      input.addressId,
       OrderMapper.aggregateToResponseReadModel(order),
     );
+  }
+
+  private buildCreateOrderInput(data: createMyOrderDtoType, actor: AuthActor): CreateOrderInput {
+    const waitingTime = ExpirationDate.create(data.waitingTime);
+    if (waitingTime.remainingHours > MAX_WAITING_TIME_HOURS) {
+      throw new BadRequestError('Waiting time must not be far in the future.');
+    }
+
+    return {
+      orderId: Id.create(),
+      idempotentKey: Id.create(data.idempotentKey),
+      addressId: Id.create(data.addressId),
+      actorId: Id.create(actor._id),
+      waitingTime,
+      safeOrder: data.safeOrder,
+      items: data.items.map((item) => ({
+        variantId: Id.create(item.variantId),
+        quantity: Quantity.create(item.quantity),
+      })),
+    };
+  }
+
+  /** Address is only a guard, so it is read before the transaction to fail fast. */
+  private async ensureUsableAddress(addressId: Id, actorId: Id): Promise<string> {
+    const { address, active } = await this.addressQueries.ensureActiveById(addressId, actorId);
+    if (!address || !active) throw new BadRequestError('Address not found or inactive.');
+    return address.fullAddress;
+  }
+
+  private async createOrderInTransaction(
+    input: CreateOrderInput,
+    fullAddress: string,
+  ): Promise<{ order: OrderAggregate; itemEvents: IEvent[] }> {
+    await this.orderRepo.EnsureUniqueImpodentKey(input.idempotentKey);
+
+    const { buyable, rejected } = await this.resolveOrderItems(input.items, input.actorId);
+    if (input.safeOrder) this.assertAllItemsFulfillable(rejected);
+
+    const order = this.buildOrderAggregate(input, buyable, fullAddress);
+    const itemEvents = await this.writeOrderItems(input, buyable, rejected);
+
+    // The aggregate raises `order.created`; events stay buffered until commit.
+    order.createOrder();
+    await this.orderRepo.Create(order);
+
+    return { order, itemEvents };
+  }
+
+  private buildOrderAggregate(
+    input: CreateOrderInput,
+    items: ResolvedOrderItem[],
+    fullAddress: string,
+  ): OrderAggregate {
+    return OrderAggregate.create({
+      id: input.orderId,
+      idempotentKey: input.idempotentKey,
+      totalPrice: this.calculateTotal(items),
+      buyerId: input.actorId,
+      address: FullAddressVO.create(fullAddress),
+    });
+  }
+
+  private calculateTotal(items: ResolvedOrderItem[]): Money {
+    const total = items.reduce((sum, item) => sum + item.quantity.value * item.price, 0);
+    return Money.create(total);
+  }
+
+  /** Safe order: one rejected line fails the whole order before any write. */
+  private assertAllItemsFulfillable(rejected: RejectedOrderItem[]): void {
+    if (rejected.length === 0) return;
+
+    const reasons = [...new Set(rejected.map((item) => item.reason))].join(', ');
+    throw new BadRequestError(
+      `Order rejected: ${rejected.length} item(s) could not be fulfilled (${reasons}).`,
+    );
+  }
+
+  private async writeOrderItems(
+    input: CreateOrderInput,
+    buyable: ResolvedOrderItem[],
+    rejected: RejectedOrderItem[],
+  ): Promise<IEvent[]> {
+    const itemEvents = await this.orderItemsWriter.create(
+      buyable.map((item) => ({
+        id: Id.create(),
+        orderId: input.orderId,
+        vendorId: item.vendorId,
+        productId: item.productId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        waitingTime: input.waitingTime,
+        price: Money.create(item.price),
+      })),
+    );
+
+    if (rejected.length === 0) return itemEvents;
+
+    // Rejected lines are recorded with a reason, never priced or reserved.
+    const failureEvents = await this.orderItemsWriter.recordFailures(
+      rejected.map((item) => ({
+        id: Id.create(),
+        orderId: input.orderId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+        waitingTime: input.waitingTime,
+        reason: item.reason,
+      })),
+    );
+
+    return [...itemEvents, ...failureEvents];
+  }
+
+  /**
+   * Validates the cart and reserves stock, reporting why each line was rejected.
+   *
+   * The contract queries already return only active, non-deleted variants and
+   * non-deleted, non-blocked products, so no extra `validIds` filtering is
+   * needed. Every line that does not survive lands in `rejected` with a reason
+   * instead of being silently dropped, which is what `safeOrder` needs.
+   */
+  private async resolveOrderItems(
+    items: OrderItemRequest[],
+    actorId: Id,
+  ): Promise<{ buyable: ResolvedOrderItem[]; rejected: RejectedOrderItem[] }> {
+    const { candidates, rejected } = await this.joinItemsWithCatalog(items);
+    const reservation = await this.reserveCandidates(candidates, actorId);
+
+    return {
+      buyable: reservation.buyable,
+      rejected: [...rejected, ...reservation.rejected],
+    };
+  }
+
+  private async joinItemsWithCatalog(
+    items: OrderItemRequest[],
+  ): Promise<{ candidates: ResolvedOrderItem[]; rejected: RejectedOrderItem[] }> {
+    const variants = await this.variantQueries.verifyAndGet(items.map((item) => item.variantId));
+    const products = await this.productQueries.verifyAndGet(
+      variants.variantReadModel.map((variant) => Id.create(variant.productId)),
+    );
+
+    const variantById = new Map(variants.variantReadModel.map((variant) => [variant.id, variant]));
+    const productById = new Map(products.productReadModel.map((product) => [product.id, product]));
+
+    const candidates: ResolvedOrderItem[] = [];
+    const rejected: RejectedOrderItem[] = [];
+
+    // A missing entry means the variant or product became unavailable between requests.
+    for (const item of items) {
+      const variant = variantById.get(item.variantId.value);
+      if (!variant) {
+        const reason = variants.notFoundIds.some((id) => id.equals(item.variantId))
+          ? 'variant_not_found'
+          : 'variant_unavailable';
+        rejected.push({ variantId: item.variantId, quantity: item.quantity, reason });
+        continue;
+      }
+
+      const product = productById.get(variant.productId);
+      if (!product) {
+        rejected.push({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          reason: 'product_unavailable',
+        });
+        continue;
+      }
+
+      candidates.push({
+        variantId: item.variantId,
+        productId: Id.create(variant.productId),
+        vendorId: Id.create(product.vendorId),
+        quantity: item.quantity,
+        price: variant.price,
+      });
+    }
+
+    return { candidates, rejected };
+  }
+
+  /** Reserves before the order is built so the total only covers held stock. */
+  private async reserveCandidates(
+    candidates: ResolvedOrderItem[],
+    actorId: Id,
+  ): Promise<{ buyable: ResolvedOrderItem[]; rejected: RejectedOrderItem[] }> {
+    const { lines } = await this.inventoryReservation.reserve(
+      candidates.map(({ variantId, quantity }) => ({ variantId, quantity })),
+      actorId,
+    );
+    const lineByVariant = new Map(lines.map((line) => [line.variantId.value, line]));
+
+    const buyable: ResolvedOrderItem[] = [];
+    const rejected: RejectedOrderItem[] = [];
+
+    for (const candidate of candidates) {
+      const line = lineByVariant.get(candidate.variantId.value);
+      if (line?.reserved) {
+        buyable.push(candidate);
+        continue;
+      }
+
+      rejected.push({
+        variantId: candidate.variantId,
+        quantity: candidate.quantity,
+        reason: line?.reason ?? 'inventory_not_found',
+      });
+    }
+
+    return { buyable, rejected };
   }
 
   /**
@@ -269,6 +367,7 @@ export class OrderApplicationService extends BaseService {
     const { order, restored, remaining, itemEvents } = await this.unitOfWork.transaction(
       async () => {
         const order = await this.orderRepo.FindByIdOrThrow(orderId);
+
         // Domain permissions: only the buyer may act, and only while the order
         // can still change.
         order.ensureOwnedBy(actorId);
@@ -323,42 +422,18 @@ export class OrderApplicationService extends BaseService {
     order: OrderAggregate,
     failed: OrderItemReadModel[],
     actorId: Id,
-  ) {
-    const { buyable, rejected } = await this.resolveOrderItems(
-      failed.map((item) => ({
-        variantId: Id.create(item.variantId),
-        quantity: Quantity.create(item.quantity),
-      })),
-      actorId,
-    );
+  ): Promise<RetryFailedLinesResult> {
+    const requests = failed.map((item) => ({
+      variantId: Id.create(item.variantId),
+      quantity: Quantity.create(item.quantity),
+    }));
+    const { buyable, rejected } = await this.resolveOrderItems(requests, actorId);
 
     if (buyable.length === 0) {
-      return { order, restored: [], remaining: rejected, itemEvents: [] as IEvent[] };
+      return { order, restored: [], remaining: rejected, itemEvents: [] };
     }
 
-    // The same variant can be rejected twice, so quotes are matched per failed
-    // row in order rather than by variant alone.
-    const failedByVariant = new Map<string, OrderItemReadModel[]>();
-    for (const item of failed) {
-      const bucket = failedByVariant.get(item.variantId) ?? [];
-      bucket.push(item);
-      failedByVariant.set(item.variantId, bucket);
-    }
-
-    const quotes: OrderItemRestoreInput[] = [];
-    const restoredTotals: Money[] = [];
-    for (const line of buyable) {
-      const failedItem = failedByVariant.get(line.variantId.value)?.shift();
-      if (!failedItem) continue;
-      quotes.push({
-        id: Id.create(failedItem._id),
-        productId: line.productId,
-        vendorId: line.vendorId,
-        price: Money.create(line.price),
-      });
-      restoredTotals.push(Money.create(line.price * line.quantity.value));
-    }
-
+    const { quotes, restoredTotals } = this.buildRestoreQuotes(failed, buyable);
     const itemEvents = await this.orderItemsWriter.restoreFailures(quotes);
 
     // Re-price from every line that is real now: already valid items plus the
@@ -371,6 +446,45 @@ export class OrderApplicationService extends BaseService {
     await this.orderRepo.Save(order);
 
     return { order, restored: quotes, remaining: rejected, itemEvents };
+  }
+
+  private buildRestoreQuotes(
+    failed: OrderItemReadModel[],
+    buyable: ResolvedOrderItem[],
+  ): { quotes: OrderItemRestoreInput[]; restoredTotals: Money[] } {
+    // The same variant can be rejected twice, so quotes are matched per failed
+    // row in order rather than by variant alone.
+    const failedByVariant = this.groupByVariant(failed);
+
+    const quotes: OrderItemRestoreInput[] = [];
+    const restoredTotals: Money[] = [];
+
+    for (const line of buyable) {
+      const failedItem = failedByVariant.get(line.variantId.value)?.shift();
+      if (!failedItem) continue;
+
+      quotes.push({
+        id: Id.create(failedItem._id),
+        productId: line.productId,
+        vendorId: line.vendorId,
+        price: Money.create(line.price),
+      });
+      restoredTotals.push(Money.create(line.price * line.quantity.value));
+    }
+
+    return { quotes, restoredTotals };
+  }
+
+  private groupByVariant(items: OrderItemReadModel[]): Map<string, OrderItemReadModel[]> {
+    const grouped = new Map<string, OrderItemReadModel[]>();
+
+    for (const item of items) {
+      const bucket = grouped.get(item.variantId) ?? [];
+      bucket.push(item);
+      grouped.set(item.variantId, bucket);
+    }
+
+    return grouped;
   }
 
   private retriedMessage(
@@ -391,22 +505,13 @@ export class OrderApplicationService extends BaseService {
 
   /** Public: the authenticated user's own non-deleted orders. */
   async getMyOrders(query: GetMyOrdersQueryDto, buyerId: string) {
-    const filter: FilterQuery<OrderPersistence> = {
-      buyerId: Id.create(buyerId).value,
-      'deleted.deleted': false,
-    };
-    const cursor = query.cursor ? Id.create(query.cursor) : undefined;
-    const limit = query.limit ? Quantity.create(query.limit) : undefined;
-    const result = await this.orderRepo.FindPaginated({
-      filter,
-      cursor,
-      limit,
-      direction: query.direction,
-    });
-    return {
-      data: result.data.map((order) => OrderMapper.aggregateToReadModel(order)),
-      meta: result.meta,
-    };
+    return this.paginateOrders(
+      {
+        buyerId: Id.create(buyerId).value,
+        'deleted.deleted': false,
+      },
+      query,
+    );
   }
 
   /** Admin: all orders — optional buyerId / deleted filters, no baseline scope. */
@@ -414,14 +519,18 @@ export class OrderApplicationService extends BaseService {
     const filter: FilterQuery<OrderPersistence> = {};
     if (query.buyerId) filter.buyerId = Id.create(query.buyerId).value;
     if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
-    const cursor = query.cursor ? Id.create(query.cursor) : undefined;
-    const limit = query.limit ? Quantity.create(query.limit) : undefined;
+
+    return this.paginateOrders(filter, query);
+  }
+
+  private async paginateOrders(filter: FilterQuery<OrderPersistence>, query: OrderListQuery) {
     const result = await this.orderRepo.FindPaginated({
       filter,
-      cursor,
-      limit,
+      cursor: query.cursor ? Id.create(query.cursor) : undefined,
+      limit: query.limit ? Quantity.create(query.limit) : undefined,
       direction: query.direction,
     });
+
     return {
       data: result.data.map((order) => OrderMapper.aggregateToReadModel(order)),
       meta: result.meta,
@@ -433,9 +542,11 @@ export class OrderApplicationService extends BaseService {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
     const order = await this.orderRepo.FindByIdOrThrow(orderId);
+
     if (!order.buyerId.equals(actorId)) {
       throw new BadRequestError('You do not own this order.');
     }
+
     return OrderMapper.aggregateToResponseReadModel(order);
   }
 
@@ -445,36 +556,122 @@ export class OrderApplicationService extends BaseService {
     return OrderMapper.aggregateToResponseReadModel(order);
   }
 
-  /** Loads the order items so transitions can cascade to items and inventory. */
-  private async itemRefs(orderId: Id): Promise<OrderItemRef[]> {
-    const items = await this.orderItemsQueries.getByOrderId(orderId);
-    return items.map((item: OrderItemReadModel) => ({
-      id: Id.create(item._id),
+  async cancelMyOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
       orderId,
-      variantId: Id.create(item.variantId),
-      quantity: Quantity.create(item.quantity),
-    }));
+      actorId,
+      (order) => {
+        order.ensureOwnedBy(actorId);
+        order.cancelOrder(reason, actorId);
+      },
+      (items) => this.orderItemsWriter.cancel(items),
+      () => 'release',
+    );
+
+    return OrderMessages.orderCancelled(orderId, actorId, reason);
   }
 
-  private async publish(events: IEvent[]): Promise<void> {
-    if (events.length > 0) await this.eventBus.publish(events);
+  async confirmOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.confirmOrder(actorId),
+      (items) => this.orderItemsWriter.confirm(items),
+    );
+
+    return OrderMessages.orderConfirmed(orderId, actorId);
   }
 
-  /**
-   * Keeps the inventory module in step with the order state machine.
-   * `complete` consumes held stock; `release` returns it on cancellation;
-   * `restock` returns fulfilled stock on a return.
-   */
-  private async applyInventoryTransition(
-    action: InventoryTransition | null,
-    items: OrderItemRef[],
-    actorId: Id,
-  ): Promise<void> {
-    if (!action || items.length === 0) return;
-    const lines = items.map((item) => ({ variantId: item.variantId, quantity: item.quantity }));
-    if (action === 'complete') await this.inventoryReservation.complete(lines, actorId);
-    else if (action === 'release') await this.inventoryReservation.release(lines, actorId);
-    else await this.inventoryReservation.restock(lines, actorId);
+  async completeOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.completeOrder(actorId),
+      (items) => this.orderItemsWriter.complete(items),
+      () => 'complete',
+    );
+
+    return OrderMessages.orderCompleted(orderId, actorId);
+  }
+
+  async returnOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.returnOrder(reason, actorId),
+      (items) => this.orderItemsWriter.returnItems(items),
+      // A completed order has already consumed its reservation; a confirmed
+      // one still holds it, so it is released instead of restocked.
+      (order) => (order.status.status === 'completed' ? 'restock' : 'release'),
+    );
+
+    return OrderMessages.orderReturned(orderId, actorId, reason);
+  }
+
+  async refundOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.refundOrder(reason, actorId),
+      (items) => this.orderItemsWriter.refund(items),
+      // A refund is financial only: stock already came back through a return,
+      // or never left the shelf.
+      () => null,
+    );
+
+    return OrderMessages.orderRefunded(orderId, actorId, reason);
+  }
+
+  async updateOrder(id: string, data: updateOrderDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+
+    order.updateOrder(Money.create(data.totalPrice), FullAddressVO.create(data.address), actorId);
+    await this.saveAndPublish(order);
+
+    return OrderMessages.orderUpdated(orderId, actorId);
+  }
+
+  async deleteOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+
+    order.deleteOrder(reason, actorId);
+    await this.saveAndPublish(order);
+
+    return OrderMessages.orderDeleted(orderId, actorId, reason);
+  }
+
+  async recoverOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+
+    order.recoverOrder(actorId);
+    await this.saveAndPublish(order);
+
+    return OrderMessages.orderRecovered(orderId, actorId);
   }
 
   /**
@@ -492,124 +689,67 @@ export class OrderApplicationService extends BaseService {
       const order = await this.orderRepo.FindByIdOrThrow(orderId);
       const items = await this.itemRefs(orderId);
       const action = inventoryAction?.(order) ?? null;
+
       // Validate the state transition before any side effect, so a rejected
       // transition never reaches the item cascade or the inventory module.
       apply(order);
+
       const itemEvents = await cascade(items);
       await this.applyInventoryTransition(action, items, actorId);
       await this.orderRepo.Save(order);
+
       return { order, itemEvents };
     });
+
     await this.publish([...itemEvents, ...order.pullEvents()]);
     return order;
   }
 
-  async cancelMyOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const reason = Reason.create(data.reason);
-    await this.transitionOrder(
+  /** Loads the order items so transitions can cascade to items and inventory. */
+  private async itemRefs(orderId: Id): Promise<OrderItemRef[]> {
+    const items = await this.orderItemsQueries.getByOrderId(orderId);
+
+    return items.map((item: OrderItemReadModel) => ({
+      id: Id.create(item._id),
       orderId,
-      actorId,
-      (order) => {
-        order.ensureOwnedBy(actorId);
-        order.cancelOrder(reason, actorId);
-      },
-      (items) => this.orderItemsWriter.cancel(items),
-      () => 'release',
-    );
-    return OrderMessages.orderCancelled(orderId, actorId, reason);
+      variantId: Id.create(item.variantId),
+      quantity: Quantity.create(item.quantity),
+    }));
   }
 
-  async confirmOrder(id: string, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    await this.transitionOrder(
-      orderId,
-      actorId,
-      (order) => order.confirmOrder(actorId),
-      (items) => this.orderItemsWriter.confirm(items),
-    );
-    return OrderMessages.orderConfirmed(orderId, actorId);
+  /**
+   * Keeps the inventory module in step with the order state machine.
+   * `complete` consumes held stock; `release` returns it on cancellation;
+   * `restock` returns fulfilled stock on a return.
+   */
+  private async applyInventoryTransition(
+    action: InventoryTransition | null,
+    items: OrderItemRef[],
+    actorId: Id,
+  ): Promise<void> {
+    if (!action || items.length === 0) return;
+
+    const lines = items.map(({ variantId, quantity }) => ({ variantId, quantity }));
+
+    switch (action) {
+      case 'complete':
+        await this.inventoryReservation.complete(lines, actorId);
+        break;
+      case 'release':
+        await this.inventoryReservation.release(lines, actorId);
+        break;
+      case 'restock':
+        await this.inventoryReservation.restock(lines, actorId);
+        break;
+    }
   }
 
-  async completeOrder(id: string, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    await this.transitionOrder(
-      orderId,
-      actorId,
-      (order) => order.completeOrder(actorId),
-      (items) => this.orderItemsWriter.complete(items),
-      () => 'complete',
-    );
-    return OrderMessages.orderCompleted(orderId, actorId);
-  }
-
-  async returnOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const reason = Reason.create(data.reason);
-    await this.transitionOrder(
-      orderId,
-      actorId,
-      (order) => order.returnOrder(reason, actorId),
-      (items) => this.orderItemsWriter.returnItems(items),
-      // A completed order has already consumed its reservation; a confirmed
-      // one still holds it, so it is released instead of restocked.
-      (order) => (order.status.status === 'completed' ? 'restock' : 'release'),
-    );
-    return OrderMessages.orderReturned(orderId, actorId, reason);
-  }
-
-  async refundOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const reason = Reason.create(data.reason);
-    await this.transitionOrder(
-      orderId,
-      actorId,
-      (order) => order.refundOrder(reason, actorId),
-      (items) => this.orderItemsWriter.refund(items),
-      // A refund is financial only: stock already came back through a return,
-      // or never left the shelf.
-      () => null,
-    );
-    return OrderMessages.orderRefunded(orderId, actorId, reason);
-  }
-
-  async updateOrder(id: string, data: updateOrderDtoType, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const order = await this.orderRepo.FindByIdOrThrow(orderId);
-    order.updateOrder(
-      Money.create(data.totalPrice),
-      FullAddressVO.create(data.address),
-      actorId,
-    );
+  private async saveAndPublish(order: OrderAggregate): Promise<void> {
     await this.orderRepo.Save(order);
     await this.publish(order.pullEvents());
-    return OrderMessages.orderUpdated(orderId, actorId);
   }
 
-  async deleteOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const reason = Reason.create(data.reason);
-    const order = await this.orderRepo.FindByIdOrThrow(orderId);
-    order.deleteOrder(reason, actorId);
-    await this.orderRepo.Save(order);
-    await this.publish(order.pullEvents());
-    return OrderMessages.orderDeleted(orderId, actorId, reason);
-  }
-
-  async recoverOrder(id: string, actor: AuthActor) {
-    const orderId = Id.create(id);
-    const actorId = Id.create(actor._id);
-    const order = await this.orderRepo.FindByIdOrThrow(orderId);
-    order.recoverOrder(actorId);
-    await this.orderRepo.Save(order);
-    await this.publish(order.pullEvents());
-    return OrderMessages.orderRecovered(orderId, actorId);
+  private async publish(events: IEvent[]): Promise<void> {
+    if (events.length > 0) await this.eventBus.publish(events);
   }
 }

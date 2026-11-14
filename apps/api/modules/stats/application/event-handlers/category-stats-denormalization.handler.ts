@@ -31,7 +31,9 @@ interface CategoryRollupDeps {
  * scheduler tick and the admin "Run data correction" action both refresh
  * category stats. Uses idempotent `$set` writes — re-runs never double count.
  */
-export class CategoryStatsDenormalizationHandler implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
+export class CategoryStatsDenormalizationHandler
+  implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']>
+{
   private readonly deps: CategoryRollupDeps;
 
   constructor(deps: Partial<CategoryRollupDeps> = {}) {

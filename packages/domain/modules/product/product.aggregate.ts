@@ -1,6 +1,6 @@
-import { BadRequestError } from '../../errors/app-error';
 import type { desclaimerItem, Metrics } from '../../../shared';
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import {
   AppearanceVO,
   BlockInfoVO,
@@ -16,6 +16,7 @@ import {
   Title,
   type UrlVO,
 } from '../../value-objects';
+import { emptyMetrics } from '../stats/metrics';
 import { ProductBlockedEvent } from './events/product-blocked.event';
 import { ProductCreatedEvent } from './events/product-created.event';
 import { ProductDefaultImageSetEvent } from './events/product-default-image-set.event';
@@ -28,7 +29,6 @@ import { ProductDisclaimersRemovedEvent } from './events/product-disclaimers-rem
 import { ProductImagesAddedEvent } from './events/product-images-added.event';
 import { ProductImagesRemovedEvent } from './events/product-images-removed.event';
 import { ProductInStockUpdatedEvent } from './events/product-in-stock-updated.event';
-import { emptyMetrics } from '../stats/metrics';
 import { ProductIngredientsAddedEvent } from './events/product-ingredients-added.event';
 import { ProductIngredientsClearedEvent } from './events/product-ingredients-cleared.event';
 import { ProductIngredientsDisabledEvent } from './events/product-ingredients-disabled.event';
@@ -264,7 +264,7 @@ export class ProductAggregate extends AggregateRoot {
     maxPrice: Money,
     minDiscountedPrice: Money,
     maxDiscountedPrice: Money,
-    actorId?: Id,
+    _actorId?: Id,
   ): void {
     this._minPrice = minPrice;
     this._maxPrice = maxPrice;
@@ -443,7 +443,7 @@ export class ProductAggregate extends AggregateRoot {
     const added: string[] = [];
 
     ingredientList.forEach((ingredient) => {
-      if (ingredient && ingredient.trim()) {
+      if (ingredient?.trim()) {
         this._ingredients.add(ingredient);
         added.push(ingredient);
       }
@@ -456,7 +456,7 @@ export class ProductAggregate extends AggregateRoot {
     const removed: string[] = [];
 
     ingredientList.forEach((ingredient) => {
-      if (ingredient && ingredient.trim()) {
+      if (ingredient?.trim()) {
         this._ingredients.remove(ingredient);
         removed.push(ingredient);
       }

@@ -12,7 +12,8 @@ import { ProductVariantModel, type ProductVariantPersistence } from './product-v
 
 export class ProductVariantRepository
   extends MongoRepository<ProductVariantPersistence>
-  implements IProductVariantRepository {
+  implements IProductVariantRepository
+{
   constructor() {
     super(ProductVariantModel);
   }

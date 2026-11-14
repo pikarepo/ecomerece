@@ -3,7 +3,7 @@ import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { getCurrentSession } from '../../../core/database/transaction-context';
 import { ConcurrencyError, NotFoundError } from '../../../errors/app-error';
 import { HomeMapper } from './home.mapper';
-import { HomeModel, type HomePersistence } from './home.models';
+import { HomeModel } from './home.models';
 
 export const DEFAULT_HOME_ID = 'home-main';
 
@@ -16,7 +16,7 @@ export class HomeRepository implements IHomeRepository {
     const doc = await HomeModel.findById(id.value)
       .session(this.session ?? null)
       .lean();
-    return doc ? HomeMapper.persistenceToAggregate(doc as any) : null;
+    return doc ? HomeMapper.persistenceToAggregate(doc) : null;
   }
 
   async getHomeMain(): Promise<HomeAggregate> {

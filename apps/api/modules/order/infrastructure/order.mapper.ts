@@ -1,4 +1,4 @@
-import { OrderAggregate, OrderStatusVO, type OrderReadModel } from '@ecomerece/domain';
+import { OrderAggregate, type OrderReadModel, OrderStatusVO } from '@ecomerece/domain';
 import { DeleteInfoVO } from '@ecomerece/domain/value-objects/delete-info.vo';
 import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';

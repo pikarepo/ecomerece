@@ -50,9 +50,7 @@ export class ProductStatsSyncScheduler {
       });
       if (!acquired) return;
 
-      await this.eventBus.publish(
-        new ProductStatsDenormalizationRequestedEvent({ force: false }),
-      );
+      await this.eventBus.publish(new ProductStatsDenormalizationRequestedEvent({ force: false }));
       await statsSyncSettingsService.markRan(now);
     } catch (error) {
       console.error('[stats-sync] scheduler tick failed:', error);

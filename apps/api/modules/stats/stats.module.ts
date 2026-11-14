@@ -11,7 +11,6 @@ import { ProductStatsDenormalizationHandler } from './application/event-handlers
 import { VendorStatsDenormalizationHandler } from './application/event-handlers/vendor-stats-denormalization.handler';
 import { VendorStatsForceRefreshHandler } from './application/event-handlers/vendor-stats-force-refresh.handler';
 import { ProductStatsSyncScheduler } from './application/ProductStatsSyncScheduler';
-import { statsQueryService } from './application/StatsQueryService';
 import { VendorStatsRefreshService } from './application/vendor-stats-refresh.service';
 import { StatsController } from './presentation/StatsController';
 
@@ -53,8 +52,7 @@ export function CreateStatsModule({
     'stats.product-denormalization-requested',
     new VendorStatsDenormalizationHandler({
       connectDB,
-      loadVendors: async () =>
-        (await vendorStats.listVendorIds()).map((id) => ({ id })),
+      loadVendors: async () => (await vendorStats.listVendorIds()).map((id) => ({ id })),
       refreshVendorCore: (vendorId) => vendorStatsRefresh.refreshVendorCore(vendorId),
     }),
   );

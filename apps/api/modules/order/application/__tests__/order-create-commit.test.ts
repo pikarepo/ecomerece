@@ -1,11 +1,10 @@
+import { describe, expect, it } from 'bun:test';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
-import { describe, expect, it } from 'bun:test';
 import type { createMyOrderDtoType } from '@ecomerece/shared';
 import { OrderApplicationService } from '../order.app.service';
 
-const id = (n: number) =>
-  Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
+const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`).value;
 
 const actor = {
   _id: id(1),
@@ -22,9 +21,7 @@ const orderInput: createMyOrderDtoType = {
   items: [{ variantId: id(2), quantity: 3 }],
 };
 
-function buildService(
-  options: { saveFails?: boolean; rejectLine?: boolean } = {},
-) {
+function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {}) {
   const calls: string[] = [];
   const published: IEvent[] = [];
   const createdTotals: number[] = [];

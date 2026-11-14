@@ -107,7 +107,6 @@ export class HomeAggregate extends AggregateRoot {
     );
   }
 
-  // --- Categories ---
   addCategory(category: CategoryVO): void {
     if (this._categories.length >= HomeAggregate.MAX_CATEGORIES) {
       throw new Error(`Cannot exceed maximum of ${HomeAggregate.MAX_CATEGORIES} categories.`);
@@ -174,7 +173,6 @@ export class HomeAggregate extends AggregateRoot {
     this.raise(new HomeCategoriesReorderedEvent({ homeId: this._id }));
   }
 
-  // --- Features ---
   setFeatures(features: FeatureVO[]): void {
     if (features.length > HomeAggregate.MAX_FEATURES) {
       throw new Error(`Cannot exceed maximum of ${HomeAggregate.MAX_FEATURES} features.`);
@@ -220,7 +218,6 @@ export class HomeAggregate extends AggregateRoot {
     this.raise(new HomeFeatureRemovedEvent({ homeId: this._id, featureId: id }));
   }
 
-  // --- Slides ---
   addSlide(slide: SlideVO): void {
     if (this._slides.length >= HomeAggregate.MAX_SLIDES) {
       throw new Error(`Cannot exceed maximum of ${HomeAggregate.MAX_SLIDES} slides.`);
@@ -253,7 +250,9 @@ export class HomeAggregate extends AggregateRoot {
     }
     this._slides.splice(index, 1);
     // Normalize display orders after removal
-    this._slides.forEach((s, idx) => s.updateDisplayOrder(Quantity.create(idx)));
+    this._slides.forEach((s, idx) => {
+      s.updateDisplayOrder(Quantity.create(idx));
+    });
     this.touch();
     this.raise(new HomeSlideRemovedEvent({ homeId: this._id, slideId: id }));
   }
@@ -282,7 +281,6 @@ export class HomeAggregate extends AggregateRoot {
     this.raise(new HomeSlidesReorderedEvent({ homeId: this._id }));
   }
 
-  // --- Promos ---
   addPromo(promo: PromoVO): void {
     if (this._promos.length >= HomeAggregate.MAX_PROMOS) {
       throw new Error(`Cannot exceed maximum of ${HomeAggregate.MAX_PROMOS} promos.`);
@@ -315,7 +313,6 @@ export class HomeAggregate extends AggregateRoot {
     this.raise(new HomePromoRemovedEvent({ homeId: this._id, promoId: id }));
   }
 
-  // --- Product Containers ---
   addProductContainer(container: ProductContainerVO): void {
     if (this._productContainers.length >= HomeAggregate.MAX_PRODUCT_CONTAINERS) {
       throw new Error(
@@ -349,7 +346,9 @@ export class HomeAggregate extends AggregateRoot {
       throw new Error(`Container '${id.value}' not found.`);
     }
     this._productContainers.splice(index, 1);
-    this._productContainers.forEach((c, idx) => c.updateDisplayOrder(Quantity.create(idx)));
+    this._productContainers.forEach((c, idx) => {
+      c.updateDisplayOrder(Quantity.create(idx));
+    });
     this.touch();
     this.raise(new HomeContainerRemovedEvent({ homeId: this._id, containerId: id }));
   }

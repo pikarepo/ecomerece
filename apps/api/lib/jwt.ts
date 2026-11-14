@@ -1,6 +1,8 @@
 import { jwtVerify, SignJWT } from 'jose';
 
-const secret = new TextEncoder().encode(process.env.JWT_SECRET!);
+const secretValue = process.env.JWT_SECRET;
+if (!secretValue) throw new Error('Missing JWT_SECRET.');
+const secret = new TextEncoder().encode(secretValue);
 
 export const createToken = async (payload: { userId: string; role: string }) => {
   return await new SignJWT(payload)

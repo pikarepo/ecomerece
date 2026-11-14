@@ -70,7 +70,8 @@ export abstract class BaseService {
     opts?: { min?: number; max?: number },
   ): number {
     const n = Number(value);
-    if (value === null || value === undefined || isNaN(n)) throw new BadRequestError(message);
+    if (value === null || value === undefined || Number.isNaN(n))
+      throw new BadRequestError(message);
     if (opts?.min !== undefined && n < opts.min)
       throw new BadRequestError(`Value must be ≥ ${opts.min}`);
     if (opts?.max !== undefined && n > opts.max)
@@ -303,7 +304,8 @@ export abstract class BaseService {
     return items.reduce(
       (acc, item) => {
         const k = String(item[key]);
-        (acc[k] ??= []).push(item);
+        acc[k] ??= [];
+        acc[k].push(item);
         return acc;
       },
       {} as Record<string, T[]>,

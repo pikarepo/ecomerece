@@ -7,7 +7,5 @@ export class OrderDeletedEvent
   readonly type = 'order.deleted';
   readonly occurredOn = EffectiveDate.today();
 
-  constructor(
-    public readonly payload: { orderId: Id; actorId: Id; deletionInfo: DeleteInfoVO },
-  ) {}
+  constructor(public readonly payload: { orderId: Id; actorId: Id; deletionInfo: DeleteInfoVO }) {}
 }

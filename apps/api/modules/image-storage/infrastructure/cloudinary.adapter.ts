@@ -26,9 +26,7 @@ import {
 } from '@ecomerece/domain';
 import type { CloudinaryConfig } from './cloudinary.config';
 
-// ---------------------------------------------------------------------------
 // Cloudinary REST response shapes
-// ---------------------------------------------------------------------------
 
 interface CloudinaryUploadResponse {
   public_id: string;
@@ -67,9 +65,7 @@ interface CloudinaryDestroyResponse {
   error?: { message: string };
 }
 
-// ---------------------------------------------------------------------------
 // Adapter
-// ---------------------------------------------------------------------------
 
 export class CloudinaryAdapter implements IImageStoragePort {
   private readonly cloudName: string;
@@ -88,9 +84,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     this.cdnBase = `https://res.cloudinary.com/${config.cloudName}`;
   }
 
-  // -----------------------------------------------------------------------
   // Upload
-  // -----------------------------------------------------------------------
 
   async upload(source: ImageSource, options?: UploadOptions) {
     const key = this.resolveKey(source, options);
@@ -136,9 +130,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return this.batchRun(sources, (source) => this.upload(source, { ...options, overwrite: true }));
   }
 
-  // -----------------------------------------------------------------------
   // Replace
-  // -----------------------------------------------------------------------
 
   async replace(key: ImageKey, source: ImageSource, options?: ReplaceOptions) {
     if (!options?.createIfMissing) {
@@ -149,9 +141,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return this.upload(source, { ...options, key, overwrite: true });
   }
 
-  // -----------------------------------------------------------------------
   // Delete
-  // -----------------------------------------------------------------------
 
   async delete(key: ImageKey, options?: StorageCallOptions): Promise<void> {
     const timestamp = Math.floor(Date.now() / 1000);
@@ -189,9 +179,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return this.batchRun(keys, (key) => this.delete(key, options));
   }
 
-  // -----------------------------------------------------------------------
   // URLs
-  // -----------------------------------------------------------------------
 
   async getPublicUrl(key: ImageKey, options?: PublicUrlOptions): Promise<string> {
     const transformPart = options?.transform
@@ -231,9 +219,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return `${this.cdnBase}/image/upload${transformPart}/${key.value}${ext}?${params.toString()}`;
   }
 
-  // -----------------------------------------------------------------------
   // Metadata
-  // -----------------------------------------------------------------------
 
   async getMetadata(key: ImageKey, options?: StorageCallOptions) {
     const timestamp = Math.floor(Date.now() / 1000);
@@ -264,9 +250,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return this.batchRun(keys, (key) => this.getMetadata(key, options));
   }
 
-  // -----------------------------------------------------------------------
   // Transform
-  // -----------------------------------------------------------------------
 
   async transform(key: ImageKey, transform: ImageTransform, options?: StorageCallOptions) {
     if (!(await this.exists(key, { signal: options?.signal }))) {
@@ -276,9 +260,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return { key, publicUrl, version: undefined };
   }
 
-  // -----------------------------------------------------------------------
   // Exists
-  // -----------------------------------------------------------------------
 
   async exists(key: ImageKey, options?: StorageCallOptions): Promise<boolean> {
     try {
@@ -290,9 +272,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     }
   }
 
-  // -----------------------------------------------------------------------
   // Download
-  // -----------------------------------------------------------------------
 
   async download(key: ImageKey, options?: DownloadOptions): Promise<ReadableStream<Uint8Array>> {
     const url = await this.getPublicUrl(key);
@@ -313,9 +293,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
     return res.body as unknown as ReadableStream<Uint8Array>;
   }
 
-  // -----------------------------------------------------------------------
   // Internals
-  // -----------------------------------------------------------------------
 
   private sign(params: Record<string, string>): string {
     const sorted = Object.keys(params)
@@ -357,8 +335,8 @@ export class CloudinaryAdapter implements IImageStoragePort {
         if (done) break;
         chunks.push(value);
       }
-    } catch (error: any) {
-      if (error?.name === 'AbortError') throw new ImageAbortedError();
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') throw new ImageAbortedError();
       throw error;
     }
 
@@ -473,7 +451,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
   private async throwUploadError(res: Response): Promise<never> {
     let message = `Cloudinary upload failed (HTTP ${res.status}).`;
     try {
-      const body: any = await res.json();
+      const body = (await res.json()) as { error?: { message?: string } };
       message = body.error?.message ?? message;
     } catch {}
     if (res.status === 404) throw new ImageNotFoundError(message);
@@ -485,7 +463,7 @@ export class CloudinaryAdapter implements IImageStoragePort {
   private async throwDestroyError(res: Response): Promise<never> {
     let message = `Cloudinary request failed (HTTP ${res.status}).`;
     try {
-      const body: any = await res.json();
+      const body = (await res.json()) as { error?: { message?: string } };
       message = body.error?.message ?? message;
     } catch {}
     if (res.status === 401 || res.status === 403) throw new ImageAccessDeniedError(message);

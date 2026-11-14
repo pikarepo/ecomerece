@@ -15,8 +15,7 @@ import {
 } from '@ecomerece/domain/value-objects/street-address.vo';
 import { AddressInternalService } from '../address.app.internal.service';
 
-const id = (n: number) =>
-  Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
+const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
 
 function buildAddress(ownerId: Id, deleted = false) {
   return AddressAggregate.rehydrate(
@@ -56,10 +55,7 @@ describe('AddressInternalService.ensureActiveAddressGetById', () => {
   });
 
   it('does not expose an address owned by another user', async () => {
-    const result = await buildService(buildAddress(id(2))).ensureActiveAddressGetById(
-      id(1),
-      id(3),
-    );
+    const result = await buildService(buildAddress(id(2))).ensureActiveAddressGetById(id(1), id(3));
 
     expect(result).toEqual({ address: null, active: false });
   });

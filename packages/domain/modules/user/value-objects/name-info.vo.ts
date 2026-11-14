@@ -13,8 +13,8 @@ export class NameInfoVO {
     // A missing middle name must not leave a double space in the derived
     // full name — consumers validate it as a single Name value.
     const fullName = arr
-      .filter(Boolean)
-      .map((part) => part!.value)
+      .filter((part): part is PersonName => part !== null)
+      .map((part) => part.value)
       .join(' ');
     return new NameInfoVO(firstName, middleName, lastName, fullName);
   }

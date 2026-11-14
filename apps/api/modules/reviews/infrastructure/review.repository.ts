@@ -10,7 +10,8 @@ import { ReviewModel, type ReviewPersistence } from './review.model';
 
 export class ReviewRepository
   extends MongoRepository<ReviewPersistence>
-  implements IReviewRepository {
+  implements IReviewRepository
+{
   constructor() {
     super(ReviewModel);
   }

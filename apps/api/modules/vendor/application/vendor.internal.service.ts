@@ -1,8 +1,8 @@
+import type { IUserQueries } from '@ecomerece/contracts';
 import type { IVendorRepository, VendorReadModel } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { IUserQueries } from '@ecomerece/contracts';
 import { VendorMapper } from '../infrastructure/vendor.mapper';
 
 export class VendorInternalService extends BaseService {

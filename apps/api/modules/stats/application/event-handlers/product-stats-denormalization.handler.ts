@@ -24,7 +24,8 @@ export interface ProductStatsDenormalizationDeps {
  * correction and the vendor force-refresh button re-use this same pipeline).
  */
 export class ProductStatsDenormalizationHandler
-  implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']> {
+  implements IEventHandler<ProductStatsDenormalizationRequestedEvent['payload']>
+{
   constructor(private readonly deps: ProductStatsDenormalizationDeps) {}
 
   async handle(event: IEvent<ProductStatsDenormalizationRequestedEvent['payload']>): Promise<void> {

@@ -22,7 +22,8 @@ export interface VendorStatsForceRefreshDeps {
  * of the vendor's monthly force-refresh quota.
  */
 export class VendorStatsForceRefreshHandler
-  implements IEventHandler<VendorStatsForceRefreshRequestedEvent['payload']> {
+  implements IEventHandler<VendorStatsForceRefreshRequestedEvent['payload']>
+{
   private readonly deps: VendorStatsForceRefreshDeps;
 
   constructor(deps: Partial<VendorStatsForceRefreshDeps> = {}) {

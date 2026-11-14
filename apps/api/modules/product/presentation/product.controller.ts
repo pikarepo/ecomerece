@@ -1,8 +1,8 @@
 import {
   blockLiftProductDto,
   blockProductDto,
-  clearIngredientsDto,
   CreateMyProductDtoSchema,
+  clearIngredientsDto,
   deafultImageDto,
   disclaimerItemsDto,
   getAdminPaginatedProductsQuerySchema,

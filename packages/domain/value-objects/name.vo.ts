@@ -46,7 +46,7 @@ export class Name extends StringVO {
       throw new BadRequestError('Name cannot exceed 50 characters.');
     }
 
-    if (!/^[A-Za-z]+(?:[ '\-][A-Za-z]+)*$/.test(trimmed)) {
+    if (!/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/.test(trimmed)) {
       throw new BadRequestError('Name can only contain letters, spaces, hyphens and apostrophes.');
     }
   }

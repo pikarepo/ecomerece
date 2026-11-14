@@ -8,23 +8,23 @@ type AddressController = ReturnType<typeof createAddressModule>['addressControll
 export function createAddressRoutes(addressController: AddressController) {
   const AddressRoutes = new Hono();
 
-AddressRoutes.get('/my', authMiddleware, addressController.getMyAddresses);
-AddressRoutes.get('/:id', authMiddleware, addressController.getAddressById);
-AddressRoutes.get(
-  '/admin/all',
-  authMiddleware,
-  adminMiddleware,
-  addressController.getAdminPaginatedAddresses,
-);
-AddressRoutes.post('/my', authMiddleware, addressController.createMyAddress);
-AddressRoutes.delete('/my/:id', authMiddleware, addressController.deleteMyAddress);
-AddressRoutes.patch('/my/:id/default', authMiddleware, addressController.setMyAddressAsDefault);
-AddressRoutes.patch('/my/:id/update', authMiddleware, addressController.updateMyAddress);
-AddressRoutes.patch(
-  '/my/:id/recover',
-  authMiddleware,
-  adminMiddleware,
-  addressController.recoverAddress,
+  AddressRoutes.get('/my', authMiddleware, addressController.getMyAddresses);
+  AddressRoutes.get('/:id', authMiddleware, addressController.getAddressById);
+  AddressRoutes.get(
+    '/admin/all',
+    authMiddleware,
+    adminMiddleware,
+    addressController.getAdminPaginatedAddresses,
+  );
+  AddressRoutes.post('/my', authMiddleware, addressController.createMyAddress);
+  AddressRoutes.delete('/my/:id', authMiddleware, addressController.deleteMyAddress);
+  AddressRoutes.patch('/my/:id/default', authMiddleware, addressController.setMyAddressAsDefault);
+  AddressRoutes.patch('/my/:id/update', authMiddleware, addressController.updateMyAddress);
+  AddressRoutes.patch(
+    '/my/:id/recover',
+    authMiddleware,
+    adminMiddleware,
+    addressController.recoverAddress,
   );
 
   return AddressRoutes;

@@ -202,9 +202,7 @@ export class StatsRepository {
       {
         $group: {
           _id: null,
-          ...Object.fromEntries(
-            sums.map(([field, initial]) => [field, { $sum: `$metrics.${field}` }]),
-          ),
+          ...Object.fromEntries(sums.map(([field]) => [field, { $sum: `$metrics.${field}` }])),
         },
       },
     ]);

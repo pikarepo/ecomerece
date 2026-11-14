@@ -1,12 +1,12 @@
-import type { IImageStoragePort } from '@ecomerece/domain';
 import type { IUserQueries } from '@ecomerece/contracts';
+import type { IImageStoragePort } from '@ecomerece/domain';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { VendorAppService } from './application/vendor.app.service';
 import { VendorInternalService } from './application/vendor.internal.service';
+import { VendorRepository } from './infrastructure/vendor.repository';
 import { VendorQueryAdapter } from './infrastructure/vendor-query.adapter';
 import { VendorStatsAccessAdapter } from './infrastructure/vendor-stats-access.adapter';
 import { VendorStatsProjector } from './infrastructure/vendor-stats-projector.adapter';
-import { VendorRepository } from './infrastructure/vendor.repository';
 import { VendorController } from './presentation/vendor.controller';
 
 interface VendorModuleDeps extends Buses {

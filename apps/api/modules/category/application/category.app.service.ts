@@ -1,3 +1,4 @@
+import type { AuthActor } from '@ecomerece/contracts';
 import {
   CategoryAggregate,
   Id,
@@ -20,7 +21,6 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import { BaseService } from '../../../core/services/base.services';
-import type { AuthActor } from '@ecomerece/contracts';
 import { CategoryMapper } from '../infrastructure/category.mapper';
 import type { CategoryPersistence } from '../infrastructure/category.models';
 import type { CategoryRepository } from '../infrastructure/category.repository';
@@ -120,10 +120,7 @@ export class CategoryAppService extends BaseService {
     return CategoryMessags.created(id, actorId);
   }
 
-  async updateCategory(
-    data: updateCategoryType,
-    actor: AuthActor,
-  ): Promise<CategoryMessagesType> {
+  async updateCategory(data: updateCategoryType, actor: AuthActor): Promise<CategoryMessagesType> {
     const id = Id.create(data.id);
     const actorId = Id.create(actor._id);
     const category = await this.categoryRepo.FindByIdOrThrow(id);

@@ -1,8 +1,8 @@
 import type {
   IInventoryReservation,
+  InventoryReservationResult,
   IProductStockUpdater,
   IProductVariantQueries,
-  InventoryReservationResult,
 } from '@ecomerece/contracts';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
@@ -24,25 +24,16 @@ export class InventoryReservationAdapter implements IInventoryReservation {
     return result;
   }
 
-  async complete(
-    items: { variantId: Id; quantity: Quantity }[],
-    actorId: Id,
-  ): Promise<void> {
+  async complete(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void> {
     await this.inventoryService.completeInventories(items, actorId);
   }
 
-  async release(
-    items: { variantId: Id; quantity: Quantity }[],
-    actorId: Id,
-  ): Promise<void> {
+  async release(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void> {
     const inventories = await this.inventoryService.releaseInventories(items, actorId);
     await this.syncProductStock(inventories, actorId);
   }
 
-  async restock(
-    items: { variantId: Id; quantity: Quantity }[],
-    actorId: Id,
-  ): Promise<void> {
+  async restock(items: { variantId: Id; quantity: Quantity }[], actorId: Id): Promise<void> {
     const inventories = await this.inventoryService.restockInventories(items, actorId);
     await this.syncProductStock(inventories, actorId);
   }

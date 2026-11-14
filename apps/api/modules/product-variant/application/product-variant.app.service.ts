@@ -1,6 +1,12 @@
+import type {
+  AuthActor,
+  IProductPricingUpdater,
+  IProductQueries,
+  IUserQueries,
+  IVendorQueries,
+} from '@ecomerece/contracts';
 import { ProductVariantAggregate } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
-
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
@@ -17,15 +23,8 @@ import type {
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
-import type {
-  IProductPricingUpdater,
-  IProductQueries,
-  IUserQueries,
-  IVendorQueries,
-} from '@ecomerece/contracts';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
-import type { AuthActor } from '@ecomerece/contracts';
 import { productVariantMapper } from '../infrastructure/product-variant.mapper';
 import type { ProductVariantPersistence } from '../infrastructure/product-variant.model';
 import type { ProductVariantRepository } from '../infrastructure/product-variant.repository';
@@ -201,7 +200,12 @@ export class productVariantApplicationService extends BaseService {
   async syncPricingSummary(id: string, actor: AuthActor) {
     const productId = Id.create(id);
     const actorId = Id.create(actor._id);
-    let price;
+    let price: {
+      minPrice: Money;
+      maxPrice: Money;
+      minDiscountedPrice: Money;
+      maxDiscountedPrice: Money;
+    };
     const activeVariants = await this.vairiantRepo.FindActiveByProductId(productId);
 
     if (!activeVariants || activeVariants.length === 0) {
@@ -231,7 +235,7 @@ export class productVariantApplicationService extends BaseService {
     if (query.productId) filter.productId = Id.create(query.productId).value;
     if (query.active !== undefined) filter.active = query.active;
     if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
-    if (query.search) filter.title = { $regex: query.search, $options: 'i' } as any;
+    if (query.search) filter.title = { $regex: query.search, $options: 'i' };
     const cursor = query.cursor ? Id.create(query.cursor) : undefined;
     const limit = query.limit ? Quantity.create(query.limit) : undefined;
     const result = await this.vairiantRepo.FindPaginated({

@@ -1,5 +1,5 @@
-import { BadRequestError } from '../../errors/app-error';
 import { AggregateRoot } from '../../aggregate-root';
+import { BadRequestError } from '../../errors/app-error';
 import {
   DeleteInfoVO,
   EffectiveDate,
@@ -18,7 +18,6 @@ import { OrderRecoveredEvent } from './events/order-recovered.event';
 import { OrderRefundedEvent } from './events/order-refunded.event';
 import { OrderReturnedEvent } from './events/order-returned.event';
 import { OrderUpdatedEvent } from './events/order-updated.event';
-import type { OrderItem } from './value-objects/order-item.vo';
 import { OrderStatusVO } from './value-objects/order-status.vo';
 
 export type createOrderPros = {
@@ -184,9 +183,7 @@ export class OrderAggregate extends AggregateRoot {
       throw new BadRequestError('Order is already deleted.');
     }
     this._delete = DeleteInfoVO.create(actorId, reason);
-    this.raise(
-      new OrderDeletedEvent({ orderId: this._id, actorId, deletionInfo: this._delete }),
-    );
+    this.raise(new OrderDeletedEvent({ orderId: this._id, actorId, deletionInfo: this._delete }));
   }
 
   recoverOrder(actorId: Id) {

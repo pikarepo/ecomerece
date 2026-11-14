@@ -1,4 +1,5 @@
 import { NameInfoVO, UserAggregate, UserRoleVO } from '@ecomerece/domain';
+import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { EmailVO } from '@ecomerece/domain/value-objects/email.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { PersonName } from '@ecomerece/domain/value-objects/name.vo';
@@ -17,7 +18,6 @@ import type {
   UserRoleDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
-import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
 import { getUserById } from '../../../lib/supabase';
@@ -60,9 +60,10 @@ export class UserAppService extends BaseService {
     }
 
     const metadata = SupabaseUser.user_metadata ?? {};
-    const fullName = String(
-      metadata.full_name ?? metadata.name ?? SupabaseUser.email.split('@')[0] ?? 'User',
-    ).trim() || 'User';
+    const fullName =
+      String(
+        metadata.full_name ?? metadata.name ?? SupabaseUser.email.split('@')[0] ?? 'User',
+      ).trim() || 'User';
     const image = new UrlVO(
       metadata.avatar_url ||
         metadata.picture ||
@@ -217,7 +218,7 @@ export class UserAppService extends BaseService {
       'deleted.deleted': false,
     };
     if (query.search) {
-      filter['name.fullName'] = { $regex: query.search, $options: 'i' } as any;
+      filter['name.fullName'] = { $regex: query.search, $options: 'i' };
     }
     const cursor = query.cursor ? Id.create(query.cursor) : undefined;
     const limit = query.limit ? Quantity.create(query.limit) : undefined;
@@ -237,7 +238,7 @@ export class UserAppService extends BaseService {
   async findAdminPaginatedUsers(query: GetAdminPaginatedUsersQueryDto) {
     const filter: FilterQuery<UserPersistence> = {};
     if (query.search) {
-      filter['name.fullName'] = { $regex: query.search, $options: 'i' } as any;
+      filter['name.fullName'] = { $regex: query.search, $options: 'i' };
     }
     if (query.role) filter['role.role'] = query.role;
     if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
