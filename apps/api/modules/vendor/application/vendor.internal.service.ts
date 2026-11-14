@@ -1,4 +1,4 @@
-import type { IUserQueries } from '@ecomerece/contracts';
+import type { EnsureActiveVendorResult, IUserQueries } from '@ecomerece/contracts';
 import type { IVendorRepository, VendorReadModel } from '@ecomerece/domain';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { BaseService } from '../../../core/services/base.services';
@@ -34,6 +34,16 @@ export class VendorInternalService extends BaseService {
     if (!vendor.verification.isVerified)
       throw new BadRequestError('This vendor has not been verified yet.');
     return VendorMapper.aggregateToReadModel(vendor);
+  }
+
+  async ensureActiveVendorByUserId(userId: Id): Promise<EnsureActiveVendorResult> {
+    const vendor = await this.vendorRepo.FindByOwnerId(userId);
+    if (!vendor) return { vendor: null, active: false };
+
+    const active =
+      !vendor.delete.isDeleted && vendor.verification.isVerified && !vendor.verification.isRejected;
+
+    return { vendor: VendorMapper.aggregateToReadModel(vendor), active };
   }
 
   async ensureActiveVendorGetById(

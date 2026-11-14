@@ -133,6 +133,10 @@ export class UserAggregate extends AggregateRoot {
     );
   }
   signIn(id: Id): void {
+    // Refuse a spoofed sign-in event for another user's id.
+    if (!this._id.equals(id)) {
+      throw new BadRequestError('Sign-in id does not match this user.');
+    }
     this.raise(new UserSignedInEvent({ userId: id }));
   }
   assignRole(role: UserRoleVO, actor: Id, reason: Reason): void {

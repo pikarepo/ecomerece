@@ -1,6 +1,6 @@
 import { type IconVO, Id, type Title, type UrlVO } from '../../../value-objects';
 import type { ColorVO } from '../../../value-objects/color.vo';
-import type { ImageKey } from '../../image-storage/value-objects/image-key.vo';
+import type { ImageKey } from '../../../value-objects/image-key.vo';
 
 export type CategoryVOProps = {
   id?: Id;

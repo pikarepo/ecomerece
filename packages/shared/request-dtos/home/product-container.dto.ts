@@ -2,12 +2,16 @@ import { z } from 'zod';
 import { idSchema, positiveNumberSchema, titleSchema } from '../../dtos';
 
 export const baseQueryDtoSchema = z.object({
-  filter: z.record(z.string(), z.unknown()).default({}),
-  cursor: z.string().nullable().optional(),
+  filter: z.record(z.string(), z.unknown(), { message: 'Filter must be an object' }).default({}),
+  cursor: z.string({ message: 'Cursor must be a string' }).nullable().optional(),
   limit: positiveNumberSchema.default(20),
-  direction: z.enum(['next', 'prev']).default('next'),
+  direction: z
+    .enum(['next', 'prev'], { message: 'Direction must be either next or prev' })
+    .default('next'),
   sort: z
-    .record(z.string(), z.union([z.literal(1), z.literal(-1)]))
+    .record(z.string(), z.union([z.literal(1), z.literal(-1)]), {
+      message: 'Sort must be an object of 1 or -1 values',
+    })
     .nullable()
     .optional(),
 });

@@ -1,6 +1,8 @@
 import {
   cancelMyOrderItemsDto,
+  deleteOrderItemDto,
   getAdminPaginatedOrderItemsQuerySchema,
+  getVendorPaginatedOrderItemsQuerySchema,
   idSchema,
   updateOrderItemDto,
 } from '@ecomerece/shared';
@@ -23,6 +25,38 @@ export class OrderItemsController extends BaseController<OrderItemsApplicationSe
   getAdminPaginatedOrderItems = async (c: Context) => {
     const query = this.query(c, getAdminPaginatedOrderItemsQuerySchema);
     return this.ok(c, await this.service.findAdminPaginatedOrderItems(query));
+  };
+
+  getVendorPaginatedOrderItems = async (c: Context) => {
+    const query = this.query(c, getVendorPaginatedOrderItemsQuerySchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.findVendorPaginatedOrderItems(query, actor));
+  };
+
+  getVendorOrderItemById = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.getVendorOrderItemById(id, actor));
+  };
+
+  updateVendorOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, updateOrderItemDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.updateVendorOrderItem(id, data, actor));
+  };
+
+  deleteOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, deleteOrderItemDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.deleteOrderItem(id, data, actor));
+  };
+
+  recoverOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.recoverOrderItem(id, actor));
   };
 
   cancelMyOrderItems = async (c: Context) => {
@@ -60,5 +94,29 @@ export class OrderItemsController extends BaseController<OrderItemsApplicationSe
     const id = this.param(c, 'id', idSchema);
     const actor = c.get('user');
     return this.ok(c, await this.service.refundOrderItem(id, actor));
+  };
+
+  vendorConfirmOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.vendorConfirmOrderItem(id, actor));
+  };
+
+  vendorCompleteOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.vendorCompleteOrderItem(id, actor));
+  };
+
+  vendorReturnOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.vendorReturnOrderItem(id, actor));
+  };
+
+  vendorRefundOrderItem = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.vendorRefundOrderItem(id, actor));
   };
 }

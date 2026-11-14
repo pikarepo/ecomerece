@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const reasonSchema = z
   .string()
+  .trim()
   .min(10, 'Reason must be at least 10 characters')
   .max(100, 'Reason must not exceed 100 characters');
 export const optionalReasonSchema = reasonSchema.optional();

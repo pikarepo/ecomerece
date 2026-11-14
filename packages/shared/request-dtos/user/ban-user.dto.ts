@@ -3,7 +3,9 @@ import { clerkUserIdSchema, reasonSchema } from '../../dtos';
 
 export const BanUserDTOSchema = z.object({
   userId: clerkUserIdSchema,
-  forDays: z.number().min(1, 'Ban duration must be at least 1 day'),
+  forDays: z
+    .number({ message: 'Ban duration must be a number' })
+    .min(1, 'Ban duration must be at least 1 day'),
   reason: reasonSchema,
 });
 

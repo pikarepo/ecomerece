@@ -1,5 +1,5 @@
+import type { ImageKey } from '../../../value-objects/image-key.vo';
 import type { ImageStorageError } from '../errors/image-storage-errors';
-import type { ImageKey } from '../value-objects/image-key.vo';
 
 export interface BatchItemResult<T> {
   /** The input key (or generated key) this entry refers to. */

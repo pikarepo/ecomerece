@@ -101,6 +101,7 @@ export class InventoryAggregate extends AggregateRoot {
   }
 
   reserve(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._reserved = this._reserved.increase(quantity.value);
     this._available = this._available.decrease(quantity.value);
     this.raise(
@@ -110,6 +111,7 @@ export class InventoryAggregate extends AggregateRoot {
 
   /** Consumes held stock once an order is fulfilled (reserved leaves the shelf). */
   complete(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._reserved = this._reserved.decrease(quantity.value);
     this.raise(
       new InventoryCompletedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
@@ -118,6 +120,7 @@ export class InventoryAggregate extends AggregateRoot {
 
   /** Puts a held reservation back on the shelf (order cancelled before fulfilment). */
   release(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._reserved = this._reserved.decrease(quantity.value);
     this._available = this._available.increase(quantity.value);
     this.raise(
@@ -127,6 +130,7 @@ export class InventoryAggregate extends AggregateRoot {
 
   /** Puts already-consumed stock back on the shelf (a return). */
   restock(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._available = this._available.increase(quantity.value);
     this.raise(
       new InventoryRestockedEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
@@ -134,12 +138,14 @@ export class InventoryAggregate extends AggregateRoot {
   }
 
   buy(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._available = this._available.increase(quantity.value);
     this.raise(
       new InventoryBoughtEvent({ inventoryId: this._id, variantId: this._variantId, quantity }),
     );
   }
   updateLowStockThreshold(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._lowStockThreshold = quantity;
     this.raise(
       new InventoryLowStockThresholdUpdatedEvent({
@@ -150,6 +156,7 @@ export class InventoryAggregate extends AggregateRoot {
     );
   }
   removeStock(quantity: Quantity, _actorId: Id) {
+    this.ensureNotDeleted();
     this._available = this._available.decrease(quantity.value);
     this.raise(
       new InventoryStockRemovedEvent({
@@ -160,6 +167,9 @@ export class InventoryAggregate extends AggregateRoot {
     );
   }
   deleteInventory(reason: Reason, actorId: Id) {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This inventory has already been deleted.');
+    }
     if (!this._available.isZero)
       throw new BadRequestError('Clear the available stock before deleting this inventory.');
     if (!this._reserved.isZero)
@@ -173,5 +183,11 @@ export class InventoryAggregate extends AggregateRoot {
         deletionInfo: this._delete,
       }),
     );
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This inventory has been deleted.');
+    }
   }
 }

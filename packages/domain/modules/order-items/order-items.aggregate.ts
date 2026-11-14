@@ -7,12 +7,15 @@ import {
   type Id,
   Money,
   Quantity,
+  type Reason,
 } from '../../value-objects';
 import { OrderItemCancelledEvent } from './events/order-item-cancelled.event';
 import { OrderItemCompletedEvent } from './events/order-item-completed.event';
 import { OrderItemConfirmedEvent } from './events/order-item-confirmed.event';
 import { OrderItemCreatedEvent } from './events/order-item-created.event';
+import { OrderItemDeletedEvent } from './events/order-item-deleted.event';
 import type { OrderItemEventPayload } from './events/order-item-event-payload';
+import { OrderItemRecoveredEvent } from './events/order-item-recovered.event';
 import { OrderItemRefundedEvent } from './events/order-item-refunded.event';
 import { OrderItemReturnedEvent } from './events/order-item-returned.event';
 import { OrderItemUpdatedEvent } from './events/order-item-updated.event';
@@ -214,18 +217,21 @@ export class OrderItemsAggregate extends AggregateRoot {
   }
 
   confirm() {
+    this.ensureNotDeleted();
     this._status = this._status.confirm();
     this.raise(new OrderItemConfirmedEvent(this.eventPayload()));
     return this;
   }
 
   complete() {
+    this.ensureNotDeleted();
     this._status = this._status.complete();
     this.raise(new OrderItemCompletedEvent(this.eventPayload()));
     return this;
   }
 
   cancel() {
+    this.ensureNotDeleted();
     this._status = this._status.cancel();
     this.raise(new OrderItemCancelledEvent(this.eventPayload()));
     return this;
@@ -233,18 +239,21 @@ export class OrderItemsAggregate extends AggregateRoot {
 
   /** `return` is reserved in TS, so the method is named `returnItem`. */
   returnItem() {
+    this.ensureNotDeleted();
     this._status = this._status.return();
     this.raise(new OrderItemReturnedEvent(this.eventPayload()));
     return this;
   }
 
   refund() {
+    this.ensureNotDeleted();
     this._status = this._status.refund();
     this.raise(new OrderItemRefundedEvent(this.eventPayload()));
     return this;
   }
 
   update(data: { quantity: Quantity; waitingTime: ExpirationDate; price: Money }) {
+    this.ensureNotDeleted();
     this._quantity = data.quantity;
     this._waitingTime = data.waitingTime;
     this._price = data.price;
@@ -260,5 +269,44 @@ export class OrderItemsAggregate extends AggregateRoot {
       }),
     );
     return this;
+  }
+
+  deleteItem(reason: Reason, actorId: Id) {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('Order item is already deleted.');
+    }
+    this._delete = DeleteInfoVO.create(actorId, reason);
+    this.raise(
+      new OrderItemDeletedEvent({
+        orderItemId: this._id,
+        orderId: this._orderId,
+        vendorId: this._vendorId,
+        actorId,
+        deletionInfo: this._delete,
+      }),
+    );
+    return this;
+  }
+
+  recoverItem(actorId: Id) {
+    if (!this._delete.isDeleted) {
+      throw new BadRequestError('Order item is not deleted.');
+    }
+    this._delete = DeleteInfoVO.none();
+    this.raise(
+      new OrderItemRecoveredEvent({
+        orderItemId: this._id,
+        orderId: this._orderId,
+        vendorId: this._vendorId,
+        actorId,
+      }),
+    );
+    return this;
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('Cannot perform operation on a deleted order item.');
+    }
   }
 }

@@ -17,4 +17,8 @@ export class ProductQueryAdapter implements IProductQueries {
   verifyAndGet(ids: Id[]): Promise<VerifyProductsResult> {
     return this.internalService.verifyProductAndGet(ids);
   }
+
+  listVendorProductIds(vendorId: Id): Promise<Id[]> {
+    return this.internalService.listVendorProductIds(vendorId);
+  }
 }

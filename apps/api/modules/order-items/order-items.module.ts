@@ -1,4 +1,4 @@
-import type { IOrderQueries } from '@ecomerece/contracts';
+import type { IOrderQueries, IVendorQueries } from '@ecomerece/contracts';
 import type { UnitOfWork } from '../../core/database/unit-of-work';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { OrderItemsApplicationService } from './application/order-item.app.service';
@@ -27,6 +27,7 @@ export function createOrderItemsCore() {
 interface OrderItemsApplicationDeps extends Buses {
   core: ReturnType<typeof createOrderItemsCore>;
   orderQueries: IOrderQueries;
+  vendorQueries: IVendorQueries;
   unitOfWork: UnitOfWork;
 }
 
@@ -34,6 +35,7 @@ interface OrderItemsApplicationDeps extends Buses {
 export function createOrderItemsApplication({
   core,
   orderQueries,
+  vendorQueries,
   eventBus,
   unitOfWork,
 }: OrderItemsApplicationDeps) {
@@ -41,6 +43,7 @@ export function createOrderItemsApplication({
     core.internalService,
     core.itemsRepo,
     orderQueries,
+    vendorQueries,
     eventBus,
     unitOfWork,
   );

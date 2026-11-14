@@ -1,8 +1,15 @@
-export abstract class DateVO {
-  constructor(protected readonly _value: Date) {}
+import { BadRequestError } from '../errors/app-error';
 
+export abstract class DateVO {
+  constructor(protected readonly _value: Date) {
+    if (!(_value instanceof Date) || Number.isNaN(_value.getTime())) {
+      throw new BadRequestError('Invalid date.');
+    }
+  }
+
+  // Return a copy so callers cannot mutate the value through the getter.
   get value(): Date {
-    return this._value;
+    return new Date(this._value);
   }
 
   equals(other: DateVO): boolean {
@@ -10,26 +17,30 @@ export abstract class DateVO {
   }
 
   before(date: Date): boolean {
-    return this.value < date;
+    return this._value.getTime() < date.getTime();
   }
 
   after(date: Date): boolean {
-    return this.value > date;
+    return this._value.getTime() > date.getTime();
   }
 
   get isPast(): boolean {
-    return this.value < new Date();
+    return this._value.getTime() < Date.now();
   }
 
   get isFuture(): boolean {
-    return this.value > new Date();
+    return this._value.getTime() > Date.now();
   }
 
   get timestamp(): number {
-    return this.value.getTime();
+    return this._value.getTime();
   }
 
   toISOString(): string {
-    return this.value.toISOString();
+    return this._value.toISOString();
+  }
+
+  toJSON(): string {
+    return this.toISOString();
   }
 }

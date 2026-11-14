@@ -3,15 +3,13 @@ import { StringVO } from './string-vo';
 
 export class Title extends StringVO {
   constructor(value: string) {
-    super(value);
+    super(value.trim());
 
-    const trimmed = value.trim();
-
-    if (trimmed.length < 3) {
+    if (this.value.length < 3) {
       throw new BadRequestError('Title must be at least 3 characters.');
     }
 
-    if (trimmed.length > 150) {
+    if (this.value.length > 150) {
       throw new BadRequestError('Title cannot exceed 150 characters.');
     }
   }

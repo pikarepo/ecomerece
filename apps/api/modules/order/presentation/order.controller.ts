@@ -2,6 +2,7 @@ import {
   createMyOrderDto,
   getAdminPaginatedOrdersQuerySchema,
   getMyOrdersQuerySchema,
+  getVendorPaginatedOrdersQuerySchema,
   orderReasonDto,
   updateOrderDto,
 } from '@ecomerece/shared';
@@ -45,6 +46,25 @@ export class OrderController extends BaseController<OrderApplicationService> {
     const data = await this.body(c, orderReasonDto);
     const actor = c.get('user');
     return this.ok(c, await this.service.cancelMyOrder(id, data, actor));
+  };
+
+  cancelAdminOrder = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, orderReasonDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.cancelAdminOrder(id, data, actor));
+  };
+
+  getVendorPaginatedOrders = async (c: Context) => {
+    const query = this.query(c, getVendorPaginatedOrdersQuerySchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.findVendorPaginatedOrders(query, actor));
+  };
+
+  getVendorOrderById = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.getVendorOrderById(id, actor));
   };
 
   confirmOrder = async (c: Context) => {

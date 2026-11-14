@@ -14,4 +14,3 @@ export abstract class EnumVO<T extends string> extends StringVO {
     return super.value as T;
   }
 }
-1;

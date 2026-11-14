@@ -20,4 +20,6 @@ export interface VerifyVariantsResult {
 export interface IProductVariantQueries {
   ensureActiveById(variantId: Id): Promise<EnsureActiveVariantResult>;
   verifyAndGet(ids: Id[]): Promise<VerifyVariantsResult>;
+  /** Non-deleted variant ids for the given products, for vendor-scoped listings. */
+  listVariantIdsByProductIds(productIds: Id[]): Promise<Id[]>;
 }

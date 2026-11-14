@@ -5,6 +5,7 @@ import type {
   IOrderItemsWriter,
   IProductQueries,
   IProductVariantQueries,
+  IVendorQueries,
 } from '@ecomerece/contracts';
 import type { UnitOfWork } from '../../core/database/unit-of-work';
 import type { Buses } from '../../core/infrastructure/buses/buses';
@@ -21,6 +22,7 @@ interface OrderModuleDeps extends Buses {
   addressQueries: IAddressQueries;
   variantQueries: IProductVariantQueries;
   productQueries: IProductQueries;
+  vendorQueries: IVendorQueries;
   unitOfWork: UnitOfWork;
 }
 
@@ -32,6 +34,7 @@ export function createOrder({
   addressQueries,
   variantQueries,
   productQueries,
+  vendorQueries,
   unitOfWork,
 }: OrderModuleDeps) {
   const orderRepo = new OrderRepository();
@@ -46,6 +49,7 @@ export function createOrder({
     orderItemsWriter,
     orderItemsQueries,
     unitOfWork,
+    vendorQueries,
   );
   const orderController = new OrderController(orderApplicationService);
   const queries = new OrderQueryAdapter(orderInternalService);

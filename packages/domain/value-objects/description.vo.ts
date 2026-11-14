@@ -3,15 +3,13 @@ import { StringVO } from './string-vo';
 
 export class Description extends StringVO {
   constructor(value: string) {
-    super(value);
+    super(value.trim());
 
-    const trimmed = value.trim();
-
-    if (trimmed.length < 10) {
+    if (this.value.length < 10) {
       throw new BadRequestError('Description must be at least 10 characters.');
     }
 
-    if (trimmed.length > 5000) {
+    if (this.value.length > 5000) {
       throw new BadRequestError('Description cannot exceed 5000 characters.');
     }
   }

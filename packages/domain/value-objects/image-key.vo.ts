@@ -1,4 +1,4 @@
-import { ImageInvalidKeyError } from '../errors/image-storage-errors';
+import { ImageInvalidKeyError } from '../errors/image-invalid-key.error';
 
 /**
  * Provider-neutral object key (folder path + file name).

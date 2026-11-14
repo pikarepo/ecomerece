@@ -6,6 +6,7 @@ import type {
   IOrderItemsWriter,
   IProductQueries,
   IProductVariantQueries,
+  IVendorQueries,
   OrderItemRestoreInput,
 } from '@ecomerece/contracts';
 import { OrderAggregate, type OrderItemFailureReason } from '@ecomerece/domain';
@@ -21,13 +22,14 @@ import type {
   createMyOrderDtoType,
   GetAdminPaginatedOrdersQueryDto,
   GetMyOrdersQueryDto,
+  GetVendorPaginatedOrdersQueryDto,
   orderReasonDtoType,
   updateOrderDtoType,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BaseService } from '../../../core/services/base.services';
-import { BadRequestError } from '../../../errors/app-error';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../../../errors/app-error';
 import { OrderMapper } from '../infrastructure/order.mapper';
 import type { OrderPersistence } from '../infrastructure/order.model';
 import type { OrderRepository } from '../infrastructure/order.repository';
@@ -104,8 +106,18 @@ export class OrderApplicationService extends BaseService {
     private readonly orderItemsWriter: IOrderItemsWriter,
     private readonly orderItemsQueries: IOrderItemsQueries,
     private readonly unitOfWork: UnitOfWork,
+    private readonly vendorQueries: IVendorQueries,
   ) {
     super();
+  }
+
+  /** Resolves the caller's verified vendor, or refuses the vendor-only action. */
+  private async resolveVendorId(actorId: Id): Promise<Id> {
+    const vendor = await this.vendorQueries.ensureActiveByUserId(actorId);
+    if (!vendor.vendor || !vendor.active) {
+      throw new ForbiddenError('You do not own an active vendor.');
+    }
+    return Id.create(vendor.vendor.id);
   }
 
   /**
@@ -573,6 +585,57 @@ export class OrderApplicationService extends BaseService {
     );
 
     return OrderMessages.orderCancelled(orderId, actorId, reason);
+  }
+
+  /** Admin: cancel any order, releasing its reserved stock. */
+  async cancelAdminOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.cancelOrder(reason, actorId),
+      (items) => this.orderItemsWriter.cancel(items),
+      () => 'release',
+    );
+
+    return OrderMessages.orderCancelled(orderId, actorId, reason);
+  }
+
+  /** Vendor: own non-deleted orders, i.e. those holding at least one of their items. */
+  async findVendorPaginatedOrders(query: GetVendorPaginatedOrdersQueryDto, actor: AuthActor) {
+    const vendorId = await this.resolveVendorId(Id.create(actor._id));
+    const vendorItems = await this.orderItemsQueries.getByVendorId(vendorId);
+    const orderIds = [...new Set(vendorItems.map((item) => item.orderId))];
+
+    const filter: FilterQuery<OrderPersistence> = {
+      _id: { $in: orderIds },
+      'deleted.deleted': false,
+    };
+    if (query.status) filter.status = query.status;
+
+    return this.paginateOrders(filter, query);
+  }
+
+  /** Vendor: one order they contribute to, with only their own item lines. */
+  async getVendorOrderById(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const vendorId = await this.resolveVendorId(Id.create(actor._id));
+    const order = await this.orderRepo.FindByIdOrThrow(orderId);
+    if (order.delete.isDeleted) throw new NotFoundError('Order not found.');
+
+    const items = await this.orderItemsQueries.getByOrderId(orderId);
+    const vendorItems = items.filter((item) => item.vendorId === vendorId.value);
+    if (vendorItems.length === 0) {
+      throw new ForbiddenError('This order does not contain your items.');
+    }
+
+    return {
+      order: OrderMapper.aggregateToResponseReadModel(order),
+      items: vendorItems,
+    };
   }
 
   async confirmOrder(id: string, actor: AuthActor) {

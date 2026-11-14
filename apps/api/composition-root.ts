@@ -66,11 +66,13 @@ export function createApplication() {
     addressQueries: address.queries,
     variantQueries: productVariant.queries,
     productQueries: product.queries,
+    vendorQueries: vendor.queries,
     unitOfWork,
   });
   const orderItems = createOrderItemsApplication({
     core: orderItemsCore,
     orderQueries: order.queries,
+    vendorQueries: vendor.queries,
     eventBus,
     unitOfWork,
   });

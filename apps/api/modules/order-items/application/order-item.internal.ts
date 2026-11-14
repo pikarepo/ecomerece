@@ -8,6 +8,7 @@ import type {
 import { type OrderItemReadModel, OrderItemsAggregate } from '@ecomerece/domain';
 import type { IEvent } from '@ecomerece/domain/events/event-bus.interface';
 import type { Id } from '@ecomerece/domain/value-objects/id.vo';
+import type { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import type { OrderItemResponseReadModel } from '@ecomerece/shared';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError } from '../../../errors/app-error';
@@ -67,6 +68,20 @@ export class OrderItemsInternalService extends BaseService {
     return this.transition(await this.loadItems(items), (item) => item.refund());
   }
 
+  async deleteOrderItem(itemId: Id, reason: Reason, actorId: Id): Promise<IEvent[]> {
+    const [item] = await this.loadItems([{ id: itemId }]);
+    item.deleteItem(reason, actorId);
+    await this.itemsRepo.Save(item);
+    return item.pullEvents();
+  }
+
+  async recoverOrderItem(itemId: Id, actorId: Id): Promise<IEvent[]> {
+    const [item] = await this.loadItems([{ id: itemId }]);
+    item.recoverItem(actorId);
+    await this.itemsRepo.Save(item);
+    return item.pullEvents();
+  }
+
   async updateOrderItems(items: OrderItemUpdateInput[]): Promise<IEvent[]> {
     const existingItems = await this.loadItems(items);
     const updateById = new Map(items.map((item) => [item.id.value, item]));
@@ -107,7 +122,12 @@ export class OrderItemsInternalService extends BaseService {
     return this.itemsRepo.FindResponseByOrderId(orderId);
   }
 
-  /** Rejected lines of an order, for a later fulfilment retry. */
+  /** Real (non-failed) lines for one vendor, used by vendor order views. */
+  async getOrderItemsByVendorId(vendorId: Id): Promise<OrderItemReadModel[]> {
+    const items = await this.itemsRepo.FindByVendorId(vendorId);
+    return items.map(OrderItemsMapper.aggregateToReadModel);
+  }
+
   async getFailedOrderItems(orderId: Id): Promise<OrderItemReadModel[]> {
     return this.itemsRepo.FindFailedReadModelsByOrderId(orderId);
   }

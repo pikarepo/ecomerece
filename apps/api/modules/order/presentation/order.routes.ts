@@ -49,6 +49,14 @@ export function createOrderRoutes(orderController: OrderController) {
     adminMiddleware,
     orderController.refundOrder,
   );
+  OrderRoutes.get('/vendor/all', authMiddleware, orderController.getVendorPaginatedOrders);
+  OrderRoutes.get('/vendor/:id', authMiddleware, orderController.getVendorOrderById);
+  OrderRoutes.post(
+    '/admin/:id/cancel',
+    authMiddleware,
+    adminMiddleware,
+    orderController.cancelAdminOrder,
+  );
   OrderRoutes.post('/cancel/my/:id', authMiddleware, orderController.cancelMyOrder);
   OrderRoutes.post('/retry-items/my/:id', authMiddleware, orderController.retryMyOrderItems);
   OrderRoutes.post('/retry-item/my/:id', authMiddleware, orderController.retryMyOrderItem);

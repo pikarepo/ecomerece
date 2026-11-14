@@ -10,6 +10,8 @@ export interface EnsureActiveVendorResult {
 /** Cross-module read port implemented by the vendor module. */
 export interface IVendorQueries {
   ensureActiveById(vendorId: Id): Promise<EnsureActiveVendorResult>;
+  /** Resolves the vendor owned by a user and reports whether it may act. */
+  ensureActiveByUserId(userId: Id): Promise<EnsureActiveVendorResult>;
   getByUserId(userId: Id): Promise<VendorReadModel | null>;
 }
 

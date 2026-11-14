@@ -1,6 +1,7 @@
 import type { desclaimerItem, Metrics } from '../../../shared';
 import { AggregateRoot } from '../../aggregate-root';
 import { BadRequestError } from '../../errors/app-error';
+import { emptyMetrics } from '../../shared/metrics';
 import {
   AppearanceVO,
   BlockInfoVO,
@@ -16,7 +17,6 @@ import {
   Title,
   type UrlVO,
 } from '../../value-objects';
-import { emptyMetrics } from '../stats/metrics';
 import { ProductBlockedEvent } from './events/product-blocked.event';
 import { ProductCreatedEvent } from './events/product-created.event';
 import { ProductDefaultImageSetEvent } from './events/product-default-image-set.event';
@@ -330,34 +330,40 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   makeProductPublic(): void {
+    this.ensureNotDeleted();
     if (this._appearance.isPublic) throw new BadRequestError('This product is already public.');
     this._appearance = this._appearance.makePublic();
     this.raise(new ProductMadePublicEvent({ productId: this._id }));
   }
 
   makeProductPrivate(): void {
+    this.ensureNotDeleted();
     if (this._appearance.isPrivate) throw new BadRequestError('This product is already private.');
     this._appearance = this._appearance.makePrivate();
     this.raise(new ProductMadePrivateEvent({ productId: this._id }));
   }
 
   updateMeta(title: Title, description: Description, actorId: Id): void {
+    this.ensureNotDeleted();
     this._title = title;
     this._description = description;
     this.raise(new ProductMetaUpdatedEvent({ productId: this._id, actorId }));
   }
 
   enableDisclaimer(actorId: Id) {
+    this.ensureNotDeleted();
     this._disclaimer = this._disclaimer.enable();
     this.raise(new ProductDisclaimerEnabledEvent({ productId: this._id, actorId }));
   }
 
   disableDisclaimer(actorId: Id) {
+    this.ensureNotDeleted();
     this._disclaimer = this._disclaimer.disable();
     this.raise(new ProductDisclaimerDisabledEvent({ productId: this._id, actorId }));
   }
 
   addDisclaimers(data: desclaimerItem[], actorId: Id) {
+    this.ensureNotDeleted();
     const items = data.map((value) => ({
       name: Name.create(value.name),
       title: Title.create(value.title),
@@ -372,6 +378,7 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   removeDisclaimers(data: desclaimerItem[], actorId: Id) {
+    this.ensureNotDeleted();
     const items = data.map((value) => ({
       name: Name.create(value.name),
       title: Title.create(value.title),
@@ -381,22 +388,26 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   updateDisclaimer(name: Name, title: Title, actorId: Id) {
+    this.ensureNotDeleted();
     this._disclaimer = this._disclaimer.update(name.value, title.value);
     this.raise(new ProductDisclaimerUpdatedEvent({ productId: this._id, actorId, name, title }));
   }
 
   addImages(images: ImageVO | ImageVO[], actorId: Id): void {
+    this.ensureNotDeleted();
     this._images = this._images.add(images);
     this.raise(new ProductImagesAddedEvent({ productId: this._id, actorId, images }));
   }
 
   removeImages(urls: UrlVO | UrlVO[], actorId: Id): void {
+    this.ensureNotDeleted();
     this._images = this._images.remove(urls);
     this.raise(new ProductImagesRemovedEvent({ productId: this._id, actorId, urls }));
   }
 
   setDefault(index: Quantity, actorId: Id) {
-    this._images.setDefault(index);
+    this.ensureNotDeleted();
+    this._images = this._images.setDefault(index);
     this.raise(new ProductDefaultImageSetEvent({ productId: this._id, actorId, index }));
   }
 
@@ -429,16 +440,19 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   enableIngredients(actorId: Id): void {
+    this.ensureNotDeleted();
     this._ingredients = this._ingredients.enable();
     this.raise(new ProductIngredientsEnabledEvent({ productId: this._id, actorId }));
   }
 
   disableIngredients(actorId: Id): void {
+    this.ensureNotDeleted();
     this._ingredients = this._ingredients.disable();
     this.raise(new ProductIngredientsDisabledEvent({ productId: this._id, actorId }));
   }
 
   addIngredients(items: string | string[], actorId: Id): void {
+    this.ensureNotDeleted();
     const ingredientList = Array.isArray(items) ? items : [items];
     const added: string[] = [];
 
@@ -452,6 +466,7 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   removeIngredients(items: string | string[], actorId: Id): void {
+    this.ensureNotDeleted();
     const ingredientList = Array.isArray(items) ? items : [items];
     const removed: string[] = [];
 
@@ -467,11 +482,18 @@ export class ProductAggregate extends AggregateRoot {
   }
 
   clearIngredients(actorId: Id): void {
+    this.ensureNotDeleted();
     this._ingredients = this._ingredients.clear();
     this.raise(new ProductIngredientsClearedEvent({ productId: this._id, actorId }));
   }
 
   hasIngredient(item: string): boolean {
     return this._ingredients.has(item);
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This product has been deleted.');
+    }
   }
 }

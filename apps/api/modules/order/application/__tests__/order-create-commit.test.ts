@@ -123,6 +123,7 @@ function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {
     orderItemsWriter as never,
     orderItemsQueries as never,
     unitOfWork as never,
+    {} as never,
   );
 
   return { service, calls, published, itemEvent, createdTotals, recordedFailures };

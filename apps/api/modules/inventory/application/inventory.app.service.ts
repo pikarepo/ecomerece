@@ -16,6 +16,7 @@ import type {
   createMyInventoryDtoType,
   DeleteInventoryDto,
   GetAdminPaginatedInventoryQueryDto,
+  GetVendorPaginatedInventoryQueryDto,
   InventoryResponseReadModel,
   removeMyInventoryStockDtoType,
   updateMylowStockThresholdDtoType,
@@ -23,7 +24,7 @@ import type {
 import type { FilterQuery } from 'mongoose';
 import type { idType } from '../../../../../packages/shared/dtos/id-schema';
 import { BaseService } from '../../../core/services/base.services';
-import { BadRequestError } from '../../../errors/app-error';
+import { BadRequestError, ForbiddenError } from '../../../errors/app-error';
 import { InventoryMapper } from '../infrastructure/inventory.mapper';
 import type { InventoryPersistence } from '../infrastructure/inventory.model';
 import type { InventoryReposityory } from '../infrastructure/inventory.repository';
@@ -57,6 +58,38 @@ export class InventoryApplicationService extends BaseService {
     if (events.length > 0) {
       await this.eventBus.publish(events);
     }
+  }
+
+  /** Resolves the caller's verified vendor, or refuses the vendor-only action. */
+  private async resolveVendorId(actorId: Id): Promise<Id> {
+    const vendor = await this.vendorQueries.ensureActiveByUserId(actorId);
+    if (!vendor.vendor || !vendor.active) {
+      throw new ForbiddenError('You do not own an active vendor.');
+    }
+    return Id.create(vendor.vendor.id);
+  }
+
+  /** Vendor: ids of every non-deleted variant under the vendor's products. */
+  private async variantIdsForVendor(vendorId: Id): Promise<Id[]> {
+    const productIds = await this.productQueries.listVendorProductIds(vendorId);
+    return this.variantQueries.listVariantIdsByProductIds(productIds);
+  }
+
+  /** Admin: the variant, its product and the product's vendor must all be live. */
+  private async assertVariantStockable(variantId: Id): Promise<void> {
+    const activeVariant = await this.variantQueries.ensureActiveById(variantId);
+    if (!activeVariant.variant) throw new BadRequestError('Variant not found.');
+    if (!activeVariant.active) throw new BadRequestError('Variant is not active.');
+
+    const productId = Id.create(activeVariant.variant.productId);
+    const activeProduct = await this.productQueries.ensureActiveById(productId);
+    if (!activeProduct.product) throw new BadRequestError('Product not found.');
+    if (!activeProduct.active) throw new BadRequestError('Product is not active.');
+
+    const vendorId = Id.create(activeProduct.product.vendorId);
+    const activeVendor = await this.vendorQueries.ensureActiveById(vendorId);
+    if (!activeVendor.vendor) throw new BadRequestError('Vendor not found.');
+    if (!activeVendor.active) throw new BadRequestError('Vendor is not active.');
   }
 
   async canActorEditInventory(variantId: Id, actorId: Id): Promise<void> {
@@ -190,6 +223,150 @@ export class InventoryApplicationService extends BaseService {
     const actorId = Id.create(actor._id);
     const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
     await this.canActorEditInventory(inventory.variantId, actorId);
+    inventory.deleteInventory(Reason.create(data.reason), actorId);
+    await this.inventoryRepo.Save(inventory);
+    await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, false, actorId);
+    return InventoryMessages.inventoryDeleted(inventoryId, actorId);
+  }
+
+  /** Vendor: inventory rows for the caller's own non-deleted variants. */
+  async findVendorPaginatedInventory(query: GetVendorPaginatedInventoryQueryDto, actor: AuthActor) {
+    const vendorId = await this.resolveVendorId(Id.create(actor._id));
+    const variantIds = await this.variantIdsForVendor(vendorId);
+    const filter: FilterQuery<InventoryPersistence> = {
+      variantId: { $in: variantIds.map((id) => id.value) },
+      'deleted.deleted': false,
+    };
+    if (query.inStock !== undefined) filter.inStock = query.inStock;
+    const cursor = query.cursor ? Id.create(query.cursor) : undefined;
+    const limit = query.limit ? Quantity.create(query.limit) : undefined;
+    const result = await this.inventoryRepo.FindPaginated({
+      filter,
+      cursor,
+      limit,
+      direction: query.direction,
+    });
+    return {
+      data: result.data.map((inventory) => InventoryMapper.aggregateToReadModel(inventory)),
+      meta: result.meta,
+    };
+  }
+
+  /** Vendor: one inventory row, after proving the caller owns its variant. */
+  async getVendorInventoryById(id: string, actor: AuthActor): Promise<InventoryResponseReadModel> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
+    await this.canActorEditInventory(inventory.variantId, actorId);
+    return InventoryMapper.aggregateToResponseReadModel(inventory);
+  }
+
+  /** Admin: create a stock row for any live variant, regardless of owner. */
+  async createInventory(
+    data: createMyInventoryDtoType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create();
+    const actorId = Id.create(actor._id);
+    const variantId = Id.create(data.variantId);
+    const lowStockThreshold = Quantity.create(data.lowStockThreshold);
+    const available = Quantity.create(data.available);
+    await this.assertVariantStockable(variantId);
+
+    const existing = await this.inventoryRepo.FindByVariantId(variantId);
+    if (existing) throw new BadRequestError('Inventory already exists for this variant.');
+
+    const inventory = InventoryAggregate.create({
+      id: inventoryId,
+      variantId,
+      lowStockThreshold,
+      available,
+    });
+    await this.inventoryRepo.Create(inventory);
+    await this.publishEvents(inventory);
+    await this.syncProductStock(variantId, available.value > 0, actorId);
+    const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
+    return InventoryMessages.inventoryCreated(inventoryId, actorId, inventoryReaponseReadModel);
+  }
+
+  /** Admin: restock any inventory row. */
+  async buyAdminInventoryStock(
+    data: buyMyInventoryStockDtoType,
+    id: idType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const quantity = Quantity.create(data.quantity);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
+    inventory.buy(quantity, actorId);
+    await this.inventoryRepo.Save(inventory);
+    await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, inventory.available.value > 0, actorId);
+    const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
+    return InventoryMessages.inventoryBought(
+      inventoryId,
+      quantity,
+      actorId,
+      inventoryReaponseReadModel,
+    );
+  }
+
+  /** Admin: remove stock from any inventory row. */
+  async removeAdminInventoryStock(
+    data: removeMyInventoryStockDtoType,
+    id: idType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const quantity = Quantity.create(data.quantity);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
+    inventory.removeStock(quantity, actorId);
+    await this.inventoryRepo.Save(inventory);
+    await this.publishEvents(inventory);
+    await this.syncProductStock(inventory.variantId, inventory.available.value > 0, actorId);
+    const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
+    return InventoryMessages.inventoryRemoved(
+      inventoryId,
+      quantity,
+      actorId,
+      inventoryReaponseReadModel,
+    );
+  }
+
+  /** Admin: change the low-stock threshold of any inventory row. */
+  async updateAdminLowStockThreshold(
+    data: updateMylowStockThresholdDtoType,
+    id: idType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const lowStockThreshold = Quantity.create(data.lowStockThreshold);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
+    inventory.updateLowStockThreshold(lowStockThreshold, actorId);
+    await this.inventoryRepo.Save(inventory);
+    await this.publishEvents(inventory);
+    const inventoryReaponseReadModel = InventoryMapper.aggregateToResponseReadModel(inventory);
+    return InventoryMessages.lowStockThresholdUpdated(
+      inventoryId,
+      lowStockThreshold,
+      actorId,
+      inventoryReaponseReadModel,
+    );
+  }
+
+  /** Admin: soft-delete any empty inventory row. */
+  async deleteAdminInventory(
+    data: DeleteInventoryDto,
+    id: idType,
+    actor: AuthActor,
+  ): Promise<inventoryMessagesType> {
+    const inventoryId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const inventory = await this.inventoryRepo.FindByIdOrThrow(inventoryId);
     inventory.deleteInventory(Reason.create(data.reason), actorId);
     await this.inventoryRepo.Save(inventory);
     await this.publishEvents(inventory);

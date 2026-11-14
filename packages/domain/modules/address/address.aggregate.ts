@@ -122,14 +122,13 @@ export class AddressAggregate extends AggregateRoot {
   }
 
   updateAddress(data: AddressVO, actorId: Id) {
-    if (actorId.value !== this.ownerId.value)
-      throw new BadRequestError('You can only update your own address.');
+    this.ensureOwnedBy(actorId, 'You can only update your own address.');
+    this.ensureNotDeleted();
     this._address = data;
     this.raise(new AddressUpdatedEvent({ addressId: this._id, ownerId: this._ownerId, actorId }));
   }
   deleteAddress(reason: Reason, actorId: Id) {
-    if (actorId.value !== this.ownerId.value)
-      throw new BadRequestError('You can only delete your own address.');
+    this.ensureOwnedBy(actorId, 'You can only delete your own address.');
     if (this._delete.isDeleted) throw new BadRequestError('This address has already been removed.');
     this._delete = DeleteInfoVO.create(actorId, reason);
     this.raise(
@@ -142,19 +141,35 @@ export class AddressAggregate extends AggregateRoot {
     );
   }
   recoverAddress(actorId: Id) {
+    this.ensureOwnedBy(actorId, 'You can only recover your own address.');
     if (!this._delete.isDeleted)
       throw new BadRequestError('This address has already been recovered.');
     this._delete = DeleteInfoVO.none();
     this.raise(new AddressRecoveredEvent({ addressId: this._id, ownerId: this._ownerId, actorId }));
   }
   setAsDefault(actorId: Id) {
-    if (actorId.value !== this.ownerId.value)
-      throw new BadRequestError('You can only set your own address as default.');
+    this.ensureOwnedBy(actorId, 'You can only set your own address as default.');
+    this.ensureNotDeleted();
+    if (this._defaultDate) {
+      throw new BadRequestError('This address is already the default address.');
+    }
     this._defaultDate = EffectiveDate.today();
     this.raise(new AddressSetAsDefaultEvent({ addressId: this._id, ownerId: this._ownerId }));
   }
 
   toString(): string {
     return this.fullAddress.toString();
+  }
+
+  private ensureOwnedBy(actorId: Id, message: string): void {
+    if (!this._ownerId.equals(actorId)) {
+      throw new BadRequestError(message);
+    }
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This address has been removed.');
+    }
   }
 }

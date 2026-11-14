@@ -68,6 +68,8 @@ export interface IOrderItemsWriter {
  */
 export interface IOrderItemsQueries {
   getByOrderId(orderId: Id): Promise<OrderItemReadModel[]>;
+  /** Real (non-failed) lines belonging to one vendor, across every order. */
+  getByVendorId(vendorId: Id): Promise<OrderItemReadModel[]>;
   /** Rejected lines only, so a caller can retry fulfilling them later. */
   getFailedByOrderId(orderId: Id): Promise<OrderItemReadModel[]>;
   /** One rejected line, for a single-line retry. */

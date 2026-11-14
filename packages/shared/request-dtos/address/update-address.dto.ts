@@ -6,7 +6,7 @@ export const updateMyAddressDto = z.object({
   city: nameSchema,
   state: nameSchema,
   postalCode: z
-    .string()
+    .string({ message: 'Postal code must be a string' })
     .min(1, 'Postal code is required')
     .max(10, 'Postal code must not exceed 10 characters'),
   country: nameSchema,

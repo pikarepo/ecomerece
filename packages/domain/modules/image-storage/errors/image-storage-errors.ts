@@ -14,11 +14,7 @@ export class ImageStorageError extends AppError {
   }
 }
 
-export class ImageInvalidKeyError extends ImageStorageError {
-  constructor(message = 'The image key is invalid.') {
-    super(message, 'IMAGE_STORAGE_INVALID_KEY', 400);
-  }
-}
+export { ImageInvalidKeyError } from '../../../errors/image-invalid-key.error';
 
 export class ImageNotFoundError extends ImageStorageError {
   constructor(message = 'The requested image was not found in storage.') {

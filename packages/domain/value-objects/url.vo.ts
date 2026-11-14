@@ -1,9 +1,15 @@
 import { BadRequestError } from '../errors/app-error';
 import { StringVO } from './string-vo';
 
+const MAX_URL_LENGTH = 2048;
+
 export class UrlVO extends StringVO {
   constructor(value: string) {
     super(value.trim());
+
+    if (this.value.length > MAX_URL_LENGTH) {
+      throw new BadRequestError('URL is too long.');
+    }
 
     const schemeMatch = this.value.match(/^([a-z][a-z0-9+\-.]*):/i);
     if (!schemeMatch) {
@@ -15,11 +21,25 @@ export class UrlVO extends StringVO {
       throw new BadRequestError('URL must use the HTTP or HTTPS protocol.');
     }
 
+    let parsed: URL;
     try {
-      new URL(this.value);
+      parsed = new URL(this.value);
     } catch {
       throw new BadRequestError('Invalid URL.');
     }
+
+    // `https://trusted.example@evil.example` visits evil.example; refuse it.
+    if (parsed.username || parsed.password) {
+      throw new BadRequestError('URL must not contain credentials.');
+    }
+  }
+
+  get hostname(): string {
+    return new URL(this.value).hostname;
+  }
+
+  get isHttps(): boolean {
+    return new URL(this.value).protocol === 'https:';
   }
 
   static create(url: string) {

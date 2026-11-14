@@ -1,7 +1,7 @@
 import type { ReadableStream } from 'node:stream/web';
+import type { ImageKey } from '../../../value-objects/image-key.vo';
 import type { BatchResult } from '../read-models/batch-result.read-model';
 import type { StoredImage } from '../read-models/stored-image.read-model';
-import type { ImageKey } from '../value-objects/image-key.vo';
 import type { ImageMetadata } from '../value-objects/image-metadata.vo';
 import type { ImageSource } from '../value-objects/image-source.vo';
 import type { ImageTransform } from '../value-objects/image-transform.vo';

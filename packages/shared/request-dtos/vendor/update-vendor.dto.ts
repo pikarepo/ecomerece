@@ -2,11 +2,15 @@ import { z } from 'zod';
 import { imageInputSchema } from '../../dtos';
 
 const vendorAddressSchema = z.object({
-  streetAddress: z.string().min(1, 'Street address is required'),
-  city: z.string().min(1, 'City is required'),
-  state: z.string().min(1, 'State is required'),
-  postalCode: z.string().min(1, 'Postal code is required'),
-  country: z.string().min(1, 'Country is required'),
+  streetAddress: z
+    .string({ message: 'Street address must be a string' })
+    .min(1, 'Street address is required'),
+  city: z.string({ message: 'City must be a string' }).min(1, 'City is required'),
+  state: z.string({ message: 'State must be a string' }).min(1, 'State is required'),
+  postalCode: z
+    .string({ message: 'Postal code must be a string' })
+    .min(1, 'Postal code is required'),
+  country: z.string({ message: 'Country must be a string' }).min(1, 'Country is required'),
 });
 
 /** Fields the store owner can edit about their own vendor profile. */
@@ -30,7 +34,7 @@ export const UpdateMyVendorMetaDtoSchema = z.object({
 });
 
 export const UpdateMyVendorContactDtoSchema = z.object({
-  phone: z.string().min(1, 'Phone number is required'),
+  phone: z.string({ message: 'Phone number must be a string' }).min(1, 'Phone number is required'),
   email: z.email({ message: 'Must be a valid email address' }),
   address: vendorAddressSchema,
 });

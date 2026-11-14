@@ -1,5 +1,5 @@
 import type { IProductRepository, ProductAggregate, Quantity } from '@ecomerece/domain';
-import type { Id } from '@ecomerece/domain/value-objects/id.vo';
+import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { FilterQuery } from 'mongoose';
 import { MongoRepository } from '../../../core/repository/mongo.repository';
 import { BadRequestError, ConcurrencyError, NotFoundError } from '../../../errors/app-error';
@@ -54,6 +54,14 @@ export class ProductRepository
     if (!doc) return null;
 
     return ProductMapper.persistenceToAggregate(doc);
+  }
+
+  async FindIdsByVendorId(id: Id): Promise<Id[]> {
+    const docs = await super.find({
+      vendorId: id.value,
+      'deleted.deleted': false,
+    });
+    return docs.map((doc) => Id.create(doc._id));
   }
 
   async FindByIdOrThrow(id: Id): Promise<ProductAggregate> {

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const descriptionSchema = z
   .string()
+  .trim()
   .min(10, 'Description must be at least 10 characters')
   .max(5000, 'Description must not exceed 5000 characters');
 export const optionalDescriptionSchema = descriptionSchema.optional();

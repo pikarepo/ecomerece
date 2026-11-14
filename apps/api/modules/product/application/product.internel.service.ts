@@ -20,6 +20,10 @@ export class ProductInternelService extends BaseService {
     return { product: ProductReadModel, active: true };
   }
 
+  async listVendorProductIds(vendorId: Id): Promise<Id[]> {
+    return this.productRepo.FindIdsByVendorId(vendorId);
+  }
+
   async verifyProductAndGet(ids: Id[]): Promise<{
     validIds: Id[];
     notFoundIds: Id[];

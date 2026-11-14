@@ -7,7 +7,10 @@ export const imagesDto = z.object({
 });
 
 export const deafultImageDto = z.object({
-  index: z.number().min(0, 'Index must be at least 0').max(3, 'Index must not exceed 3'),
+  index: z
+    .number({ message: 'Index must be a number' })
+    .min(0, 'Index must be at least 0')
+    .max(3, 'Index must not exceed 3'),
   productId: idSchema,
 });
 export type deafultImageDtoType = z.infer<typeof deafultImageDto>;

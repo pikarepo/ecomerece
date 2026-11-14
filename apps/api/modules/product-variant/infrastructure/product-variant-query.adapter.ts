@@ -17,4 +17,8 @@ export class ProductVariantQueryAdapter implements IProductVariantQueries {
   verifyAndGet(ids: Id[]): Promise<VerifyVariantsResult> {
     return this.internalService.verifyVariantsAndGet(ids);
   }
+
+  listVariantIdsByProductIds(productIds: Id[]): Promise<Id[]> {
+    return this.internalService.listVariantIdsByProductIds(productIds);
+  }
 }

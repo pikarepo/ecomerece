@@ -15,6 +15,7 @@ export * from './icon.vo';
 export * from './id.vo';
 export * from './identifier-vo';
 export * from './image.vo';
+export * from './image-key.vo';
 export * from './money.vo';
 export * from './name.vo';
 export * from './number.vo';

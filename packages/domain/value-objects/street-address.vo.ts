@@ -1,98 +1,106 @@
+import { BadRequestError } from '../errors/app-error';
 import { StringVO } from './string-vo';
 
+// Lengths are measured on the trimmed value so padding cannot bypass the limits.
 export class StreetAddressVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 5 || this.value.length > 200) {
+      throw new BadRequestError('Street address must be between 5 and 200 characters.');
+    }
   }
 
   static create(value: string): StreetAddressVO {
-    if (value.length < 5 || value.length > 200) {
-      throw new Error('Street address must be between 5 and 200 characters.');
-    }
-    return new StreetAddressVO(value.trim());
+    return new StreetAddressVO(value);
   }
   static rehydrate(value: string): StreetAddressVO {
-    return new StreetAddressVO(value.trim());
+    return new StreetAddressVO(value);
   }
 }
 
 export class CityVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 2 || this.value.length > 100) {
+      throw new BadRequestError('City must be between 2 and 100 characters.');
+    }
   }
 
   static create(value: string): CityVO {
-    if (value.length < 2 || value.length > 100) {
-      throw new Error('City must be between 2 and 100 characters.');
-    }
-    return new CityVO(value.trim());
+    return new CityVO(value);
   }
   static rehydrate(value: string): CityVO {
-    return new CityVO(value.trim());
+    return new CityVO(value);
   }
 }
 
 export class StateVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 2 || this.value.length > 100) {
+      throw new BadRequestError('State must be between 2 and 100 characters.');
+    }
   }
 
   static create(value: string): StateVO {
-    if (value.length < 2 || value.length > 100) {
-      throw new Error('State must be between 2 and 100 characters.');
-    }
-    return new StateVO(value.trim());
+    return new StateVO(value);
   }
   static rehydrate(value: string): StateVO {
-    return new StateVO(value.trim());
+    return new StateVO(value);
   }
 }
 
 export class PostalCodeVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 3 || this.value.length > 20) {
+      throw new BadRequestError('Postal code must be between 3 and 20 characters.');
+    }
   }
 
   static create(value: string): PostalCodeVO {
-    if (value.length < 3 || value.length > 20) {
-      throw new Error('Postal code must be between 3 and 20 characters.');
-    }
-    return new PostalCodeVO(value.trim());
+    return new PostalCodeVO(value);
   }
   static rehydrate(value: string): PostalCodeVO {
-    return new PostalCodeVO(value.trim());
+    return new PostalCodeVO(value);
   }
 }
 
 export class CountryVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 2 || this.value.length > 100) {
+      throw new BadRequestError('Country must be between 2 and 100 characters.');
+    }
   }
 
   static create(value: string): CountryVO {
-    if (value.length < 2 || value.length > 100) {
-      throw new Error('Country must be between 2 and 100 characters.');
-    }
-    return new CountryVO(value.trim());
+    return new CountryVO(value);
   }
   static rehydrate(value: string): CountryVO {
-    return new CountryVO(value.trim());
+    return new CountryVO(value);
   }
 }
 
 export class FullAddressVO extends StringVO {
-  protected override validate(value: string): void {
-    super.validate(value);
+  constructor(value: string) {
+    super(value.trim());
+
+    if (this.value.length < 10 || this.value.length > 500) {
+      throw new BadRequestError('Full address must be between 10 and 500 characters.');
+    }
   }
 
   static create(value: string): FullAddressVO {
-    if (value.length < 10 || value.length > 500) {
-      throw new Error('Full address must be between 10 and 500 characters.');
-    }
-    return new FullAddressVO(value.trim());
+    return new FullAddressVO(value);
   }
   static rehydrate(value: string): FullAddressVO {
-    return new FullAddressVO(value.trim());
+    return new FullAddressVO(value);
   }
 }
 export class AddressVO {

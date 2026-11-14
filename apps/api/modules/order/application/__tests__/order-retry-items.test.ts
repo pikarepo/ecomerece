@@ -138,6 +138,7 @@ function buildService(
     orderItemsWriter as never,
     orderItemsQueries as never,
     unitOfWork as never,
+    {} as never,
   );
 
   return { service, calls, published, savedTotals, quotes, itemEvent };

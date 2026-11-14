@@ -24,6 +24,10 @@ export class productVariantInternalService extends BaseService {
       return { variant: productVariantMapper.aggregateToReadModel(variant), active: false };
     return { variant: productVariantMapper.aggregateToReadModel(variant), active: true };
   }
+  async listVariantIdsByProductIds(productIds: Id[]): Promise<Id[]> {
+    return this.variantRepo.FindIdsByProductIds(productIds);
+  }
+
   async verifyVariantsAndGet(ids: Id[]): Promise<{
     validIds: Id[];
     notFoundIds: Id[];

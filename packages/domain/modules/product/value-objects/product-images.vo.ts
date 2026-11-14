@@ -9,11 +9,11 @@ export class ImagesVO {
       throw new BadRequestError('At least one product image is required.');
     }
 
-    return new ImagesVO(images);
+    return new ImagesVO(Object.freeze([...images]));
   }
 
   static rehydrate(images: ImageVO[]): ImagesVO {
-    return new ImagesVO(images);
+    return new ImagesVO(Object.freeze([...images]));
   }
 
   get value(): readonly ImageVO[] {
@@ -32,15 +32,16 @@ export class ImagesVO {
     return this._images[0];
   }
 
-  setDefault(index: Quantity) {
-    const length = this._images.length;
-    if (!(index.value < length - 1) && index.value !== length - 1)
+  setDefault(index: Quantity): ImagesVO {
+    if (index.value >= this._images.length) {
       throw new BadRequestError('The selected image does not exist in this product.');
-    for (let i = 0; i <= length - 1; i++) {
-      this._images[i].setDefault(false);
     }
 
-    return this._images[index.value].setDefault(true);
+    const images = this._images.map((image, position) =>
+      image.setDefault(position === index.value),
+    );
+
+    return ImagesVO.rehydrate(images);
   }
 
   last(): ImageVO | undefined {

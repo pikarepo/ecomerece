@@ -21,6 +21,47 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
   );
   OrderItemsRoutes.post('/cancel/my', authMiddleware, orderItemsController.cancelMyOrderItems);
 
+  OrderItemsRoutes.get(
+    '/vendor/all',
+    authMiddleware,
+    orderItemsController.getVendorPaginatedOrderItems,
+  );
+  OrderItemsRoutes.get('/vendor/:id', authMiddleware, orderItemsController.getVendorOrderItemById);
+  OrderItemsRoutes.patch('/vendor/:id', authMiddleware, orderItemsController.updateVendorOrderItem);
+  OrderItemsRoutes.post(
+    '/vendor/:id/confirm',
+    authMiddleware,
+    orderItemsController.vendorConfirmOrderItem,
+  );
+  OrderItemsRoutes.post(
+    '/vendor/:id/complete',
+    authMiddleware,
+    orderItemsController.vendorCompleteOrderItem,
+  );
+  OrderItemsRoutes.post(
+    '/vendor/:id/return',
+    authMiddleware,
+    orderItemsController.vendorReturnOrderItem,
+  );
+  OrderItemsRoutes.post(
+    '/vendor/:id/refund',
+    authMiddleware,
+    orderItemsController.vendorRefundOrderItem,
+  );
+
+  OrderItemsRoutes.delete(
+    '/admin/:id',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.deleteOrderItem,
+  );
+  OrderItemsRoutes.post(
+    '/admin/:id/recover',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.recoverOrderItem,
+  );
+
   OrderItemsRoutes.patch(
     '/admin/:id',
     authMiddleware,

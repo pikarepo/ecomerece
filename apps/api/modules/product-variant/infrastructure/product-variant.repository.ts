@@ -3,7 +3,7 @@ import type {
   ProductVariantAggregate,
   Quantity,
 } from '@ecomerece/domain';
-import type { Id } from '@ecomerece/domain/value-objects/id.vo';
+import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import type { FilterQuery } from 'mongoose';
 import { MongoRepository } from '../../../core/repository/mongo.repository';
 import { BadRequestError, ConcurrencyError } from '../../../errors/app-error';
@@ -22,6 +22,16 @@ export class ProductVariantRepository
     const doc = await super.findById(id.value);
     if (!doc) return null;
     return productVariantMapper.persistenceToAggregate(doc);
+  }
+
+  async FindIdsByProductIds(productIds: Id[]): Promise<Id[]> {
+    if (productIds.length === 0) return [];
+
+    const docs = await super.find({
+      productId: { $in: productIds.map((id) => id.value) },
+      'deleted.deleted': false,
+    });
+    return docs.map((doc) => Id.create(doc._id));
   }
 
   async FindByIds(id: Id[]): Promise<ProductVariantAggregate[]> {

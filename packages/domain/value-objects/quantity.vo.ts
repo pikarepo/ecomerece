@@ -1,3 +1,4 @@
+import { BadRequestError } from '../errors/app-error';
 import { NumberVO } from './number.vo';
 
 export class Quantity extends NumberVO {
@@ -5,7 +6,7 @@ export class Quantity extends NumberVO {
     super(value);
 
     if (value < 0) {
-      throw new Error('Quantity cannot be negative.');
+      throw new BadRequestError('Quantity cannot be negative.');
     }
   }
 
@@ -14,8 +15,12 @@ export class Quantity extends NumberVO {
   }
 
   decrease(amount: number): Quantity {
+    if (amount < 0) {
+      throw new BadRequestError('Amount cannot be negative.');
+    }
+
     if (amount > this.value) {
-      throw new Error('Insufficient quantity.');
+      throw new BadRequestError('Insufficient quantity.');
     }
 
     return new Quantity(this.value - amount);
@@ -37,5 +42,9 @@ export class Quantity extends NumberVO {
 
   get isZero(): boolean {
     return this.value === 0;
+  }
+
+  get isPositive(): boolean {
+    return this.value > 0;
   }
 }

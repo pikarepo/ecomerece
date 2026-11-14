@@ -1,3 +1,4 @@
+import { BadRequestError } from '../errors/app-error';
 import { EffectiveDate } from './effective-date.vo';
 import type { Id } from './id.vo';
 import type { Reason } from './reason.vo';
@@ -21,11 +22,12 @@ export class BlockInfoVO {
     return new BlockInfoVO(null, false, null, null);
   }
 
-  static create(
-    blockedBy: Id | null,
+  static create(blockedBy: Id | null, blockedReason: Reason | null) {
+    // A blocked record without an actor or reason would be unauditable.
+    if (!blockedBy || !blockedReason) {
+      throw new BadRequestError('Block information requires an actor and a reason.');
+    }
 
-    blockedReason: Reason | null,
-  ) {
     return new BlockInfoVO(blockedBy, true, EffectiveDate.today(), blockedReason);
   }
 

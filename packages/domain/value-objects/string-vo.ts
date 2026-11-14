@@ -1,7 +1,9 @@
+import { BadRequestError } from '../errors/app-error';
+
 export abstract class StringVO {
   protected static defaultValidate(value: string): void {
     if (!value.trim()) {
-      throw new Error('Value cannot be empty.');
+      throw new BadRequestError('Value cannot be empty.');
     }
   }
 
@@ -19,6 +21,11 @@ export abstract class StringVO {
 
   equals(other: StringVO): boolean {
     return this.value === other.value;
+  }
+
+  // Plain objects are common in events/tests; keep equality value-based on both shapes.
+  valueOf(): string {
+    return this.value;
   }
 
   contains(text: string): boolean {

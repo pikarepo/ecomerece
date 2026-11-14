@@ -8,13 +8,24 @@ export const ProductImageDto = z.object({
 });
 
 export const DisclaimerDto = z.object({
-  name: z.string().trim().min(1, 'Disclaimer name is required'),
-  title: z.string().trim().min(1, 'Disclaimer title is required'),
+  name: z
+    .string({ message: 'Disclaimer name must be a string' })
+    .trim()
+    .min(1, 'Disclaimer name is required'),
+  title: z
+    .string({ message: 'Disclaimer title must be a string' })
+    .trim()
+    .min(1, 'Disclaimer title is required'),
 });
 
 export const IngredientDto = z.object({
   isIngredients: booleanSchema,
-  ingredients: z.array(z.string().trim().min(1, 'Ingredient name is required')),
+  ingredients: z.array(
+    z
+      .string({ message: 'Ingredient name must be a string' })
+      .trim()
+      .min(1, 'Ingredient name is required'),
+  ),
 });
 
 export const DisclaimerInfoDto = z.object({
@@ -30,7 +41,10 @@ export const CreateMyProductDtoSchema = z.object({
   title: titleSchema,
   categoryId: idSchema,
   appearance: z.enum(['public', 'private'], { message: 'Appearance must be public or private' }),
-  description: z.string().trim().min(1, 'Description is required'),
+  description: z
+    .string({ message: 'Description must be a string' })
+    .trim()
+    .min(1, 'Description is required'),
   ingredient: IngredientDto,
   disclaimer: DisclaimerInfoDto,
   image: ImageInfoDto,

@@ -39,6 +39,11 @@ export class OrderItemsRepository
     return docs.map(OrderItemsMapper.persistenceToAggregate);
   }
 
+  async FindByVendorId(vendorId: Id): Promise<OrderItemsAggregate[]> {
+    const docs = await super.find({ vendorId: vendorId.value, ...VALID_LINE });
+    return docs.map(OrderItemsMapper.persistenceToAggregate);
+  }
+
   async FindById(id: Id): Promise<OrderItemsAggregate | null> {
     const doc = await super.findById(id.value);
     if (!doc || doc.failureReason) return null;
@@ -100,8 +105,17 @@ export class OrderItemsRepository
     return docs.map(OrderItemsMapper.persistenceToReadModel);
   }
 
+  /**
+   * Drops `version` from the payload: `$inc` owns it on update, and MongoDB
+   * rejects `$set` + `$inc` on the same path.
+   */
+  private toUpdatePayload(item: OrderItemsAggregate) {
+    const { version: _version, ...data } = OrderItemsMapper.aggregateToPersistence(item);
+    return data;
+  }
+
   async Save(item: OrderItemsAggregate): Promise<void> {
-    const data = OrderItemsMapper.aggregateToPersistence(item);
+    const data = this.toUpdatePayload(item);
     const result = await super.updateOne(
       {
         _id: item.id.value,
@@ -122,7 +136,7 @@ export class OrderItemsRepository
     if (items.length === 0) return;
     const bulkOps = [];
     for (const item of items) {
-      const data = OrderItemsMapper.aggregateToPersistence(item);
+      const data = this.toUpdatePayload(item);
       bulkOps.push({
         updateOne: {
           filter: {
@@ -136,7 +150,7 @@ export class OrderItemsRepository
         },
       });
     }
-    const result = await super.updateMany(bulkOps, { ordered: false });
+    const result = await this.bulkWrite(bulkOps, { ordered: false });
 
     if (result.modifiedCount !== items.length)
       throw new ConcurrencyError('One or more items were concurrently modified.');

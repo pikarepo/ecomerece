@@ -119,6 +119,7 @@ export class ProductVariantAggregate extends AggregateRoot {
   }
 
   updateMeta(title: Title, actorId: Id) {
+    this.ensureNotDeleted();
     this._title = title;
     this.raise(
       new ProductVariantMetaUpdatedEvent({
@@ -130,6 +131,7 @@ export class ProductVariantAggregate extends AggregateRoot {
   }
 
   activate(actorId: Id) {
+    this.ensureNotDeleted();
     if (this._active === true) throw new BadRequestError('This variant is already active.');
     this._active = true;
     this.raise(
@@ -141,6 +143,7 @@ export class ProductVariantAggregate extends AggregateRoot {
     );
   }
   deActivate(actorId: Id) {
+    this.ensureNotDeleted();
     if (this._active === false) throw new BadRequestError('This variant is already inactive.');
     this._active = false;
     this.raise(
@@ -153,8 +156,11 @@ export class ProductVariantAggregate extends AggregateRoot {
   }
 
   updatePrice(price: Money, discountedPrice: Money, actorId: Id) {
-    if (price < discountedPrice)
+    this.ensureNotDeleted();
+    // Compare values: relational operators on objects would compare references.
+    if (price.value < discountedPrice.value) {
       throw new BadRequestError('The discount must be lower than the actual price.');
+    }
     this._price = price;
     this._discountedPrice = discountedPrice;
     this.raise(
@@ -195,5 +201,11 @@ export class ProductVariantAggregate extends AggregateRoot {
         actorId,
       }),
     );
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This product variant has been deleted.');
+    }
   }
 }

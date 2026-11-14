@@ -1,5 +1,12 @@
+import { BadRequestError } from '../errors/app-error';
+
 export abstract class NumberVO {
-  constructor(protected readonly _value: number) {}
+  constructor(protected readonly _value: number) {
+    // NaN/Infinity would silently poison prices, stock and pagination limits.
+    if (typeof _value !== 'number' || !Number.isFinite(_value)) {
+      throw new BadRequestError('Value must be a finite number.');
+    }
+  }
 
   get value(): number {
     return this._value;

@@ -5,7 +5,7 @@ export class ImageVO {
   private constructor(
     readonly url: UrlVO,
     readonly alt: AltVO,
-    public isDefault: boolean,
+    readonly isDefault: boolean,
     readonly imageKey?: string,
   ) {}
 
@@ -16,8 +16,9 @@ export class ImageVO {
   static rehydrate(url: UrlVO, alt: AltVO, isDefault: boolean, imageKey?: string): ImageVO {
     return new ImageVO(url, alt, isDefault ?? false, imageKey);
   }
-  setDefault(val: boolean) {
-    this.isDefault = val;
+
+  setDefault(val: boolean): ImageVO {
+    return new ImageVO(this.url, this.alt, val, this.imageKey);
   }
 
   equals(other: ImageVO): boolean {

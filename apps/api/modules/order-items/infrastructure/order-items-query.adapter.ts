@@ -11,6 +11,10 @@ export class OrderItemsQueryAdapter implements IOrderItemsQueries {
     return this.internalService.getOrderItemsByOrderId(orderId);
   }
 
+  getByVendorId(vendorId: Id): Promise<OrderItemReadModel[]> {
+    return this.internalService.getOrderItemsByVendorId(vendorId);
+  }
+
   getFailedByOrderId(orderId: Id): Promise<OrderItemReadModel[]> {
     return this.internalService.getFailedOrderItems(orderId);
   }

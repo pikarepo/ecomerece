@@ -1,3 +1,4 @@
+import { BadRequestError } from '../errors/app-error';
 import { NumberVO } from './number.vo';
 
 export class Money extends NumberVO {
@@ -5,7 +6,7 @@ export class Money extends NumberVO {
     super(amount);
 
     if (amount < 0) {
-      throw new Error('Money cannot be negative.');
+      throw new BadRequestError('Money cannot be negative.');
     }
   }
 

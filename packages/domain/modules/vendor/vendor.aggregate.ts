@@ -159,8 +159,11 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   verifyVendor(actor: Id) {
-    if (this._ownerId === actor) throw new BadRequestError('You cannot verify your own vendor.');
-    if (this._delete.isDeleted) throw new BadRequestError('An inactive vendor cannot be verified.');
+    this.ensureActive();
+    // Ids are values: reference equality would let an owner verify their own vendor.
+    if (this._ownerId.equals(actor)) {
+      throw new BadRequestError('You cannot verify your own vendor.');
+    }
     this._verification = this._verification.verify(EffectiveDate.today());
     this.raise(
       new VendorVerifiedEvent({
@@ -172,8 +175,10 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   rejectVerification(actor: Id, reason: Reason) {
-    if (this._ownerId === actor)
+    this.ensureActive();
+    if (this._ownerId.equals(actor)) {
       throw new BadRequestError('You cannot reject the verification of your own vendor.');
+    }
     this._verification = this._verification.reject(reason);
     this.raise(
       new VendorVerificationRejectedEvent({
@@ -185,12 +190,14 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   updateImage(logo: UrlVO, banner: UrlVO, logoKey?: string, bannerKey?: string) {
+    this.ensureActive();
     this._image = this._image.changeBanner(banner, bannerKey);
     this._image = this.image.changeLogo(logo, logoKey);
     this.raise(new VendorImageUpdatedEvent({ vendorId: this._id, ownerId: this._ownerId }));
   }
 
   updateContact(phone: PhoneNumber, email: EmailVO, address: AddressVO) {
+    this.ensureActive();
     this._contact = this._contact.changePhone(phone);
     this._contact = this._contact.changeEmail(email);
     this._contact = this._contact.changeAddress(address);
@@ -198,6 +205,7 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   updatedMeta(title: Title, slug: Slug, description: Description): void {
+    this.ensureActive();
     this._title = Title.create(title.value);
     this._slug = Slug.create(slug.value);
     this._description = Description.create(description.value);
@@ -217,7 +225,12 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   recoverVendor(actor: Id) {
-    if (this._ownerId === actor) throw new BadRequestError('You cannot recover your own vendor.');
+    if (!this._delete.isDeleted) {
+      throw new BadRequestError('This vendor is not deleted.');
+    }
+    if (this._ownerId.equals(actor)) {
+      throw new BadRequestError('You cannot recover your own vendor.');
+    }
     this._delete = DeleteInfoVO.none();
     this.raise(
       new VendorRecoverEvent({
@@ -228,8 +241,7 @@ export class VendorAggregate extends AggregateRoot {
   }
 
   setStatsRefreshEnabled(enabled: boolean) {
-    if (this._delete.isDeleted)
-      throw new BadRequestError('An inactive vendor cannot change stats refresh settings.');
+    this.ensureActive();
     this.raise(
       new VendorStatsRefreshToggledEvent({
         vendorId: this._id,
@@ -238,5 +250,11 @@ export class VendorAggregate extends AggregateRoot {
       }),
     );
     this._statsRefreshEnabled = enabled;
+  }
+
+  private ensureActive(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This vendor is deleted.');
+    }
   }
 }

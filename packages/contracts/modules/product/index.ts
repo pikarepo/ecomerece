@@ -21,6 +21,8 @@ export interface VerifyProductsResult {
 export interface IProductQueries {
   ensureActiveById(productId: Id): Promise<EnsureActiveProductResult>;
   verifyAndGet(ids: Id[]): Promise<VerifyProductsResult>;
+  /** Non-deleted product ids owned by a vendor, for vendor-scoped listings. */
+  listVendorProductIds(vendorId: Id): Promise<Id[]>;
 }
 
 export interface ProductPriceRange {

@@ -8,7 +8,7 @@ export const createMyOrderDto = z.object({
    * All-or-nothing: when true, any rejected line aborts the whole order.
    * When false, rejected lines are stored with a failure reason and no cost.
    */
-  safeOrder: z.boolean().default(false),
+  safeOrder: z.boolean({ message: 'safeOrder must be a boolean' }).default(false),
   waitingTime: z.coerce.date({ message: 'Must be a valid date' }),
   items: z
     .array(

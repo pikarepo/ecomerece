@@ -5,12 +5,12 @@ import {
   DeleteInfoVO,
   EffectiveDate,
   type Id,
+  type ImageKey,
   Quantity,
   type Reason,
   type Title,
   type UrlVO,
 } from '../../value-objects';
-import type { ImageKey } from '../image-storage/value-objects/image-key.vo';
 import { CategoryBlockedEvent } from './events/category-blocked.event';
 import { CategoryCreatedEvent } from './events/category-created.event';
 import { CategoryDeletedEvent } from './events/category-deleted.event';
@@ -113,26 +113,35 @@ export class CategoryAggregate extends AggregateRoot {
   }
 
   updateMeta(title: Title, actorId: Id) {
+    this.ensureNotDeleted();
     this._title = title;
     this.raise(new CategoryMetaUpdatedEvent({ categoryId: this._id, actorId }));
   }
   updateImage(image: UrlVO, imageKey?: ImageKey) {
+    this.ensureNotDeleted();
     this._image = image;
     this._imageKey = imageKey;
     this.raise(new CategoryImageUpdatedEvent({ categoryId: this._id, image }));
   }
 
   deleteCategory(reason: Reason, actorId: Id) {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This category has already been deleted.');
+    }
     this._delete = DeleteInfoVO.create(actorId, reason);
     this.raise(
       new CategoryDeletedEvent({ categoryId: this._id, actorId, deletionInfo: this._delete }),
     );
   }
   recoverCategory(actorId: Id) {
+    if (!this._delete.isDeleted) {
+      throw new BadRequestError('This category has not been deleted.');
+    }
     this._delete = DeleteInfoVO.none();
     this.raise(new CategoryRecoveredEvent({ categoryId: this._id, actorId }));
   }
   blockCategory(reason: Reason, actorId: Id) {
+    this.ensureNotDeleted();
     if (this._block.isBlocked) {
       throw new BadRequestError('Category is already blocked.');
     }
@@ -141,10 +150,17 @@ export class CategoryAggregate extends AggregateRoot {
   }
 
   unblockCategory(actorId: Id) {
+    this.ensureNotDeleted();
     if (!this._block.isBlocked) {
       throw new BadRequestError('Category is not blocked.');
     }
     this._block = BlockInfoVO.none();
     this.raise(new CategoryUnblockedEvent({ categoryId: this._id, actorId }));
+  }
+
+  private ensureNotDeleted(): void {
+    if (this._delete.isDeleted) {
+      throw new BadRequestError('This category has been deleted.');
+    }
   }
 }

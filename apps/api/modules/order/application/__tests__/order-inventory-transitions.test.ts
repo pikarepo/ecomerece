@@ -125,6 +125,7 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
     orderItemsWriter as never,
     orderItemsQueries as never,
     unitOfWork as never,
+    {} as never,
   );
 
   return { service, calls, published, inventoryLines };

@@ -1,4 +1,4 @@
-import type { ImageKey } from '../value-objects/image-key.vo';
+import type { ImageKey } from '../../../value-objects/image-key.vo';
 import type { ImageMetadata } from '../value-objects/image-metadata.vo';
 
 /**

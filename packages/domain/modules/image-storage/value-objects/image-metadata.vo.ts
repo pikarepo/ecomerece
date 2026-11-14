@@ -1,4 +1,4 @@
-import type { ImageKey } from './image-key.vo';
+import type { ImageKey } from '../../../value-objects/image-key.vo';
 
 export interface ImageMetadataProps {
   key: ImageKey;

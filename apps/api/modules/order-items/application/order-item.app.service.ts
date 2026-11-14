@@ -1,12 +1,15 @@
-import type { AuthActor, IOrderQueries } from '@ecomerece/contracts';
+import type { AuthActor, IOrderQueries, IVendorQueries } from '@ecomerece/contracts';
 import type { IEvent, IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import { ExpirationDate } from '@ecomerece/domain/value-objects/expiration-date.vo';
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
+import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import type {
   CancelMyOrderItemsDto,
+  DeleteOrderItemDto,
   GetAdminPaginatedOrderItemsQueryDto,
+  GetVendorPaginatedOrderItemsQueryDto,
   UpdateOrderItemDto,
 } from '@ecomerece/shared';
 import type { FilterQuery } from 'mongoose';
@@ -31,10 +34,29 @@ export class OrderItemsApplicationService extends BaseService {
     private readonly itemsInternalService: OrderItemsInternalService,
     private readonly itemsRepo: OrderItemsRepository,
     private readonly orderQueries: IOrderQueries,
+    private readonly vendorQueries: IVendorQueries,
     private readonly eventBus: IEventBus,
     private readonly unitOfWork: UnitOfWork,
   ) {
     super();
+  }
+
+  /** Resolves the caller's verified vendor, or refuses the vendor-only action. */
+  private async resolveVendorId(actorId: Id): Promise<Id> {
+    const vendor = await this.vendorQueries.ensureActiveByUserId(actorId);
+    if (!vendor.vendor || !vendor.active) {
+      throw new ForbiddenError('You do not own an active vendor.');
+    }
+    return Id.create(vendor.vendor.id);
+  }
+
+  /** Throws unless the item exists and belongs to the caller's vendor. */
+  private async assertVendorOwnsItem(itemId: Id, vendorId: Id): Promise<void> {
+    const item = await this.itemsRepo.FindReadModelById(itemId);
+    if (!item) throw new NotFoundError('Order item not found.');
+    if (item.vendorId !== vendorId.value) {
+      throw new ForbiddenError('This order item does not belong to your vendor.');
+    }
   }
 
   /** Throws unless the order exists, is active, and belongs to `actorId`. */
@@ -117,6 +139,65 @@ export class OrderItemsApplicationService extends BaseService {
     };
   }
 
+  /** Vendor: non-deleted items belonging to the caller's own vendor. */
+  async findVendorPaginatedOrderItems(
+    query: GetVendorPaginatedOrderItemsQueryDto,
+    actor: AuthActor,
+  ) {
+    const vendorId = await this.resolveVendorId(Id.create(actor._id));
+    const filter: FilterQuery<OrderItemsPersistence> = {
+      vendorId: vendorId.value,
+      'deleted.deleted': false,
+    };
+    if (query.orderId) filter.orderId = Id.create(query.orderId).value;
+    if (query.status) filter.status = query.status;
+    const cursor = query.cursor ? Id.create(query.cursor) : undefined;
+    const limit = query.limit ? Quantity.create(query.limit) : undefined;
+
+    const result = await this.itemsRepo.FindPaginated({
+      filter,
+      cursor,
+      limit,
+      direction: query.direction,
+    });
+    return {
+      data: result.data,
+      meta: result.meta,
+    };
+  }
+
+  /** Vendor: one of their own items, scoped by the verified vendor id. */
+  async getVendorOrderItemById(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    const vendorId = await this.resolveVendorId(Id.create(actor._id));
+    await this.assertVendorOwnsItem(itemId, vendorId);
+    const item = await this.itemsRepo.FindResponseById(itemId);
+    if (!item) throw new NotFoundError('Order item not found.');
+    return item;
+  }
+
+  /** Vendor: update quantity / waiting time / price of an item they own. */
+  async updateVendorOrderItem(id: string, data: UpdateOrderItemDto, actor: AuthActor) {
+    const itemId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const vendorId = await this.resolveVendorId(actorId);
+    await this.assertVendorOwnsItem(itemId, vendorId);
+
+    const update = {
+      id: itemId,
+      quantity: Quantity.create(data.quantity),
+      waitingTime: ExpirationDate.create(data.waitingTime),
+      price: Money.create(data.price),
+    };
+
+    const events = await this.unitOfWork.transaction(() =>
+      this.itemsInternalService.updateOrderItems([update]),
+    );
+    if (events.length > 0) await this.eventBus.publish(events);
+
+    return OrderItemsMessages.orderItemUpdated(itemId, actorId);
+  }
+
   /** Admin: update quantity / waiting time / price of one item. */
   async updateOrderItem(id: string, data: UpdateOrderItemDto, actor: AuthActor) {
     const itemId = Id.create(id);
@@ -178,5 +259,85 @@ export class OrderItemsApplicationService extends BaseService {
       (items) => this.itemsInternalService.refundOrderItems(items),
       'refunded',
     );
+  }
+
+  /** Runs a vendor transition only after proving the item is theirs. */
+  private async vendorTransitionOne(
+    itemId: Id,
+    actor: AuthActor,
+    run: (items: { id: Id }[]) => Promise<IEvent[]>,
+    status: string,
+  ) {
+    const actorId = Id.create(actor._id);
+    const vendorId = await this.resolveVendorId(actorId);
+    await this.assertVendorOwnsItem(itemId, vendorId);
+    return this.transitionOne(itemId, actorId, run, status);
+  }
+
+  vendorConfirmOrderItem(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    return this.vendorTransitionOne(
+      itemId,
+      actor,
+      (items) => this.itemsInternalService.confirmOrderItems(items),
+      'confirmed',
+    );
+  }
+
+  vendorCompleteOrderItem(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    return this.vendorTransitionOne(
+      itemId,
+      actor,
+      (items) => this.itemsInternalService.completeOrderItems(items),
+      'completed',
+    );
+  }
+
+  vendorReturnOrderItem(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    return this.vendorTransitionOne(
+      itemId,
+      actor,
+      (items) => this.itemsInternalService.returnOrderItems(items),
+      'returned',
+    );
+  }
+
+  vendorRefundOrderItem(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    return this.vendorTransitionOne(
+      itemId,
+      actor,
+      (items) => this.itemsInternalService.refundOrderItems(items),
+      'refunded',
+    );
+  }
+
+  /** Admin: soft-delete any item, keeping its row for recovery. */
+  async deleteOrderItem(id: string, data: DeleteOrderItemDto, actor: AuthActor) {
+    const itemId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    const events = await this.unitOfWork.transaction(() =>
+      this.itemsInternalService.deleteOrderItem(itemId, reason, actorId),
+    );
+    if (events.length > 0) await this.eventBus.publish(events);
+
+    return OrderItemsMessages.orderItemDeleted(itemId, actorId, reason);
+  }
+
+  /** Admin: restore a soft-deleted item. */
+  async recoverOrderItem(id: string, actor: AuthActor) {
+    const itemId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    const events = await this.unitOfWork.transaction(() =>
+      this.itemsInternalService.recoverOrderItem(itemId, actorId),
+    );
+    if (events.length > 0) await this.eventBus.publish(events);
+
+    return OrderItemsMessages.orderItemRecovered(itemId, actorId);
   }
 }

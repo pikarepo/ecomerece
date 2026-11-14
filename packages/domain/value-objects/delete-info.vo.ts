@@ -1,3 +1,4 @@
+import { BadRequestError } from '../errors/app-error';
 import { EffectiveDate } from './effective-date.vo';
 import type { Id } from './id.vo';
 import type { Reason } from './reason.vo';
@@ -11,7 +12,11 @@ export class DeleteInfoVO {
   ) {}
 
   static create(deletedBy: Id, reason: Reason) {
-    return new DeleteInfoVO(deletedBy, true, new EffectiveDate(new Date()), reason);
+    if (!deletedBy || !reason) {
+      throw new BadRequestError('Delete information requires an actor and a reason.');
+    }
+
+    return new DeleteInfoVO(deletedBy, true, EffectiveDate.today(), reason);
   }
 
   static none() {

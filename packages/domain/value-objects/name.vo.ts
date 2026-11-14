@@ -3,23 +3,21 @@ import { StringVO } from './string-vo';
 
 export class PersonName extends StringVO {
   constructor(value: string) {
-    super(value);
+    super(value.trim());
 
-    const trimmed = value.trim();
-
-    if (trimmed.length < 1) {
+    if (this.value.length < 1) {
       throw new BadRequestError('Name must contain at least one character.');
     }
 
-    if (trimmed.length > 50) {
+    if (this.value.length > 50) {
       throw new BadRequestError('Name cannot exceed 50 characters.');
     }
 
-    if (trimmed.includes(' ')) {
+    if (this.value.includes(' ')) {
       throw new BadRequestError('Name cannot contain spaces.');
     }
 
-    if (!/^[A-Za-z]+$/.test(trimmed)) {
+    if (!/^[A-Za-z]+$/.test(this.value)) {
       throw new BadRequestError('Name can only contain letters.');
     }
   }
@@ -34,19 +32,17 @@ export class PersonName extends StringVO {
 
 export class Name extends StringVO {
   constructor(value: string) {
-    super(value);
+    super(value.trim());
 
-    const trimmed = value.trim();
-
-    if (trimmed.length < 1) {
+    if (this.value.length < 1) {
       throw new BadRequestError('Name must contain at least one character.');
     }
 
-    if (trimmed.length > 50) {
+    if (this.value.length > 50) {
       throw new BadRequestError('Name cannot exceed 50 characters.');
     }
 
-    if (!/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/.test(trimmed)) {
+    if (!/^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/.test(this.value)) {
       throw new BadRequestError('Name can only contain letters, spaces, hyphens and apostrophes.');
     }
   }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const ratingSchema = z
-  .number()
+  .number({ message: 'Rating must be a number' })
   .min(1, 'Rating must be at least 1')
   .max(5, 'Rating must not exceed 5');
 export const optionalRatingSchema = ratingSchema.optional();

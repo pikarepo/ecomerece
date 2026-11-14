@@ -28,9 +28,14 @@ export class VerificationInfoVO {
     return new VerificationInfoVO(true, verifiedAt, null);
   }
 
+  /**
+   * Rejects a pending application or revokes an existing verification.
+   * A second rejection is refused so the rejection reason is not silently
+   * overwritten.
+   */
   reject(reason: Reason): VerificationInfoVO {
-    if (!this.isVerified) {
-      throw new BadRequestError('This vendor has not been verified yet.');
+    if (this.isRejected) {
+      throw new BadRequestError('This vendor verification has already been rejected.');
     }
 
     return new VerificationInfoVO(false, null, reason);

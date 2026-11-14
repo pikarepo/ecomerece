@@ -4,7 +4,7 @@ import { moneySchema } from '../../dtos';
 export const updateOrderDto = z.object({
   totalPrice: moneySchema,
   address: z
-    .string()
+    .string({ message: 'Address must be a string' })
     .min(10, 'Address must be at least 10 characters')
     .max(500, 'Address must not exceed 500 characters'),
 });

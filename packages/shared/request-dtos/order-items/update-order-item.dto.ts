@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { idSchema, moneySchema, positiveNumberSchema } from '../../dtos';
+import { moneySchema, positiveNumberSchema } from '../../dtos';
 
 export const updateOrderItemDto = z.object({
   quantity: positiveNumberSchema,

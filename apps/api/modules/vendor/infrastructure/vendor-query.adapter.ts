@@ -11,6 +11,10 @@ export class VendorQueryAdapter implements IVendorQueries {
     return this.internalService.ensureActiveVendorGetById(vendorId);
   }
 
+  ensureActiveByUserId(userId: Id): Promise<EnsureActiveVendorResult> {
+    return this.internalService.ensureActiveVendorByUserId(userId);
+  }
+
   getByUserId(userId: Id): Promise<VendorReadModel | null> {
     return this.internalService.getVendorByUserId(userId);
   }
