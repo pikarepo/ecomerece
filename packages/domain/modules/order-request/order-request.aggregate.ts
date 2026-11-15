@@ -5,6 +5,7 @@ import { OrderRequestAcceptedEvent } from './events/order-request-accepted.event
 import { OrderRequestCancelledEvent } from './events/order-request-cancelled.event';
 import { OrderRequestCreatedEvent } from './events/order-request-created.event';
 import { OrderRequestRejectedEvent } from './events/order-request-rejected.event';
+import type { OrderRequestImageVO } from './value-objects/order-request-image.vo';
 import { OrderRequestStatusVO } from './value-objects/order-request-status.vo';
 import type { OrderRequestTypeVO } from './value-objects/order-request-type.vo';
 
@@ -17,6 +18,7 @@ export type CreateOrderRequestProps = {
   type: OrderRequestTypeVO;
   reason: Reason;
   note?: string | null;
+  images?: OrderRequestImageVO[];
 };
 
 export class OrderRequestAggregate extends AggregateRoot {
@@ -30,6 +32,7 @@ export class OrderRequestAggregate extends AggregateRoot {
     private _status: OrderRequestStatusVO,
     private readonly _reason: Reason,
     private readonly _note: string | null,
+    private readonly _images: OrderRequestImageVO[],
     private _vendorResponseNote: string | null,
     private readonly _createdAt: EffectiveDate,
     private _updatedAt: EffectiveDate,
@@ -64,6 +67,9 @@ export class OrderRequestAggregate extends AggregateRoot {
   get note(): string | null {
     return this._note;
   }
+  get images(): OrderRequestImageVO[] {
+    return [...this._images];
+  }
   get vendorResponseNote(): string | null {
     return this._vendorResponseNote;
   }
@@ -85,6 +91,7 @@ export class OrderRequestAggregate extends AggregateRoot {
       OrderRequestStatusVO.pending(),
       props.reason,
       props.note ?? null,
+      props.images ?? [],
       null,
       EffectiveDate.today(),
       EffectiveDate.today(),
@@ -116,6 +123,7 @@ export class OrderRequestAggregate extends AggregateRoot {
     status: OrderRequestStatusVO,
     reason: Reason,
     note: string | null,
+    images: OrderRequestImageVO[],
     vendorResponseNote: string | null,
     createdAt: EffectiveDate,
     updatedAt: EffectiveDate,
@@ -130,6 +138,7 @@ export class OrderRequestAggregate extends AggregateRoot {
       status,
       reason,
       note,
+      images,
       vendorResponseNote,
       createdAt,
       updatedAt,
@@ -138,7 +147,9 @@ export class OrderRequestAggregate extends AggregateRoot {
 
   accept(actorId: Id, note?: string | null): void {
     if (!this._status.isPending) {
-      throw new BadRequestError(`Cannot accept order request that is already ${this._status.value}.`);
+      throw new BadRequestError(
+        `Cannot accept order request that is already ${this._status.value}.`,
+      );
     }
 
     this._status = OrderRequestStatusVO.accepted();
@@ -161,7 +172,9 @@ export class OrderRequestAggregate extends AggregateRoot {
 
   reject(actorId: Id, reason: Reason): void {
     if (!this._status.isPending) {
-      throw new BadRequestError(`Cannot reject order request that is already ${this._status.value}.`);
+      throw new BadRequestError(
+        `Cannot reject order request that is already ${this._status.value}.`,
+      );
     }
 
     this._status = OrderRequestStatusVO.rejected();
@@ -182,10 +195,32 @@ export class OrderRequestAggregate extends AggregateRoot {
 
   cancel(actorId: Id): void {
     if (!this._status.isPending) {
-      throw new BadRequestError(`Cannot cancel order request that is already ${this._status.value}.`);
+      throw new BadRequestError(
+        `Cannot cancel order request that is already ${this._status.value}.`,
+      );
     }
     if (!this._buyerId.equals(actorId)) {
       throw new ForbiddenError('Only the buyer who submitted the request may cancel it.');
+    }
+
+    this._status = OrderRequestStatusVO.cancelled();
+    this._updatedAt = EffectiveDate.today();
+
+    this.raise(
+      new OrderRequestCancelledEvent({
+        requestId: this._id,
+        orderId: this._orderId,
+        buyerId: this._buyerId,
+      }),
+    );
+  }
+
+  /** Admin override: close a pending request without the buyer ownership check. */
+  cancelByAdmin(_actorId: Id): void {
+    if (!this._status.isPending) {
+      throw new BadRequestError(
+        `Cannot cancel order request that is already ${this._status.value}.`,
+      );
     }
 
     this._status = OrderRequestStatusVO.cancelled();

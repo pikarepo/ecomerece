@@ -49,6 +49,7 @@ function buildService(options: { saveFails?: boolean; rejectLine?: boolean } = {
   };
 
   const unitOfWork = {
+    deferAfterCommit: async (work: () => Promise<void>) => work(),
     transaction: async <T>(callback: () => Promise<T>): Promise<T> => {
       calls.push('begin');
       try {
@@ -191,7 +192,7 @@ describe('OrderApplicationService.createMyOrder', () => {
     });
 
     await expect(service.createMyOrder({ ...orderInput, safeOrder: false }, actor)).rejects.toThrow(
-      'An order needs at least one vendor.',
+      'All items in the order were rejected. No order was created.',
     );
 
     // An order must name at least one vendor, so nothing is written or published.

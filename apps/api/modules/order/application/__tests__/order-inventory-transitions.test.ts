@@ -10,14 +10,17 @@ const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStar
 const actor = { _id: id(1), image: '', name: { fullName: 'Test Buyer' } };
 const buyerId = Id.create(actor._id);
 
-function buildOrder(status: 'pending' | 'confirmed' | 'completed' | 'returned') {
+function buildOrder(
+  status: 'pending' | 'confirmed' | 'completed' | 'returned',
+  vendorIds: string[] = [id(4)],
+) {
   const order = OrderAggregate.create({
     id: Id.create(id(20)),
     idempotentKey: Id.create(id(21)),
     totalPrice: { value: 300 } as never,
     buyerId,
-    vendorIds: [Id.create(id(4))],
-    orderType: OrderTypeVO.single(),
+    vendorIds: vendorIds.map((vendorId) => Id.create(vendorId)),
+    orderType: OrderTypeVO.forVendors(vendorIds.length),
     address: { fullAddress: '123 Main Street, Springfield' } as never,
   });
   if (status !== 'pending') order.confirmOrder(buyerId);
@@ -28,11 +31,15 @@ function buildOrder(status: 'pending' | 'confirmed' | 'completed' | 'returned') 
   return order;
 }
 
-function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned') {
+function buildService(
+  status: 'pending' | 'confirmed' | 'completed' | 'returned',
+  vendorIds: string[] = [id(4)],
+  itemStatuses?: string[],
+) {
   const calls: string[] = [];
   const published: IEvent[] = [];
   const inventoryLines: { variantId: string; quantity: number }[][] = [];
-  const order = buildOrder(status);
+  const order = buildOrder(status, vendorIds);
   const itemEvent = { type: 'order-item.completed', payload: {} } as IEvent;
 
   const orderRepo = {
@@ -103,17 +110,22 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
   };
 
   const vendorQueries = {
-    ensureActiveByUserId: async () => ({ vendor: { id: id(1) }, active: true }),
+    ensureActiveByUserId: async () => ({ vendor: { id: id(4) }, active: true }),
   };
 
+  const statuses = itemStatuses ?? [status === 'returned' ? 'returned' : status];
   const orderItemsQueries = {
     getByOrderId: async () => {
       calls.push('read-items');
-      return [{ _id: id(30), variantId: id(2), quantity: 2 } as never];
+      return statuses.map(
+        (itemStatus, index) =>
+          ({ _id: id(30 + index), variantId: id(2), quantity: 2, status: itemStatus }) as never,
+      );
     },
   };
 
   const unitOfWork = {
+    deferAfterCommit: async (work: () => Promise<void>) => work(),
     transaction: async <T>(callback: () => Promise<T>): Promise<T> => {
       calls.push('begin');
       try {
@@ -151,7 +163,7 @@ function buildService(status: 'pending' | 'confirmed' | 'completed' | 'returned'
 }
 
 describe('OrderApplicationService inventory contract', () => {
-  it('consumes the reservation when an order is completed', async () => {
+  it('does not touch inventory when an order is completed after confirmation', async () => {
     const { service, calls, inventoryLines } = buildService('confirmed');
 
     await service.completeOrder(id(20), actor);
@@ -161,12 +173,11 @@ describe('OrderApplicationService inventory contract', () => {
       'load-order',
       'read-items',
       'write-items:complete',
-      'inventory:complete',
       'save-order',
       'commit',
       'publish',
     ]);
-    expect(inventoryLines).toEqual([[{ variantId: id(2), quantity: 2 }]]);
+    expect(inventoryLines).toEqual([]);
   });
 
   it('releases the reservation when a buyer cancels before fulfilment', async () => {
@@ -178,12 +189,30 @@ describe('OrderApplicationService inventory contract', () => {
     expect(inventoryLines).toEqual([[{ variantId: id(2), quantity: 2 }]]);
   });
 
-  it('restocks fulfilled stock when a completed order is returned', async () => {
+  it('puts sold-out stock back when a confirmed order is cancelled', async () => {
+    const { service, calls } = buildService('confirmed');
+
+    await service.cancelMyOrder(id(20), { reason: 'changed my mind' }, actor);
+
+    expect(calls).toContain('inventory:unsold');
+    expect(calls).not.toContain('inventory:release');
+  });
+
+  it('refuses to cancel an order that was already returned', async () => {
+    const { service, calls } = buildService('returned');
+
+    await expect(
+      service.cancelMyOrder(id(20), { reason: 'changed my mind' }, actor),
+    ).rejects.toThrow('Cannot cancel an order that is already returned.');
+    expect(calls).not.toContain('save-order');
+  });
+
+  it('puts sold-out stock back on a completed return', async () => {
     const { service, calls } = buildService('completed');
 
     await service.returnOrder(id(20), { reason: 'damaged in transit' }, actor);
 
-    expect(calls).toContain('inventory:restock');
+    expect(calls).toContain('inventory:unsold');
     expect(calls).not.toContain('inventory:release');
   });
 
@@ -205,13 +234,43 @@ describe('OrderApplicationService inventory contract', () => {
     expect(calls).not.toContain('inventory:restock');
   });
 
-  it('moves sold-out stock to available on refund', async () => {
-    const { service, calls } = buildService('returned');
+  it('refunds a confirmed order and puts its sold-out stock back', async () => {
+    const { service, calls } = buildService('confirmed');
 
     await service.refundOrder(id(20), { reason: 'approved by support' }, actor);
 
     expect(calls).toContain('write-items:refund');
     expect(calls).toContain('inventory:unsold');
+  });
+
+  it('does not touch inventory when refunding an already returned order', async () => {
+    const { service, calls } = buildService('returned');
+
+    await service.refundOrder(id(20), { reason: 'approved by support' }, actor);
+
+    expect(calls).toContain('write-items:refund');
+    expect(calls).not.toContain('inventory:unsold');
+  });
+
+  it('returns stock only for lines that were not already returned on an order refund', async () => {
+    const { service, inventoryLines } = buildService(
+      'confirmed',
+      [id(4)],
+      ['returned', 'confirmed'],
+    );
+
+    await service.refundOrder(id(20), { reason: 'approved by support' }, actor);
+
+    expect(inventoryLines).toEqual([[{ variantId: id(2), quantity: 2 }]]);
+  });
+
+  it('refuses vendor-wide transitions for multi-vendor orders', async () => {
+    const { service, calls } = buildService('pending', [id(4), id(5)]);
+
+    await expect(service.confirmOrder(id(20), actor)).rejects.toThrow(
+      'Vendors must use order-item actions for a multi-vendor order.',
+    );
+    expect(calls).not.toContain('save-order');
   });
 
   it('does not change stock or publish events when the status transition is rejected', async () => {

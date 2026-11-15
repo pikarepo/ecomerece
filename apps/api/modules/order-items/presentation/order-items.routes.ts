@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
+import { vendorMiddleware } from '../../../middleware/vendor';
 import type { createOrderItemsApplication } from '../order-items.module';
 
 type OrderItemsController = ReturnType<typeof createOrderItemsApplication>['orderItemsController'];
@@ -24,28 +25,43 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
   OrderItemsRoutes.get(
     '/vendor/all',
     authMiddleware,
+    vendorMiddleware,
     orderItemsController.getVendorPaginatedOrderItems,
   );
-  OrderItemsRoutes.get('/vendor/:id', authMiddleware, orderItemsController.getVendorOrderItemById);
-  OrderItemsRoutes.patch('/vendor/:id', authMiddleware, orderItemsController.updateVendorOrderItem);
+  OrderItemsRoutes.get(
+    '/vendor/:id',
+    authMiddleware,
+    vendorMiddleware,
+    orderItemsController.getVendorOrderItemById,
+  );
+  OrderItemsRoutes.patch(
+    '/vendor/:id',
+    authMiddleware,
+    vendorMiddleware,
+    orderItemsController.updateVendorOrderItem,
+  );
   OrderItemsRoutes.post(
     '/vendor/:id/confirm',
     authMiddleware,
+    vendorMiddleware,
     orderItemsController.vendorConfirmOrderItem,
   );
   OrderItemsRoutes.post(
     '/vendor/:id/complete',
     authMiddleware,
+    vendorMiddleware,
     orderItemsController.vendorCompleteOrderItem,
   );
   OrderItemsRoutes.post(
     '/vendor/:id/return',
     authMiddleware,
+    vendorMiddleware,
     orderItemsController.vendorReturnOrderItem,
   );
   OrderItemsRoutes.post(
     '/vendor/:id/refund',
     authMiddleware,
+    vendorMiddleware,
     orderItemsController.vendorRefundOrderItem,
   );
 

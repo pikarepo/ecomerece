@@ -25,8 +25,7 @@ const OrderModelSchema = new Schema(
       type: String,
       required: true,
     },
-    // One entry per vendor: a single order buys from one vendor, a cart order
-    // may buy from several, but it is still one order row.
+
     vendorIds: {
       type: [String],
       required: true,

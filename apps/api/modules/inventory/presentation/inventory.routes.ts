@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
+import { vendorMiddleware } from '../../../middleware/vendor';
 import type { createInventoryModule } from '../inventory.module';
 
 type InventoryController = ReturnType<typeof createInventoryModule>['inventoryController'];
@@ -51,18 +52,49 @@ export function createInventoryRoutes(inventoryController: InventoryController) 
     adminMiddleware,
     inventoryController.deleteAdminInventory,
   );
-  inventoryRoutes.get('/:id', inventoryController.getInventoryByVarientId);
-  inventoryRoutes.get('/my/all', authMiddleware, inventoryController.getVendorPaginatedInventory);
-  inventoryRoutes.get('/my/:id', authMiddleware, inventoryController.getVendorInventoryById);
-  inventoryRoutes.post('/my/create', authMiddleware, inventoryController.createMyInventory);
-  inventoryRoutes.delete('/my/:id', authMiddleware, inventoryController.deleteMyInventory);
-  inventoryRoutes.patch('/my/:id/purchase', authMiddleware, inventoryController.buyMyInventory);
+  inventoryRoutes.get(
+    '/my/all',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.getVendorPaginatedInventory,
+  );
+  inventoryRoutes.get(
+    '/my/:id',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.getVendorInventoryById,
+  );
+  inventoryRoutes.post(
+    '/my/create',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.createMyInventory,
+  );
+  inventoryRoutes.delete(
+    '/my/:id',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.deleteMyInventory,
+  );
+  inventoryRoutes.patch(
+    '/my/:id/purchase',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.buyMyInventory,
+  );
   inventoryRoutes.patch(
     '/my/:id/threshold',
     authMiddleware,
+    vendorMiddleware,
     inventoryController.updateMylowStockThreshold,
   );
-  inventoryRoutes.patch('/:id/remove', authMiddleware, inventoryController.removeMyInventoryStock);
+  inventoryRoutes.patch(
+    '/:id/remove',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.removeMyInventoryStock,
+  );
+  inventoryRoutes.get('/:id', inventoryController.getInventoryByVarientId);
 
   return inventoryRoutes;
 }

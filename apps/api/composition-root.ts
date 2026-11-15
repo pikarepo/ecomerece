@@ -3,6 +3,7 @@ import { InMemoryEventBus } from './core/infrastructure/buses/in-memory-event-bu
 import { configureAuthUserLookup } from './middleware/auth';
 import { configureStatsAccess } from './middleware/statsAccessGuard';
 import { configureStatsViewGuard } from './middleware/statsViewGuard.middleware';
+import { configureVendorQueries } from './middleware/vendor';
 import { createAddressModule } from './modules/address/address.module';
 import { createCartModule } from './modules/cart/cart.module';
 import { createCategoryModule } from './modules/category/category.module';
@@ -14,6 +15,7 @@ import {
   createOrderItemsApplication,
   createOrderItemsCore,
 } from './modules/order-items/order-items.module';
+import { createOrderRequestModule } from './modules/order-request/order-request.module';
 import { createProductModule } from './modules/product/product.module';
 import { createProductVaraintModule } from './modules/product-variant/product-variant.module';
 import { createReviewModule } from './modules/reviews/review.module';
@@ -80,6 +82,17 @@ export function createApplication() {
     unitOfWork,
     inventoryReservation: inventory.inventoryReservation,
   });
+  const orderRequest = createOrderRequestModule({
+    eventBus,
+    orderQueries: order.queries,
+    orderItemsQueries: orderItemsCore.queries,
+    orderItemsWriter: orderItemsCore.orderItemsWriter,
+    orderWriter: order.orderWriter,
+    inventoryReservation: inventory.inventoryReservation,
+    vendorQueries: vendor.queries,
+    imageStorage,
+    unitOfWork,
+  });
 
   const reviews = createReviewModule({
     eventBus,
@@ -96,6 +109,7 @@ export function createApplication() {
   });
 
   configureAuthUserLookup(new UserAuthLookupAdapter());
+  configureVendorQueries(vendor.queries);
   configureStatsAccess({
     getProductVendorId: (productId) => product.statsAccess.getProductVendorId(productId),
     getVendorIdByOwnerId: (ownerId) => vendor.statsAccess.getVendorIdByOwnerId(ownerId),
@@ -113,6 +127,7 @@ export function createApplication() {
       inventory,
       order,
       orderItems,
+      orderRequest,
       product,
       productVariant,
       reviews,

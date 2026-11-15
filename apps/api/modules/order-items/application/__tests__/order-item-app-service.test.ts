@@ -22,7 +22,7 @@ const BUYER_ID = id(7);
 
 const actor = { _id: BUYER_ID.value } as never;
 
-function orderItem(vendorId: Id) {
+function orderItem(vendorId: Id, status = StatusVo.pending()) {
   return OrderItemsAggregate.rehydrate(
     ITEM_ID,
     ORDER_ID,
@@ -31,7 +31,7 @@ function orderItem(vendorId: Id) {
     id(2),
     Quantity.create(2),
     ExpirationDate.create(new Date(Date.now() + 60 * 60 * 1000)),
-    StatusVo.pending(),
+    status,
     Money.create(20),
     Money.create(10),
     DeleteInfoVO.none(),
@@ -51,9 +51,6 @@ function buildService(item: OrderItemsAggregate, inventoryReservation?: unknown)
   let confirmCalls = 0;
   let returnCalls = 0;
   let refundCalls = 0;
-  let reserveCalls = 0;
-  let reserveCalls = 0;
-
 
   const internalService = {
     deleteOrderItem: async (itemId: Id, reason: Reason, actorId: Id) => {
@@ -63,6 +60,9 @@ function buildService(item: OrderItemsAggregate, inventoryReservation?: unknown)
     recoverOrderItem: async (itemId: Id, actorId: Id) => {
       recoverCalls.push({ itemId, reason: reasonForTest, actorId });
       return [{ type: 'order-item.recovered' }];
+    },
+    cancelOrderItems: async () => {
+      return [{ type: 'order-item.cancelled' }];
     },
     confirmOrderItems: async () => {
       confirmCalls += 1;
@@ -92,18 +92,28 @@ function buildService(item: OrderItemsAggregate, inventoryReservation?: unknown)
     ensureActiveByUserId: async () => ({ vendor: { id: VENDOR_ID.value }, active: true }),
   };
 
+  const orderQueries = {
+    ensureActiveById: async () => ({
+      order: { buyerId: BUYER_ID.value },
+      active: true,
+    }),
+  };
+
   const eventBus = {
     publish: async (events: unknown[]) => {
       published.push(events);
     },
   };
 
-  const unitOfWork = { transaction: async <T>(run: () => Promise<T>) => run() };
+  const unitOfWork = {
+    deferAfterCommit: async (work: () => Promise<void>) => work(),
+    transaction: async <T>(run: () => Promise<T>) => run(),
+  };
 
   const service = new OrderItemsApplicationService(
     internalService as never,
     repo as never,
-    {} as never,
+    orderQueries as never,
     vendorQueries as never,
     eventBus as never,
     unitOfWork as never,
@@ -197,6 +207,55 @@ describe('OrderItemsApplicationService admin delete and recover', () => {
   });
 });
 
+describe('OrderItemsApplicationService buyer cancellation inventory', () => {
+  it('releases reserved stock when the buyer cancels pending lines', async () => {
+    const releaseCalls: { variantId: string; quantity: number }[][] = [];
+    const unsoldCalls: unknown[] = [];
+    const inventoryReservation = {
+      release: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        releaseCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+      unsold: async (lines: unknown[]) => {
+        unsoldCalls.push(lines);
+      },
+    };
+
+    const { service } = buildService(orderItem(VENDOR_ID), inventoryReservation);
+
+    await service.cancelMyOrderItems({ orderId: ORDER_ID.value, itemIds: [ITEM_ID.value] }, actor);
+
+    expect(releaseCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
+    expect(unsoldCalls).toEqual([]);
+  });
+
+  it('puts sold-out stock back when the buyer cancels confirmed lines', async () => {
+    const unsoldCalls: { variantId: string; quantity: number }[][] = [];
+    const releaseCalls: unknown[] = [];
+    const inventoryReservation = {
+      release: async (lines: unknown[]) => {
+        releaseCalls.push(lines);
+      },
+      unsold: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        unsoldCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+    };
+
+    const { service } = buildService(
+      orderItem(VENDOR_ID, StatusVo.confirmed()),
+      inventoryReservation,
+    );
+
+    await service.cancelMyOrderItems({ orderId: ORDER_ID.value, itemIds: [ITEM_ID.value] }, actor);
+
+    expect(unsoldCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
+    expect(releaseCalls).toEqual([]);
+  });
+});
+
 describe('OrderItemsApplicationService soldOut and unsold inventory transitions', () => {
   it('moves stock to unsold on item return when inventoryReservation is wired', async () => {
     const unsoldCalls: { variantId: string; quantity: number }[][] = [];
@@ -234,6 +293,28 @@ describe('OrderItemsApplicationService soldOut and unsold inventory transitions'
 
     expect(refundCalls()).toBe(1);
     expect(unsoldCalls).toEqual([[{ variantId: id(2).value, quantity: 2 }]]);
+  });
+
+  it('does not move inventory again when refunding an already returned item', async () => {
+    const unsoldCalls: { variantId: string; quantity: number }[][] = [];
+    const inventoryReservation = {
+      unsold: async (lines: { variantId: Id; quantity: Quantity }[]) => {
+        unsoldCalls.push(
+          lines.map((l) => ({ variantId: l.variantId.value, quantity: l.quantity.value })),
+        );
+      },
+      soldOut: async () => {},
+    };
+
+    const { service, refundCalls } = buildService(
+      orderItem(VENDOR_ID, StatusVo.returned()),
+      inventoryReservation,
+    );
+
+    await service.refundOrderItem(ITEM_ID.value, actor);
+
+    expect(refundCalls()).toBe(1);
+    expect(unsoldCalls).toEqual([]);
   });
 
   it('moves stock to soldOut on vendor confirm when inventoryReservation is wired', async () => {

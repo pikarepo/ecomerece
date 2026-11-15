@@ -21,4 +21,12 @@ export class OrderWriterAdapter implements IOrderWriter {
   async refundOrder(orderId: Id, reason: Reason, actor: AuthActor): Promise<void> {
     await this.service.refundOrder(orderId.value, { reason: reason.value }, actor);
   }
+
+  async returnOrderAsAdmin(orderId: Id, reason: Reason, actor: AuthActor): Promise<void> {
+    await this.service.returnAdminOrder(orderId.value, { reason: reason.value }, actor);
+  }
+
+  async refundOrderAsAdmin(orderId: Id, reason: Reason, actor: AuthActor): Promise<void> {
+    await this.service.refundAdminOrder(orderId.value, { reason: reason.value }, actor);
+  }
 }

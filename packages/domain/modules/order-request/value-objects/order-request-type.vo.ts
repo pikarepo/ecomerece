@@ -20,7 +20,9 @@ export class OrderRequestTypeVO {
   static create(type: string): OrderRequestTypeVO {
     const normalized = type?.toLowerCase().trim();
     if (normalized !== 'return' && normalized !== 'refund') {
-      throw new BadRequestError(`Invalid order request type: ${type}. Must be 'return' or 'refund'.`);
+      throw new BadRequestError(
+        `Invalid order request type: ${type}. Must be 'return' or 'refund'.`,
+      );
     }
     return new OrderRequestTypeVO(normalized as OrderRequestType);
   }

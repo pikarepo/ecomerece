@@ -87,16 +87,19 @@ export class OrderItemsApplicationService extends BaseService {
       if (this.inventoryReservation && item) {
         const line = [{ variantId: item.variantId, quantity: item.quantity }];
         if (status === 'confirmed') {
-          await this.inventoryReservation.reserve(line, actorId);
-        } else if (status === 'completed') {
           await this.inventoryReservation.soldOut(line, actorId);
-        } else if (status === 'returned' || status === 'refunded') {
+        } else if (status === 'returned') {
+          await this.inventoryReservation.unsold(line, actorId);
+        } else if (status === 'refunded' && item.status.value !== 'returned') {
+          // Returning already made the units available; refunding it is bookkeeping only.
           await this.inventoryReservation.unsold(line, actorId);
         }
       }
       return events;
     });
-    if (events.length > 0) await this.eventBus.publish(events);
+    if (events.length > 0) {
+      await this.unitOfWork.deferAfterCommit(() => this.eventBus.publish(events));
+    }
     return OrderItemsMessages.orderItemStatusChanged(itemId, actorId, status);
   }
 
@@ -114,11 +117,33 @@ export class OrderItemsApplicationService extends BaseService {
 
     await this.assertOrderOwner(orderId, actorId);
 
-    const events = await this.unitOfWork.transaction(() =>
-      this.itemsInternalService.cancelOrderItems(itemIds.map((id) => ({ id, orderId }))),
-    );
+    const events = await this.unitOfWork.transaction(async () => {
+      const items = await Promise.all(
+        itemIds.map((itemId) => this.itemsRepo.FindReadModelById(itemId)),
+      );
+      const events = await this.itemsInternalService.cancelOrderItems(
+        itemIds.map((id) => ({ id, orderId })),
+      );
 
-    if (events.length > 0) await this.eventBus.publish(events);
+      if (this.inventoryReservation) {
+        for (const item of items) {
+          if (!item) continue;
+          const line = [
+            { variantId: Id.create(item.variantId), quantity: Quantity.create(item.quantity) },
+          ];
+          if (item.status === 'pending') {
+            await this.inventoryReservation.release(line, actorId);
+          } else if (item.status === 'confirmed') {
+            await this.inventoryReservation.unsold(line, actorId);
+          }
+        }
+      }
+      return events;
+    });
+
+    if (events.length > 0) {
+      await this.unitOfWork.deferAfterCommit(() => this.eventBus.publish(events));
+    }
 
     return OrderItemsMessages.orderItemsCancelled(orderId, actorId, itemIds.length);
   }

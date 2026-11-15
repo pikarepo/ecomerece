@@ -7,6 +7,7 @@ import { createHomeRoutes } from '../modules/home/presentation/home.routes';
 import { createInventoryRoutes } from '../modules/inventory/presentation/inventory.routes';
 import { createOrderRoutes } from '../modules/order/presentation/order.routes';
 import { createOrderItemsRoutes } from '../modules/order-items/presentation/order-items.routes';
+import { createOrderRequestRoutes } from '../modules/order-request/presentation/order-request.routes';
 import { createProductRoutes } from '../modules/product/presentation/product.routes';
 import { createProductVariantRoutes } from '../modules/product-variant/presentation/product-varaint.routes';
 import { createReviewRoutes } from '../modules/reviews/presentation/review.routes';
@@ -24,6 +25,7 @@ export function createRoutes({ modules }: Application) {
   routes.route('/order', createOrderRoutes(modules.order.orderController));
   routes.route('/cart', createCartRoutes(modules.cart.cartController));
   routes.route('/order-items', createOrderItemsRoutes(modules.orderItems.orderItemsController));
+  routes.route('/order-request', createOrderRequestRoutes(modules.orderRequest.controller));
   routes.route('/category', createCategoryRoutes(modules.category.categoryController));
   routes.route('/address', createAddressRoutes(modules.address.addressController));
   routes.route('/users', createUserRoutes(modules.user.userController));

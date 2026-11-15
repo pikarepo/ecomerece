@@ -56,6 +56,7 @@ function buildService(
   };
 
   const unitOfWork = {
+    deferAfterCommit: async (work: () => Promise<void>) => work(),
     transaction: async <T>(callback: () => Promise<T>): Promise<T> => {
       calls.push('begin');
       try {

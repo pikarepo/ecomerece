@@ -49,4 +49,8 @@ export interface IOrderWriter {
   createFromCart(input: CreateCartOrderInput): Promise<CartOrderResult>;
   returnOrder(orderId: Id, reason: Reason, actor: AuthActor): Promise<void>;
   refundOrder(orderId: Id, reason: Reason, actor: AuthActor): Promise<void>;
+  /** Admin path: no vendor-ownership requirement. */
+  returnOrderAsAdmin(orderId: Id, reason: Reason, actor: AuthActor): Promise<void>;
+  /** Admin path: no vendor-ownership requirement. */
+  refundOrderAsAdmin(orderId: Id, reason: Reason, actor: AuthActor): Promise<void>;
 }

@@ -5,6 +5,7 @@ export * from './home';
 export * from './inventory';
 export * from './order';
 export * from './order-items';
+export * from './order-request';
 export * from './product';
 export * from './product-variant';
 export * from './review';

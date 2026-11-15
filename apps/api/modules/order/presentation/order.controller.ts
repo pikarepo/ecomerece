@@ -100,6 +100,32 @@ export class OrderController extends BaseController<OrderApplicationService> {
     return this.ok(c, await this.service.refundOrder(id, data, actor));
   };
 
+  confirmAdminOrder = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.confirmAdminOrder(id, actor));
+  };
+
+  completeAdminOrder = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.completeAdminOrder(id, actor));
+  };
+
+  returnAdminOrder = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, orderReasonDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.returnAdminOrder(id, data, actor));
+  };
+
+  refundAdminOrder = async (c: Context) => {
+    const id = this.param(c, 'id', idSchema);
+    const data = await this.body(c, orderReasonDto);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.refundAdminOrder(id, data, actor));
+  };
+
   updateOrder = async (c: Context) => {
     const id = this.param(c, 'id', idSchema);
     const data = await this.body(c, updateOrderDto);

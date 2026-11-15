@@ -42,7 +42,13 @@ import { OrderMessages } from '../presentation/order.messages';
 const MAX_WAITING_TIME_HOURS = 4;
 
 /** Order item fields needed to cascade a state change into inventory. */
-type OrderItemRef = { id: Id; orderId: Id; variantId: Id; quantity: Quantity };
+type OrderItemRef = {
+  id: Id;
+  orderId: Id;
+  variantId: Id;
+  quantity: Quantity;
+  status: string;
+};
 
 /** A line requested by the client, before any validation. */
 type OrderItemRequest = { variantId: Id; quantity: Quantity };
@@ -266,8 +272,9 @@ export class OrderApplicationService extends BaseService {
   ): Promise<{ order: OrderAggregate; itemEvents: IEvent[] }> {
     await this.orderRepo.EnsureUniqueImpodentKey(input.idempotentKey);
     const { buyable, rejected } = await this.resolveOrderItems(input.items, input.actorId);
-    if (buyable.length === 0) throw new BadRequestError('All items in the order were rejected. No order was created.');
     if (input.safeOrder) this.assertAllItemsFulfillable(rejected);
+    if (buyable.length === 0)
+      throw new BadRequestError('All items in the order were rejected. No order was created.');
     // Only buyable lines can name a vendor: a rejected line has no product, so
     // it must never add a vendor to the order.
     const vendorIds = this.resolveVendorIds(buyable);
@@ -672,10 +679,11 @@ export class OrderApplicationService extends BaseService {
       actorId,
       (order) => {
         order.ensureOwnedBy(actorId);
+        this.ensureCancellable(order);
         order.cancelOrder(reason, actorId);
       },
       (items) => this.orderItemsWriter.cancel(items),
-      () => 'release',
+      (order) => (order.status.value === 'pending' ? 'release' : 'unsold'),
     );
 
     return OrderMessages.orderCancelled(orderId, actorId, reason);
@@ -690,9 +698,12 @@ export class OrderApplicationService extends BaseService {
     await this.transitionOrder(
       orderId,
       actorId,
-      (order) => order.cancelOrder(reason, actorId),
+      (order) => {
+        this.ensureCancellable(order);
+        order.cancelOrder(reason, actorId);
+      },
       (items) => this.orderItemsWriter.cancel(items),
-      () => 'release',
+      (order) => (order.status.value === 'pending' ? 'release' : 'unsold'),
     );
 
     return OrderMessages.orderCancelled(orderId, actorId, reason);
@@ -737,13 +748,14 @@ export class OrderApplicationService extends BaseService {
   async confirmOrder(id: string, actor: AuthActor) {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
-    await this.resolveVendorId(actorId);
+    const vendorId = await this.resolveVendorId(actorId);
     await this.transitionOrder(
       orderId,
       actorId,
       (order) => order.confirmOrder(actorId),
       (items) => this.orderItemsWriter.confirm(items),
-      () => null, // inventory is already held, so no transition is needed
+      () => 'soldOut',
+      vendorId,
     );
 
     return OrderMessages.orderConfirmed(orderId, actorId);
@@ -752,13 +764,14 @@ export class OrderApplicationService extends BaseService {
   async completeOrder(id: string, actor: AuthActor) {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
-    await this.resolveVendorId(actorId);
+    const vendorId = await this.resolveVendorId(actorId);
     await this.transitionOrder(
       orderId,
       actorId,
       (order) => order.completeOrder(actorId),
       (items) => this.orderItemsWriter.complete(items),
-      () => 'complete',
+      () => null, // confirmation already moved the held units to sold-out
+      vendorId,
     );
 
     return OrderMessages.orderCompleted(orderId, actorId);
@@ -768,13 +781,15 @@ export class OrderApplicationService extends BaseService {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
     const reason = Reason.create(data.reason);
+    const vendorId = await this.resolveVendorId(actorId);
 
     await this.transitionOrder(
       orderId,
       actorId,
       (order) => order.returnOrder(reason, actorId),
       (items) => this.orderItemsWriter.returnItems(items),
-      (order) => 'unsold',
+      () => 'unsold',
+      vendorId,
     );
 
     return OrderMessages.orderReturned(orderId, actorId, reason);
@@ -784,13 +799,82 @@ export class OrderApplicationService extends BaseService {
     const orderId = Id.create(id);
     const actorId = Id.create(actor._id);
     const reason = Reason.create(data.reason);
+    const vendorId = await this.resolveVendorId(actorId);
 
     await this.transitionOrder(
       orderId,
       actorId,
       (order) => order.refundOrder(reason, actorId),
       (items) => this.orderItemsWriter.refund(items),
+      // A return already put the sold-out units back; refunding it must not do it twice.
+      (order) => (order.status.value === 'returned' ? null : 'unsold'),
+      vendorId,
+    );
+
+    return OrderMessages.orderRefunded(orderId, actorId, reason);
+  }
+
+  /** Admin: confirm any order, consuming its held stock. */
+  async confirmAdminOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.confirmOrder(actorId),
+      (items) => this.orderItemsWriter.confirm(items),
+      () => 'soldOut',
+    );
+
+    return OrderMessages.orderConfirmed(orderId, actorId);
+  }
+
+  /** Admin: complete any confirmed order. */
+  async completeAdminOrder(id: string, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.completeOrder(actorId),
+      (items) => this.orderItemsWriter.complete(items),
+      () => null,
+    );
+
+    return OrderMessages.orderCompleted(orderId, actorId);
+  }
+
+  /** Admin: return any eligible order. */
+  async returnAdminOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.returnOrder(reason, actorId),
+      (items) => this.orderItemsWriter.returnItems(items),
       () => 'unsold',
+    );
+
+    return OrderMessages.orderReturned(orderId, actorId, reason);
+  }
+
+  /** Admin: refund any eligible order. */
+  async refundAdminOrder(id: string, data: orderReasonDtoType, actor: AuthActor) {
+    const orderId = Id.create(id);
+    const actorId = Id.create(actor._id);
+    const reason = Reason.create(data.reason);
+
+    await this.transitionOrder(
+      orderId,
+      actorId,
+      (order) => order.refundOrder(reason, actorId),
+      (items) => this.orderItemsWriter.refund(items),
+      (order) => (order.status.value === 'returned' ? null : 'unsold'),
     );
 
     return OrderMessages.orderRefunded(orderId, actorId, reason);
@@ -830,6 +914,13 @@ export class OrderApplicationService extends BaseService {
     return OrderMessages.orderRecovered(orderId, actorId);
   }
 
+  /** Only unfulfilled orders can be cancelled; terminal states must not be reopened. */
+  private ensureCancellable(order: OrderAggregate): void {
+    if (order.status.value !== 'pending' && order.status.value !== 'confirmed') {
+      throw new BadRequestError(`Cannot cancel an order that is already ${order.status.value}.`);
+    }
+  }
+
   /**
    * Runs an order transition, its item cascade and the matching inventory
    * change in one transaction. Events stay buffered until the transaction commits.
@@ -840,9 +931,18 @@ export class OrderApplicationService extends BaseService {
     apply: (order: OrderAggregate) => void,
     cascade: (items: OrderItemRef[]) => Promise<IEvent[]>,
     inventoryAction?: (order: OrderAggregate) => InventoryTransition | null,
+    vendorId?: Id,
   ): Promise<OrderAggregate> {
     const { order, itemEvents } = await this.unitOfWork.transaction(async () => {
       const order = await this.orderRepo.FindByIdOrThrow(orderId);
+      if (vendorId) {
+        if (!order.hasVendor(vendorId)) {
+          throw new ForbiddenError('This order does not contain your items.');
+        }
+        if (order.vendorIds.length > 1) {
+          throw new ForbiddenError('Vendors must use order-item actions for a multi-vendor order.');
+        }
+      }
       const items = await this.itemRefs(orderId);
       const action = inventoryAction?.(order) ?? null;
 
@@ -870,13 +970,14 @@ export class OrderApplicationService extends BaseService {
       orderId,
       variantId: Id.create(item.variantId),
       quantity: Quantity.create(item.quantity),
+      status: item.status,
     }));
   }
 
   /**
    * Keeps the inventory module in step with the order state machine.
-   * `complete` consumes held stock; `release` returns it on cancellation;
-   * `restock` returns fulfilled stock on a return.
+   * `soldOut` consumes held stock on confirmation, `release` returns it on
+   * cancellation, and `unsold` puts sold-out units back on a return/refund.
    */
   private async applyInventoryTransition(
     action: InventoryTransition | null,
@@ -885,7 +986,13 @@ export class OrderApplicationService extends BaseService {
   ): Promise<void> {
     if (!action || items.length === 0) return;
 
-    const lines = items.map(({ variantId, quantity }) => ({ variantId, quantity }));
+    // Returning already made those units available; an order-wide refund that
+    // follows a line-level return must not put the same units back twice.
+    const affected =
+      action === 'unsold' ? items.filter((item) => item.status !== 'returned') : items;
+    if (affected.length === 0) return;
+
+    const lines = affected.map(({ variantId, quantity }) => ({ variantId, quantity }));
 
     switch (action) {
       case 'complete':
@@ -912,6 +1019,7 @@ export class OrderApplicationService extends BaseService {
   }
 
   private async publish(events: IEvent[]): Promise<void> {
-    if (events.length > 0) await this.eventBus.publish(events);
+    if (events.length === 0) return;
+    await this.unitOfWork.deferAfterCommit(() => this.eventBus.publish(events));
   }
 }

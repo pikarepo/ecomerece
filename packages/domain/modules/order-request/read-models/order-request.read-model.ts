@@ -8,6 +8,7 @@ export interface OrderRequestReadModel {
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled';
   reason: string;
   note: string | null;
+  images: { url: string; key: string | null }[];
   vendorResponseNote: string | null;
   createdAt: Date;
   updatedAt: Date;

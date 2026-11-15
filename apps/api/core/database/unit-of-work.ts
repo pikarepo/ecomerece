@@ -14,13 +14,20 @@ export class UnitOfWork {
     return withRetry(
       async () => {
         const session = await mongoose.startSession();
+        const store = { session, afterCommit: [] as (() => Promise<void> | void)[] };
+        let committed = false;
         try {
           session.startTransaction();
-          const result = await transactionContext.run({ session }, async () => callback());
+          const result = await transactionContext.run(store, async () => callback());
           await session.commitTransaction();
+          committed = true;
+          // Post-commit work must never be rolled back: the data is already durable.
+          for (const callback of store.afterCommit) {
+            await callback();
+          }
           return result;
         } catch (error) {
-          await session.abortTransaction();
+          if (!committed) await session.abortTransaction();
           throw error;
         } finally {
           await session.endSession();
@@ -51,5 +58,19 @@ export class UnitOfWork {
 
   isInTransaction(): boolean {
     return !!transactionContext.getStore();
+  }
+
+  /**
+   * Runs work after the current transaction commits, or immediately when no
+   * transaction is open. Used to keep event publication outside transaction
+   * boundaries even when one use case nests another module's write.
+   */
+  async deferAfterCommit(work: () => Promise<void> | void): Promise<void> {
+    const store = transactionContext.getStore();
+    if (!store) {
+      await work();
+      return;
+    }
+    store.afterCommit.push(work);
   }
 }
