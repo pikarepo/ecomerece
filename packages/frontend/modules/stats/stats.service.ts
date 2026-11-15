@@ -113,7 +113,7 @@ export interface StatsSyncSettings {
 
 export class StatsService {
   getLifetime(entityType: EntityType, entityId: string): Promise<LifetimeStatsResponse> {
-    return http.get(`/stats/${entityType}/${entityId}/lifetime`);
+    return http.get(`/stats/entity/${entityType}/${entityId}/lifetime`);
   }
 
   getTimeSeries(
@@ -124,7 +124,7 @@ export class StatsService {
     to: string,
   ): Promise<TimeSeriesStatsResponse> {
     const query = new URLSearchParams({ aggregation, from, to });
-    return http.get(`/stats/${entityType}/${entityId}/timeseries?${query}`);
+    return http.get(`/stats/entity/${entityType}/${entityId}/timeseries?${query}`);
   }
 
   getPaginatedStats(
@@ -144,7 +144,7 @@ export class StatsService {
     if (params.cursor) searchParams.set('cursor', params.cursor);
     if (params.limit) searchParams.set('limit', String(params.limit));
     const qs = searchParams.toString();
-    return http.get(`/stats/${entityType}/paginated${qs ? `?${qs}` : ''}`);
+    return http.get(`/stats/admin/${entityType}/paginated${qs ? `?${qs}` : ''}`);
   }
 
   getProductStatsOverview(
@@ -152,7 +152,7 @@ export class StatsService {
     months = 12,
     days = 30,
   ): Promise<ProductStatsOverviewResponse> {
-    return http.get(`/stats/product/${productId}/overview?months=${months}&days=${days}`);
+    return http.get(`/stats/admin/product/${productId}/overview?months=${months}&days=${days}`);
   }
 
   getCategoryStatsOverview(
@@ -160,7 +160,7 @@ export class StatsService {
     months = 12,
     days = 30,
   ): Promise<CategoryStatsOverviewResponse> {
-    return http.get(`/stats/category/${categoryId}/overview?months=${months}&days=${days}`);
+    return http.get(`/stats/admin/category/${categoryId}/overview?months=${months}&days=${days}`);
   }
 
   getVendorStatsOverview(
@@ -168,15 +168,20 @@ export class StatsService {
     months = 12,
     days = 30,
   ): Promise<VendorStatsOverviewResponse> {
-    return http.get(`/stats/vendor/${vendorId}/overview?months=${months}&days=${days}`);
+    return http.get(`/stats/admin/vendor/${vendorId}/overview?months=${months}&days=${days}`);
+  }
+
+  /** Vendor: the caller's own overview. The server resolves the vendor from the token. */
+  getMyVendorStatsOverview(months = 12, days = 30): Promise<VendorStatsOverviewResponse> {
+    return http.get(`/stats/vendor/me/overview?months=${months}&days=${days}`);
   }
 
   getVendorForceRefreshUsage(): Promise<VendorForceRefreshUsage> {
-    return http.get('/stats/vendor/force-update/usage');
+    return http.get('/stats/vendor/me/force-update/usage');
   }
 
   forceRefreshVendorStats(): Promise<VendorForceRefreshResult> {
-    return http.post('/stats/vendor/force-update', {});
+    return http.post('/stats/vendor/me/force-update', {});
   }
 
   getAggregate(
@@ -187,7 +192,7 @@ export class StatsService {
     if (params.aggregation) searchParams.set('aggregation', params.aggregation);
     if (params.ids && params.ids.length > 0) searchParams.set('ids', params.ids.join(','));
     const qs = searchParams.toString();
-    return http.get(`/stats/${entityType}/aggregate${qs ? `?${qs}` : ''}`);
+    return http.get(`/stats/admin/aggregate/${entityType}${qs ? `?${qs}` : ''}`);
   }
 
   getAggregateTimeSeries(
@@ -199,11 +204,11 @@ export class StatsService {
     if (params.from) searchParams.set('from', params.from);
     if (params.to) searchParams.set('to', params.to);
     const qs = searchParams.toString();
-    return http.get(`/stats/${entityType}/aggregate/timeseries${qs ? `?${qs}` : ''}`);
+    return http.get(`/stats/admin/aggregate/${entityType}/timeseries${qs ? `?${qs}` : ''}`);
   }
 
   getSyncSettings(): Promise<StatsSyncSettings> {
-    return http.get('/stats/settings');
+    return http.get('/stats/admin/settings');
   }
 
   updateSyncSettings(input: {
@@ -212,11 +217,11 @@ export class StatsService {
     maxStalenessHours?: number;
     vendorForceRefreshQuota?: number;
   }): Promise<StatsSyncSettings> {
-    return http.patch('/stats/settings', input);
+    return http.patch('/stats/admin/settings', input);
   }
 
   triggerProductStatsDenormalization(): Promise<{ accepted: boolean }> {
-    return http.post('/stats/denormalize', {});
+    return http.post('/stats/admin/denormalize', {});
   }
 }
 

@@ -37,6 +37,18 @@ export class ReviewController extends BaseController<ReviewApplicationService> {
     return this.ok(c, await this.service.getPaginatedReviews(query));
   };
 
+  getMyPaginatedReviews = async (c: Context) => {
+    const query: GetPaginatedReviewsQueryDto = this.query(c, getPaginatedReviewsQuerySchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.getMyPaginatedReviews(query, actor));
+  };
+
+  getVendorPaginatedReviews = async (c: Context) => {
+    const query: GetPaginatedReviewsQueryDto = this.query(c, getPaginatedReviewsQuerySchema);
+    const actor = c.get('user');
+    return this.ok(c, await this.service.getVendorPaginatedReviews(query, actor));
+  };
+
   getAdminPaginatedReviews = async (c: Context) => {
     const query: GetAdminPaginatedReviewsQueryDto = this.query(
       c,

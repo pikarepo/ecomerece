@@ -6,16 +6,68 @@ import type { createInventoryModule } from '../inventory.module';
 
 type InventoryController = ReturnType<typeof createInventoryModule>['inventoryController'];
 
+/**
+ * Stock rows hold the vendor's policy (reservations, thresholds), so only the
+ * public availability projection is unauthenticated. Vendor and admin scopes
+ * are separate routes with their own middleware.
+ */
 export function createInventoryRoutes(inventoryController: InventoryController) {
   const inventoryRoutes = new Hono();
 
+  // Public: availability for one variant.
+  inventoryRoutes.get('/variant/:id', inventoryController.getPublicInventoryByVariantId);
+
+  // Vendor
+  inventoryRoutes.get(
+    '/vendor/all',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.getVendorPaginatedInventory,
+  );
+  inventoryRoutes.get(
+    '/vendor/:id',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.getVendorInventoryById,
+  );
+  inventoryRoutes.post(
+    '/vendor',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.createMyInventory,
+  );
+  inventoryRoutes.delete(
+    '/vendor/:id',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.deleteMyInventory,
+  );
+  inventoryRoutes.patch(
+    '/vendor/:id/purchase',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.buyMyInventory,
+  );
+  inventoryRoutes.patch(
+    '/vendor/:id/threshold',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.updateMylowStockThreshold,
+  );
+  inventoryRoutes.patch(
+    '/vendor/:id/remove',
+    authMiddleware,
+    vendorMiddleware,
+    inventoryController.removeMyInventoryStock,
+  );
+
+  // Admin
   inventoryRoutes.get(
     '/admin/all',
     authMiddleware,
     adminMiddleware,
     inventoryController.getAdminPaginatedInventory,
   );
-  inventoryRoutes.get('/by-id/:id', inventoryController.getInventoryById);
   inventoryRoutes.get(
     '/admin/:id',
     authMiddleware,
@@ -23,7 +75,7 @@ export function createInventoryRoutes(inventoryController: InventoryController) 
     inventoryController.getAdminInventoryById,
   );
   inventoryRoutes.post(
-    '/admin/create',
+    '/admin',
     authMiddleware,
     adminMiddleware,
     inventoryController.createInventory,
@@ -52,49 +104,6 @@ export function createInventoryRoutes(inventoryController: InventoryController) 
     adminMiddleware,
     inventoryController.deleteAdminInventory,
   );
-  inventoryRoutes.get(
-    '/my/all',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.getVendorPaginatedInventory,
-  );
-  inventoryRoutes.get(
-    '/my/:id',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.getVendorInventoryById,
-  );
-  inventoryRoutes.post(
-    '/my/create',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.createMyInventory,
-  );
-  inventoryRoutes.delete(
-    '/my/:id',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.deleteMyInventory,
-  );
-  inventoryRoutes.patch(
-    '/my/:id/purchase',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.buyMyInventory,
-  );
-  inventoryRoutes.patch(
-    '/my/:id/threshold',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.updateMylowStockThreshold,
-  );
-  inventoryRoutes.patch(
-    '/:id/remove',
-    authMiddleware,
-    vendorMiddleware,
-    inventoryController.removeMyInventoryStock,
-  );
-  inventoryRoutes.get('/:id', inventoryController.getInventoryByVarientId);
 
   return inventoryRoutes;
 }

@@ -6,7 +6,11 @@ import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
 import { FullAddressVO } from '@ecomerece/domain/value-objects/street-address.vo';
-import type { OrderResponseReadModel } from '@ecomerece/shared';
+import type {
+  OrderResponseReadModel,
+  VendorOrderListItemReadModel,
+  VendorOrderResponseReadModel,
+} from '@ecomerece/shared';
 import type { OrderPersistence } from './order.model';
 
 export const OrderMapper = {
@@ -88,6 +92,35 @@ export const OrderMapper = {
       createdAt: doc.createdAt,
     };
   },
+  /** Vendor list row: no buyer id, no vendor roster, no cross-vendor totals. */
+  aggregateToVendorListItemReadModel(order: OrderAggregate): VendorOrderListItemReadModel {
+    return {
+      id: order.id.value,
+      orderType: order.orderType.value,
+      status: order.status.value,
+      createdAt: order.createdAt.value,
+    };
+  },
+
+  /**
+   * Vendor view: buyer id, the vendor roster and the cross-vendor total are
+   * withheld. `vendorSubtotal` is supplied by the service from the vendor's own
+   * lines, because the order aggregate only stores the combined total.
+   */
+  aggregateToVendorResponseReadModel(
+    order: OrderAggregate,
+    vendorSubtotal: number,
+  ): VendorOrderResponseReadModel {
+    return {
+      id: order.id.value,
+      orderType: order.orderType.value,
+      status: order.status.value,
+      address: order.address.value,
+      createdAt: order.createdAt.value,
+      vendorSubtotal,
+    };
+  },
+
   aggregateToResponseReadModel(order: OrderAggregate): OrderResponseReadModel {
     return {
       id: order.id.value,

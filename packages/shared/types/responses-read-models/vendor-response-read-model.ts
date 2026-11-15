@@ -19,6 +19,24 @@ export type VendorListItemReadModel = {
   createdAt?: Date;
 };
 
+/**
+ * Storefront view. Contact details, owner account and internal flags are
+ * deliberately absent: the public only needs branding and verification state.
+ */
+export type VendorPublicResponseReadModel = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  images: {
+    logo: string;
+    banner: string;
+  };
+  verification: {
+    isVerified: boolean;
+  };
+};
+
 export type VendorResponseReadModel = {
   id: string;
   ownerId: string;

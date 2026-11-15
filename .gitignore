@@ -138,3 +138,6 @@ apps/api/scripts/seed-assets/
 # ---- Temp files ----
 *.tmp
 *.temp
+
+postman/
+.postman

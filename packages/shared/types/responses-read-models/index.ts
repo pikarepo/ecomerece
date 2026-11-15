@@ -5,6 +5,7 @@ export * from './home.response-read-model';
 export * from './inventory.response-read-model';
 export * from './order.response-read-model';
 export * from './order-items.response-read-model';
+export * from './order-request.response-read-model';
 export * from './product.response-read-model';
 export * from './product-variant.response-read-model';
 export * from './review.response-read-model';

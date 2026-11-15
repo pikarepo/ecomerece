@@ -3,7 +3,10 @@ import { EffectiveDate } from '@ecomerece/domain/value-objects/effective-date.vo
 import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
-import type { InventoryResponseReadModel } from '@ecomerece/shared';
+import type {
+  InventoryPublicResponseReadModel,
+  InventoryResponseReadModel,
+} from '@ecomerece/shared';
 import type { InventoryPersistence } from './inventory.model';
 
 export const InventoryMapper = {
@@ -79,6 +82,17 @@ export const InventoryMapper = {
       createdAt: inventory.createdAt,
     };
   },
+  /** Buyer view: availability only, so the vendor's stock policy stays private. */
+  aggregateToPublicResponseReadModel(
+    inventory: InventoryAggregate,
+  ): InventoryPublicResponseReadModel {
+    return {
+      variantId: inventory.variantId.value,
+      available: inventory.available.value,
+      inStock: inventory.available.value > 0,
+    };
+  },
+
   aggregateToResponseReadModel(inventory: InventoryAggregate): InventoryResponseReadModel {
     return {
       id: inventory.id.value,

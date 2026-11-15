@@ -1,3 +1,7 @@
+/** Vendor view of one line: the vendor already knows it owns the line, so the
+ * owning vendor id is not echoed back. */
+export type VendorOrderItemResponseReadModel = Omit<OrderItemResponseReadModel, 'vendorId'>;
+
 export interface OrderItemResponseReadModel {
   _id: string;
   orderId: string;

@@ -33,6 +33,7 @@ import type { FilterQuery } from 'mongoose';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BaseService } from '../../../core/services/base.services';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../../../errors/app-error';
+import { OrderItemsMapper } from '../../order-items/infrastructure/order-item.mapper';
 import { OrderMapper } from '../infrastructure/order.mapper';
 import type { OrderPersistence } from '../infrastructure/order.model';
 import type { OrderRepository } from '../infrastructure/order.repository';
@@ -722,7 +723,17 @@ export class OrderApplicationService extends BaseService {
     };
     if (query.status) filter.status = query.status;
 
-    return this.paginateOrders(filter, query);
+    const result = await this.orderRepo.FindPaginated({
+      filter,
+      cursor: query.cursor ? Id.create(query.cursor) : undefined,
+      limit: query.limit ? Quantity.create(query.limit) : undefined,
+      direction: query.direction,
+    });
+
+    return {
+      data: result.data.map((order) => OrderMapper.aggregateToVendorListItemReadModel(order)),
+      meta: result.meta,
+    };
   }
 
   /** Vendor: one order they contribute to, with only their own item lines. */
@@ -738,10 +749,12 @@ export class OrderApplicationService extends BaseService {
     }
 
     const items = await this.orderItemsQueries.getByOrderId(orderId);
+    const vendorItems = items.filter((item) => item.vendorId === vendorId.value);
+    const vendorSubtotal = vendorItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
     return {
-      order: OrderMapper.aggregateToResponseReadModel(order),
-      items: items.filter((item) => item.vendorId === vendorId.value),
+      order: OrderMapper.aggregateToVendorResponseReadModel(order, vendorSubtotal),
+      items: vendorItems.map((item) => OrderItemsMapper.responseToVendorReadModel(item)),
     };
   }
 

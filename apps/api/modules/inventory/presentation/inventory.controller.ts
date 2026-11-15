@@ -36,10 +36,9 @@ export class InventoryController extends BaseController<InventoryApplicationServ
     const inventoryId = this.param(c, 'id', idSchema);
     return this.ok(c, await this.service.removeMyInventoryStock(data, inventoryId, actor));
   };
-  getInventoryByVarientId = async (c: Context) => {
+  getPublicInventoryByVariantId = async (c: Context) => {
     const id = this.param(c, 'id', idSchema);
-
-    return this.ok(c, await this.service.getInventoryByVarientId(id));
+    return this.ok(c, await this.service.getPublicInventoryByVariantId(id));
   };
   getInventoryById = async (c: Context) => {
     const id = this.param(c, 'id', idSchema);

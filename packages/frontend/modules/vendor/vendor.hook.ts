@@ -55,6 +55,14 @@ export function useGetMyVendor() {
   });
 }
 
+export function useGetAdminVendor(id: string) {
+  return useQuery({
+    queryKey: [...VENDOR_QUERY_KEY, 'admin', 'one', id],
+    queryFn: () => vendorService.getAdminVendorById(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useGetPaginatedVendors(params: GetPaginatedVendorsQueryDto) {
   return useQuery({
     queryKey: [...VENDOR_QUERY_KEY, 'paginated', params],

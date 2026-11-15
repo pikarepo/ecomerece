@@ -60,15 +60,15 @@ export class CategoryService {
   }
 
   createCategory(data: createCategoryDtoType): Promise<CategoryMutationResult> {
-    return http.post<CategoryMutationResult>('/category/create', data);
+    return http.post<CategoryMutationResult>('/category/admin', data);
   }
 
   updateCategory(data: updateCategoryType): Promise<CategoryMutationResult> {
-    return http.patch<CategoryMutationResult>('/category/update', data);
+    return http.patch<CategoryMutationResult>('/category/admin', data);
   }
 
   deleteCategoryById(data: deleteCategoryType): Promise<CategoryMutationResult> {
-    return http.delete<CategoryMutationResult>('/category', data);
+    return http.delete<CategoryMutationResult>('/category/admin', data);
   }
 }
 

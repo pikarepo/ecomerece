@@ -103,75 +103,75 @@ export class ProductService {
     if (params.direction) searchParams.set('direction', params.direction);
     if (params.sort) searchParams.set('sort', params.sort);
     const qs = searchParams.toString();
-    return http.get<PaginatedAdminProductsResult>(`/product/my${qs ? `?${qs}` : ''}`);
+    return http.get<PaginatedAdminProductsResult>(`/product/vendor/all${qs ? `?${qs}` : ''}`);
   }
 
   createMyProduct(data: CreateMyProductDto): Promise<ProductMutationResult> {
-    return http.post<ProductMutationResult>('/product/my', data);
+    return http.post<ProductMutationResult>('/product/vendor', data);
   }
 
   softDeleteMyProduct(data: softDeleteMyProductDtoType): Promise<ProductMutationResult> {
-    return http.delete<ProductMutationResult>('/product/my/soft', data);
+    return http.delete<ProductMutationResult>('/product/vendor', data);
   }
 
   recoverMyProduct(data: recoverProductDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/recover', data);
+    return http.patch<ProductMutationResult>('/product/vendor/recover', data);
   }
 
   blockProduct(data: blockProductDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/block', data);
+    return http.patch<ProductMutationResult>('/product/admin/block', data);
   }
 
   unBlockProduct(data: blockLiftProductDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/block/lift', data);
+    return http.patch<ProductMutationResult>('/product/admin/block/lift', data);
   }
 
   makeMyProductPublic(data: productAppereanceDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/state/my/public', data);
+    return http.patch<ProductMutationResult>('/product/vendor/state/public', data);
   }
 
   makeMyProductPrivate(data: productAppereanceDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/state/my/private', data);
+    return http.patch<ProductMutationResult>('/product/vendor/state/private', data);
   }
 
   updateMyProductMeta(data: updateProductMetaDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/meta', data);
+    return http.patch<ProductMutationResult>('/product/vendor/meta', data);
   }
 
   toggleMyProductDisclaimer(data: toggleDiscalimerDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/disclaimer/toggle', data);
+    return http.patch<ProductMutationResult>('/product/vendor/disclaimer/toggle', data);
   }
 
   addMyProductDisclaimers(data: disclaimerItemsDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/disclaimer/add', data);
+    return http.patch<ProductMutationResult>('/product/vendor/disclaimer/add', data);
   }
 
   removeMyProductDisclaimers(data: disclaimerItemsDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/disclaimer/remove', data);
+    return http.patch<ProductMutationResult>('/product/vendor/disclaimer/remove', data);
   }
 
   addMyProductImages(data: imagesDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/images/add', data);
+    return http.patch<ProductMutationResult>('/product/vendor/images/add', data);
   }
 
   setMyProductDefaultImage(data: deafultImageDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/images/default', data);
+    return http.patch<ProductMutationResult>('/product/vendor/images/default', data);
   }
 
   removeMyProductImages(data: imagesDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/images/remove', data);
+    return http.patch<ProductMutationResult>('/product/vendor/images/remove', data);
   }
 
   toggleMyProductIngredients(data: toggleIngredientsDtoType): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/ingredients/toggle', data);
+    return http.patch<ProductMutationResult>('/product/vendor/ingredients/toggle', data);
   }
 
   addMyProductIngredients(data: ingredientsDtotype): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/ingredients/add', data);
+    return http.patch<ProductMutationResult>('/product/vendor/ingredients/add', data);
   }
 
   removeMyProductIngredients(data: ingredientsDtotype): Promise<ProductMutationResult> {
-    return http.patch<ProductMutationResult>('/product/my/ingredients/remove', data);
+    return http.patch<ProductMutationResult>('/product/vendor/ingredients/remove', data);
   }
 }
 

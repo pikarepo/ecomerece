@@ -62,15 +62,10 @@ export class ReviewApplicationService extends BaseService {
     const reviews = await this.reviewRepo.FindByProductId(pId);
     return reviews.map((review) => reviewMapper.aggregateToResponseReadModel(review));
   }
-  // Public: non-deleted, non-blocked reviews — optionally filter by product / rating
-  async getPaginatedReviews(query: GetPaginatedReviewsQueryDto) {
-    const filter: FilterQuery<ReviewPersistence> = {
-      'deleted.deleted': false,
-      'block.blocked': { $ne: true },
-    };
-    if (query.productId) filter.productId = Id.create(query.productId).value;
-    if (query.rating !== undefined) filter.rating = query.rating;
-
+  private async paginateReviews(
+    filter: FilterQuery<ReviewPersistence>,
+    query: GetPaginatedReviewsQueryDto,
+  ) {
     const cursor = query.cursor ? Id.create(query.cursor) : undefined;
     const limit = query.limit ? Quantity.create(query.limit) : undefined;
     const result = await this.reviewRepo.FindPaginated({
@@ -84,6 +79,49 @@ export class ReviewApplicationService extends BaseService {
       data: result.data.map((review) => reviewMapper.aggregateToReadModel(review)),
       meta: result.meta,
     };
+  }
+
+  // Public: non-deleted, non-blocked reviews — optionally filter by product / rating
+  async getPaginatedReviews(query: GetPaginatedReviewsQueryDto) {
+    const filter: FilterQuery<ReviewPersistence> = {
+      'deleted.deleted': false,
+      'block.blocked': { $ne: true },
+    };
+    if (query.productId) filter.productId = Id.create(query.productId).value;
+    if (query.rating !== undefined) filter.rating = query.rating;
+
+    return this.paginateReviews(filter, query);
+  }
+
+  /** Buyer: reviews the caller wrote, so deleted/blocked ones stay hidden like the public list. */
+  async getMyPaginatedReviews(query: GetPaginatedReviewsQueryDto, actor: AuthActor) {
+    const filter: FilterQuery<ReviewPersistence> = {
+      authorId: Id.create(actor._id).value,
+      'deleted.deleted': false,
+    };
+    if (query.productId) filter.productId = Id.create(query.productId).value;
+    if (query.rating !== undefined) filter.rating = query.rating;
+
+    return this.paginateReviews(filter, query);
+  }
+
+  /** Vendor: reviews left on any of the vendor's products, scoped by product id. */
+  async getVendorPaginatedReviews(query: GetPaginatedReviewsQueryDto, actor: AuthActor) {
+    const vendor = await this.vendorQueries.getByUserId(Id.create(actor._id));
+    if (!vendor) throw new BadRequestError('User does not own a vendor.');
+
+    const productIds = await this.productQueries.listVendorProductIds(Id.create(vendor.id));
+    const scopedIds = query.productId
+      ? productIds.filter((id) => id.value === query.productId)
+      : productIds;
+
+    const filter: FilterQuery<ReviewPersistence> = {
+      productId: { $in: scopedIds.map((id) => id.value) },
+      'deleted.deleted': false,
+    };
+    if (query.rating !== undefined) filter.rating = query.rating;
+
+    return this.paginateReviews(filter, query);
   }
 
   // Admin: all reviews — no baseline restrictions, optional filters

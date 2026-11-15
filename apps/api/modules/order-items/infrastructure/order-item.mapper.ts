@@ -6,7 +6,10 @@ import { Id } from '@ecomerece/domain/value-objects/id.vo';
 import { Money } from '@ecomerece/domain/value-objects/money.vo';
 import { Quantity } from '@ecomerece/domain/value-objects/quantity.vo';
 import { Reason } from '@ecomerece/domain/value-objects/reason.vo';
-import type { OrderItemResponseReadModel } from '@ecomerece/shared';
+import type {
+  OrderItemResponseReadModel,
+  VendorOrderItemResponseReadModel,
+} from '@ecomerece/shared';
 import type { OrderItemsPersistence } from './order-item.model';
 
 export const OrderItemsMapper = {
@@ -126,6 +129,23 @@ export const OrderItemsMapper = {
         reason: doc.deleted.reason ?? null,
       },
       createdAt: doc.createdAt,
+    };
+  },
+
+  /** Vendor view: the owning vendor id is noise for the vendor that owns the line. */
+  responseToVendorReadModel(item: OrderItemResponseReadModel): VendorOrderItemResponseReadModel {
+    return {
+      _id: item._id,
+      orderId: item.orderId,
+      productId: item.productId,
+      variantId: item.variantId,
+      quantity: item.quantity,
+      waitingTime: item.waitingTime,
+      status: item.status,
+      totalPrice: item.totalPrice,
+      price: item.price,
+      failureReason: item.failureReason,
+      createdAt: item.createdAt,
     };
   },
 

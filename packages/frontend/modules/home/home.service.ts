@@ -33,69 +33,69 @@ export class HomeService {
 
   // Categories
   addCategory(data: CreateHomeCategoryDtoType): Promise<HomeMutationResult> {
-    return http.post<HomeMutationResult>('/home/categories', data);
+    return http.post<HomeMutationResult>('/home/admin/categories', data);
   }
   updateCategory(data: UpdateHomeCategoryDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/categories', data);
+    return http.patch<HomeMutationResult>('/home/admin/categories', data);
   }
   removeCategory(data: DeleteHomeCategoryDtoType): Promise<HomeMutationResult> {
-    return http.delete<HomeMutationResult>('/home/categories', data);
+    return http.delete<HomeMutationResult>('/home/admin/categories', data);
   }
   reorderCategories(data: ReorderHomeCategoriesDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/categories/reorder', data);
+    return http.patch<HomeMutationResult>('/home/admin/categories/reorder', data);
   }
 
   // Slides
   addSlide(data: CreateSlideDtoType): Promise<HomeMutationResult> {
-    return http.post<HomeMutationResult>('/home/slides', data);
+    return http.post<HomeMutationResult>('/home/admin/slides', data);
   }
   updateSlide(data: UpdateSlideDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/slides', data);
+    return http.patch<HomeMutationResult>('/home/admin/slides', data);
   }
   removeSlide(data: DeleteSlideDtoType): Promise<HomeMutationResult> {
-    return http.delete<HomeMutationResult>('/home/slides', data);
+    return http.delete<HomeMutationResult>('/home/admin/slides', data);
   }
   reorderSlides(data: ReorderSlidesDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/slides/reorder', data);
+    return http.patch<HomeMutationResult>('/home/admin/slides/reorder', data);
   }
 
   // Promos
   addPromo(data: CreatePromoDtoType): Promise<HomeMutationResult> {
-    return http.post<HomeMutationResult>('/home/promos', data);
+    return http.post<HomeMutationResult>('/home/admin/promos', data);
   }
   updatePromo(data: UpdatePromoDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/promos', data);
+    return http.patch<HomeMutationResult>('/home/admin/promos', data);
   }
   removePromo(data: DeletePromoDtoType): Promise<HomeMutationResult> {
-    return http.delete<HomeMutationResult>('/home/promos', data);
+    return http.delete<HomeMutationResult>('/home/admin/promos', data);
   }
 
   // Features
   addFeature(data: CreateFeatureDtoType): Promise<HomeMutationResult> {
-    return http.post<HomeMutationResult>('/home/features', data);
+    return http.post<HomeMutationResult>('/home/admin/features', data);
   }
   setFeatures(data: SetFeaturesDtoType): Promise<HomeMutationResult> {
-    return http.put<HomeMutationResult>('/home/features', data);
+    return http.put<HomeMutationResult>('/home/admin/features', data);
   }
   updateFeature(data: UpdateFeatureDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/features', data);
+    return http.patch<HomeMutationResult>('/home/admin/features', data);
   }
   removeFeature(data: DeleteFeatureDtoType): Promise<HomeMutationResult> {
-    return http.delete<HomeMutationResult>('/home/features', data);
+    return http.delete<HomeMutationResult>('/home/admin/features', data);
   }
 
   // Containers
   addContainer(data: CreateProductContainerDtoType): Promise<HomeMutationResult> {
-    return http.post<HomeMutationResult>('/home/containers', data);
+    return http.post<HomeMutationResult>('/home/admin/containers', data);
   }
   updateContainer(data: UpdateProductContainerDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/containers', data);
+    return http.patch<HomeMutationResult>('/home/admin/containers', data);
   }
   removeContainer(data: DeleteProductContainerDtoType): Promise<HomeMutationResult> {
-    return http.delete<HomeMutationResult>('/home/containers', data);
+    return http.delete<HomeMutationResult>('/home/admin/containers', data);
   }
   reorderContainers(data: ReorderProductContainersDtoType): Promise<HomeMutationResult> {
-    return http.patch<HomeMutationResult>('/home/containers/reorder', data);
+    return http.patch<HomeMutationResult>('/home/admin/containers/reorder', data);
   }
 }
 

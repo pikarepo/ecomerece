@@ -1,8 +1,4 @@
-import type {
-  IProductStatsProjector,
-  IVendorQueries,
-  IVendorStatsProjector,
-} from '@ecomerece/contracts';
+import type { IProductStatsProjector, IVendorStatsProjector } from '@ecomerece/contracts';
 import type { Buses } from '../../core/infrastructure/buses/buses';
 import { connectDB } from '../../lib/mongo';
 import { CategoryStatsDenormalizationHandler } from './application/event-handlers/category-stats-denormalization.handler';
@@ -17,15 +13,9 @@ import { StatsController } from './presentation/StatsController';
 interface StatsModuleDeps extends Buses {
   productStats: IProductStatsProjector;
   vendorStats: IVendorStatsProjector;
-  vendorQueries: IVendorQueries;
 }
 
-export function CreateStatsModule({
-  eventBus,
-  productStats,
-  vendorStats,
-  vendorQueries,
-}: StatsModuleDeps) {
+export function CreateStatsModule({ eventBus, productStats, vendorStats }: StatsModuleDeps) {
   const vendorStatsRefresh = new VendorStatsRefreshService({
     loadVendorProducts: (vendorId) => productStats.listVendorProducts(vendorId),
     loadProductsByCategory: (categoryIds) => productStats.listProductsByCategory(categoryIds),
@@ -64,7 +54,7 @@ export function CreateStatsModule({
     }),
   );
 
-  const statsController = new StatsController(vendorQueries, eventBus);
+  const statsController = new StatsController(eventBus);
   const productStatsSyncScheduler = new ProductStatsSyncScheduler(eventBus);
 
   return { statsController, productStatsSyncScheduler };

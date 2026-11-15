@@ -6,22 +6,22 @@ import type { createOrderItemsApplication } from '../order-items.module';
 
 type OrderItemsController = ReturnType<typeof createOrderItemsApplication>['orderItemsController'];
 
+/**
+ * Path convention: scope (`my` | `vendor` | `admin`), then `all` or `:id`,
+ * then the command.
+ */
 export function createOrderItemsRoutes(orderItemsController: OrderItemsController) {
   const OrderItemsRoutes = new Hono();
 
+  // Buyer
   OrderItemsRoutes.get(
-    '/admin/all',
-    authMiddleware,
-    adminMiddleware,
-    orderItemsController.getAdminPaginatedOrderItems,
-  );
-  OrderItemsRoutes.get(
-    '/order/:orderId',
+    '/my/order/:orderId',
     authMiddleware,
     orderItemsController.getMyOrderItemsByOrderId,
   );
-  OrderItemsRoutes.post('/cancel/my', authMiddleware, orderItemsController.cancelMyOrderItems);
+  OrderItemsRoutes.post('/my/cancel', authMiddleware, orderItemsController.cancelMyOrderItems);
 
+  // Vendor
   OrderItemsRoutes.get(
     '/vendor/all',
     authMiddleware,
@@ -65,6 +65,25 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
     orderItemsController.vendorRefundOrderItem,
   );
 
+  // Admin
+  OrderItemsRoutes.get(
+    '/admin/all',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.getAdminPaginatedOrderItems,
+  );
+  OrderItemsRoutes.get(
+    '/admin/:id',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.getOrderItemById,
+  );
+  OrderItemsRoutes.patch(
+    '/admin/:id',
+    authMiddleware,
+    adminMiddleware,
+    orderItemsController.updateOrderItem,
+  );
   OrderItemsRoutes.delete(
     '/admin/:id',
     authMiddleware,
@@ -76,13 +95,6 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
     authMiddleware,
     adminMiddleware,
     orderItemsController.recoverOrderItem,
-  );
-
-  OrderItemsRoutes.patch(
-    '/admin/:id',
-    authMiddleware,
-    adminMiddleware,
-    orderItemsController.updateOrderItem,
   );
   OrderItemsRoutes.post(
     '/admin/:id/confirm',
@@ -107,13 +119,6 @@ export function createOrderItemsRoutes(orderItemsController: OrderItemsControlle
     authMiddleware,
     adminMiddleware,
     orderItemsController.refundOrderItem,
-  );
-
-  OrderItemsRoutes.get(
-    '/:id',
-    authMiddleware,
-    adminMiddleware,
-    orderItemsController.getOrderItemById,
   );
 
   return OrderItemsRoutes;

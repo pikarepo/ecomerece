@@ -7,8 +7,8 @@ import type { OrderRequestController } from './order-request.controller';
 export function createOrderRequestRoutes(controller: OrderRequestController) {
   const routes = new Hono();
 
+  routes.get('/my', authMiddleware, controller.getMyOrderRequests);
   routes.post('/my', authMiddleware, controller.createMyOrderRequest);
-  routes.get('/my/all', authMiddleware, controller.getMyOrderRequests);
   routes.get('/my/:id', authMiddleware, controller.getMyOrderRequestById);
   routes.patch('/my/:id/cancel', authMiddleware, controller.cancelMyOrderRequest);
 

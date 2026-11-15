@@ -57,19 +57,14 @@ export function VariantRow({ variant }: { variant: ProductVariantResponseReadMod
         ) : inventoryQuery.error ? (
           <Chip size="small" label="Stock unavailable" variant="outlined" />
         ) : inventory ? (
-          <>
-            <Chip
-              size="small"
-              variant="outlined"
-              label={`${formatNumber(inventory.available)} available`}
-              color={inventory.available <= inventory.lowStockThreshold ? 'warning' : 'default'}
-            />
-            <Chip
-              size="small"
-              variant="outlined"
-              label={`${formatNumber(inventory.reserved)} reserved`}
-            />
-          </>
+          <Chip
+            size="small"
+            variant="outlined"
+            label={
+              inventory.inStock ? `${formatNumber(inventory.available)} available` : 'Out of stock'
+            }
+            color={inventory.inStock ? 'default' : 'warning'}
+          />
         ) : null}
       </Stack>
     </Box>

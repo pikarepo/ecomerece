@@ -37,6 +37,7 @@ import type {
   UpdateMyVendorImageDto,
   UpdateMyVendorMetaDto,
   VendorListItemReadModel,
+  VendorPublicResponseReadModel,
   VendorResponseReadModel,
   VerifyVendorDto,
 } from '@ecomerece/shared';
@@ -163,6 +164,12 @@ export class VendorAppService extends BaseService {
     await this.publishEvents(newVendor);
 
     return VendorMessages.createdVendor(id, actorId);
+  }
+
+  /** Public storefront: branding and verification only, no owner or contact data. */
+  async getPublicVendorById(id: string): Promise<VendorPublicResponseReadModel> {
+    const vendor = await this.vendorRepo.FindByIdOrThrow(Id.create(id));
+    return VendorMapper.aggregateToPublicResponseReadModel(vendor);
   }
 
   async getVendorById(id: string): Promise<VendorResponseReadModel> {

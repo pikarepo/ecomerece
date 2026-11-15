@@ -34,11 +34,11 @@ export class UserService {
   }
 
   getMe(): Promise<UserResponseReadModel> {
-    return http.get<UserResponseReadModel>('/users/me');
+    return http.get<UserResponseReadModel>('/users/my');
   }
 
   getUserById(id: string): Promise<UserResponseReadModel> {
-    return http.get<UserResponseReadModel>(`/users/${id}`);
+    return http.get<UserResponseReadModel>(`/users/admin/${id}`);
   }
 
   getPaginatedUsers(params: GetPaginatedUsersQueryDto): Promise<PaginatedUsersResult> {
@@ -48,7 +48,7 @@ export class UserService {
     if (params.limit) searchParams.set('limit', String(params.limit));
     if (params.direction) searchParams.set('direction', params.direction);
     const qs = searchParams.toString();
-    return http.get<PaginatedUsersResult>(`/users${qs ? `?${qs}` : ''}`);
+    return http.get<PaginatedUsersResult>(`/users/admin/all${qs ? `?${qs}` : ''}`);
   }
 
   getAdminPaginatedUsers(params: GetAdminPaginatedUsersQueryDto): Promise<PaginatedUsersResult> {
@@ -66,43 +66,43 @@ export class UserService {
   }
 
   assignRole(data: UserRoleDto): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/role', data);
+    return http.patch<UserMutationResult>('/users/admin/role', data);
   }
 
   softDeleteUser(data: DeleteUserDTO): Promise<UserMutationResult> {
-    return http.delete<UserMutationResult>('/users/soft', data);
+    return http.delete<UserMutationResult>('/users/admin/soft', data);
   }
 
   softDeleteMe(data?: DeleteMeDTO): Promise<UserMutationResult> {
-    return http.delete<UserMutationResult>('/users/me/soft', data);
+    return http.delete<UserMutationResult>('/users/my', data);
   }
 
   recoverUser(userId: string): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/recover', { userId });
+    return http.patch<UserMutationResult>('/users/admin/recover', { userId });
   }
 
   blockUser(data: BlockUserDTO): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/block', data);
+    return http.patch<UserMutationResult>('/users/admin/block', data);
   }
 
   blockLift(userId: string): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/block/lift', { userId });
+    return http.patch<UserMutationResult>('/users/admin/block/lift', { userId });
   }
 
   banUser(data: BanUserDTO): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/ban', data);
+    return http.patch<UserMutationResult>('/users/admin/ban', data);
   }
 
   banLift(userId: string): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/ban/lift', { userId });
+    return http.patch<UserMutationResult>('/users/admin/ban/lift', { userId });
   }
 
   extendBan(data: ExtendBanDTO): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/ban/extend', data);
+    return http.patch<UserMutationResult>('/users/admin/ban/extend', data);
   }
 
   shortenBan(data: ExtendBanDTO): Promise<UserMutationResult> {
-    return http.patch<UserMutationResult>('/users/ban/short', data);
+    return http.patch<UserMutationResult>('/users/admin/ban/short', data);
   }
 }
 

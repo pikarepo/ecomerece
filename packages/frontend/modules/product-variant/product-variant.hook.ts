@@ -33,6 +33,24 @@ export function useGetVariantsByProductId(productId: string) {
   });
 }
 
+export function useGetVariantById(id: string) {
+  return useQuery({
+    queryKey: [...PRODUCT_VARIANT_QUERY_KEY, 'one', id],
+    queryFn: () => productVariantService.getVariantById(id),
+    enabled: Boolean(id),
+  });
+}
+
+export function useGetVendorPaginatedVariants(params: GetAdminPaginatedVariantsQueryDto) {
+  return useQuery({
+    queryKey: [...PRODUCT_VARIANT_QUERY_KEY, 'vendor', params],
+    queryFn: () =>
+      productVariantService.getVendorPaginatedVariants(
+        getAdminPaginatedVariantsQuerySchema.parse(params),
+      ),
+  });
+}
+
 export function useGetAdminPaginatedVariants(params: GetAdminPaginatedVariantsQueryDto) {
   return useQuery({
     queryKey: [...PRODUCT_VARIANT_QUERY_KEY, 'admin-paginated', params],

@@ -91,6 +91,17 @@ export function useGetVendorStatsOverview(
   });
 }
 
+export function useGetMyVendorStatsOverview(
+  options: { months?: number; days?: number; enabled?: boolean } = {},
+) {
+  const { months = 12, days = 30, enabled = true } = options;
+  return useQuery({
+    queryKey: [...STATS_QUERY_KEY, 'vendor', 'me', 'overview', months, days],
+    queryFn: () => statsService.getMyVendorStatsOverview(months, days),
+    enabled,
+  });
+}
+
 export function useGetVendorForceRefreshUsage() {
   return useQuery({
     queryKey: [...STATS_QUERY_KEY, 'vendor', 'force-update', 'usage'],

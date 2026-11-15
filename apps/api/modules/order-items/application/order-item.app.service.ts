@@ -21,6 +21,7 @@ import type { FilterQuery } from 'mongoose';
 import type { UnitOfWork } from '../../../core/database/unit-of-work';
 import { BaseService } from '../../../core/services/base.services';
 import { ForbiddenError, NotFoundError } from '../../../errors/app-error';
+import { OrderItemsMapper } from '../infrastructure/order-item.mapper';
 import type { OrderItemsPersistence } from '../infrastructure/order-item.model';
 import type { OrderItemsRepository } from '../infrastructure/order-item.repository';
 import { OrderItemsMessages } from '../presentation/order-items.messages';
@@ -206,7 +207,7 @@ export class OrderItemsApplicationService extends BaseService {
       direction: query.direction,
     });
     return {
-      data: result.data,
+      data: result.data.map((item) => OrderItemsMapper.responseToVendorReadModel(item)),
       meta: result.meta,
     };
   }
@@ -218,7 +219,7 @@ export class OrderItemsApplicationService extends BaseService {
     await this.assertVendorOwnsItem(itemId, vendorId);
     const item = await this.itemsRepo.FindResponseById(itemId);
     if (!item) throw new NotFoundError('Order item not found.');
-    return item;
+    return OrderItemsMapper.responseToVendorReadModel(item);
   }
 
   /** Vendor: update quantity / waiting time / price of an item they own. */

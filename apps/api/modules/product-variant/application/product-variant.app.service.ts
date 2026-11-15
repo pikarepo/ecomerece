@@ -229,13 +229,10 @@ export class productVariantApplicationService extends BaseService {
     await this.pricingUpdater.updatePrice(productId, price, actorId);
   }
 
-  // Admin: all product variants — no baseline restrictions, optional filters
-  async findAdminPaginatedVariants(query: GetAdminPaginatedVariantsQueryDto) {
-    const filter: FilterQuery<ProductVariantPersistence> = {};
-    if (query.productId) filter.productId = Id.create(query.productId).value;
-    if (query.active !== undefined) filter.active = query.active;
-    if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
-    if (query.search) filter.title = { $regex: query.search, $options: 'i' };
+  private async paginateVariants(
+    filter: FilterQuery<ProductVariantPersistence>,
+    query: GetAdminPaginatedVariantsQueryDto,
+  ) {
     const cursor = query.cursor ? Id.create(query.cursor) : undefined;
     const limit = query.limit ? Quantity.create(query.limit) : undefined;
     const result = await this.vairiantRepo.FindPaginated({
@@ -248,5 +245,36 @@ export class productVariantApplicationService extends BaseService {
       data: result.data.map((variant) => productVariantMapper.aggregateToReadModel(variant)),
       meta: result.meta,
     };
+  }
+
+  /** Vendor: variants that belong to any product the vendor owns. */
+  async findMyPaginatedVariants(query: GetAdminPaginatedVariantsQueryDto, actor: AuthActor) {
+    const vendor = await this.vendorQueries.getByUserId(Id.create(actor._id));
+    if (!vendor) throw new BadRequestError('User does not own a vendor.');
+
+    const productIds = await this.productQueries.listVendorProductIds(Id.create(vendor.id));
+    const scopedIds = query.productId
+      ? productIds.filter((id) => id.value === query.productId)
+      : productIds;
+
+    const filter: FilterQuery<ProductVariantPersistence> = {
+      productId: { $in: scopedIds.map((id) => id.value) },
+    };
+    if (query.active !== undefined) filter.active = query.active;
+    if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
+    if (query.search) filter.title = { $regex: query.search, $options: 'i' };
+
+    return this.paginateVariants(filter, query);
+  }
+
+  // Admin: all product variants — no baseline restrictions, optional filters
+  async findAdminPaginatedVariants(query: GetAdminPaginatedVariantsQueryDto) {
+    const filter: FilterQuery<ProductVariantPersistence> = {};
+    if (query.productId) filter.productId = Id.create(query.productId).value;
+    if (query.active !== undefined) filter.active = query.active;
+    if (query.deleted !== undefined) filter['deleted.deleted'] = query.deleted;
+    if (query.search) filter.title = { $regex: query.search, $options: 'i' };
+
+    return this.paginateVariants(filter, query);
   }
 }

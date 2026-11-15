@@ -1,5 +1,4 @@
-import type { IVendorQueries } from '@ecomerece/contracts';
-import { getISOWeek, getTimeWindows, Id } from '@ecomerece/domain';
+import { getISOWeek, getTimeWindows } from '@ecomerece/domain';
 import type { IEventBus } from '@ecomerece/domain/events/event-bus.interface';
 import {
   type AggregationLevel,
@@ -49,10 +48,7 @@ function backWeeks(count: number, fromWeek: string): string[] {
 }
 
 export class StatsController {
-  constructor(
-    private readonly vendorQueries: IVendorQueries,
-    private readonly eventBus: IEventBus,
-  ) {}
+  constructor(private readonly eventBus: IEventBus) {}
 
   public recordProductView = (c: Context) => this.recordView(c, 'product');
 
@@ -159,6 +155,15 @@ export class StatsController {
     return c.json({ entityType: 'category', entityId: categoryId, overview });
   };
 
+  /** Vendor: the caller's own overview, financials included. */
+  public getMyVendorStatsOverview = async (c: Context) => {
+    const vendorId = c.get('vendorId') as string | undefined;
+    if (!vendorId) throw new HTTPException(403, { message: 'Vendor access is required.' });
+
+    const overview = await this.getEntityOverview(c, 'vendor', vendorId);
+    return c.json({ entityType: 'vendor', entityId: vendorId, overview });
+  };
+
   public getVendorStatsOverview = async (c: Context) => {
     const vendorId = this.requireParam(c, 'entityId');
     const overview = await this.getEntityOverview(c, 'vendor', vendorId);
@@ -184,19 +189,17 @@ export class StatsController {
   };
 
   public getVendorForceRefreshUsage = async (c: Context) => {
-    const vendor = await this.resolveMyVendor(c);
-    if (!vendor) throw new HTTPException(404, { message: 'Vendor not found' });
+    const vendorId = this.requireVendorId(c);
 
     const quota = await vendorForceRefreshQuotaService.getQuota();
-    const used = await vendorForceRefreshQuotaService.getUsage(vendor.id);
+    const used = await vendorForceRefreshQuotaService.getUsage(vendorId);
     return c.json({ success: true, data: { quota, used, remaining: Math.max(quota - used, 0) } });
   };
 
   public forceRefreshMyVendorStats = async (c: Context) => {
-    const vendor = await this.resolveMyVendor(c);
-    if (!vendor) throw new HTTPException(404, { message: 'Vendor not found' });
+    const vendorId = this.requireVendorId(c);
 
-    const result = await requestVendorStatsForceRefresh(vendor.id, this.eventBus);
+    const result = await requestVendorStatsForceRefresh(vendorId, this.eventBus);
 
     if (!result.accepted) {
       return c.json(
@@ -215,10 +218,11 @@ export class StatsController {
     });
   };
 
-  private async resolveMyVendor(c: Context) {
-    const userId = c.get('userId') as string | undefined;
-    if (!userId) throw new HTTPException(401, { message: 'Authentication required' });
-    return this.vendorQueries.getByUserId(Id.create(userId));
+  /** The vendor resolved by `vendorMiddleware`; vendor routes never name one. */
+  private requireVendorId(c: Context): string {
+    const vendorId = c.get('vendorId') as string | undefined;
+    if (!vendorId) throw new HTTPException(403, { message: 'Vendor access is required.' });
+    return vendorId;
   }
 
   private async getEntityOverview(c: Context, entityType: EntityType, entityId: string) {

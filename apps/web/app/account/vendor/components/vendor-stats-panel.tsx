@@ -20,7 +20,7 @@ import {
   type StatsAggregationLevel,
   useGetVendorForceRefreshUsage,
   useGetVendorLifetimeStats,
-  useGetVendorStatsOverview,
+  useGetMyVendorStatsOverview,
   useGetVendorTimeSeries,
   useVendorForceRefresh,
 } from '@ecomerece/frontend/stats';
@@ -54,7 +54,7 @@ export function VendorStatsPanel({ vendorId }: { vendorId: string }) {
   }, [aggregation]);
 
   const lifetimeQuery = useGetVendorLifetimeStats(vendorId);
-  const overviewQuery = useGetVendorStatsOverview(vendorId);
+  const overviewQuery = useGetMyVendorStatsOverview();
   const seriesQuery = useGetVendorTimeSeries(vendorId, aggregation, range.from, range.to);
   const usageQuery = useGetVendorForceRefreshUsage();
   const forceRefresh = useVendorForceRefresh();
@@ -183,9 +183,7 @@ export function VendorStatsPanel({ vendorId }: { vendorId: string }) {
             size="small"
             label="Aggregation"
             value={aggregation}
-            onChange={(event) =>
-              setAggregation(event.target.value as StatsAggregationLevel)
-            }
+            onChange={(event) => setAggregation(event.target.value as StatsAggregationLevel)}
             sx={{ minWidth: 150 }}
           >
             {AGGREGATIONS.map((option) => (
@@ -218,10 +216,7 @@ export function VendorStatsPanel({ vendorId }: { vendorId: string }) {
               <TableBody>
                 {(seriesQuery.data?.series ?? []).map((point) => {
                   const period =
-                    point.dimensions.date ??
-                    point.dimensions.week ??
-                    point.dimensions.month ??
-                    '—';
+                    point.dimensions.date ?? point.dimensions.week ?? point.dimensions.month ?? '—';
                   return (
                     <TableRow key={`${period}-${point.createdAt}`} hover>
                       <TableCell>{period}</TableCell>
@@ -232,9 +227,7 @@ export function VendorStatsPanel({ vendorId }: { vendorId: string }) {
                       <TableCell align="right">
                         {formatNumber(point.metrics.quantity ?? 0)}
                       </TableCell>
-                      <TableCell align="right">
-                        {formatMoney(point.metrics.revenue ?? 0)}
-                      </TableCell>
+                      <TableCell align="right">{formatMoney(point.metrics.revenue ?? 0)}</TableCell>
                     </TableRow>
                   );
                 })}

@@ -17,6 +17,7 @@ import type {
   DeleteInventoryDto,
   GetAdminPaginatedInventoryQueryDto,
   GetVendorPaginatedInventoryQueryDto,
+  InventoryPublicResponseReadModel,
   InventoryResponseReadModel,
   removeMyInventoryStockDtoType,
   updateMylowStockThresholdDtoType,
@@ -202,10 +203,11 @@ export class InventoryApplicationService extends BaseService {
     );
   }
 
-  async getInventoryByVarientId(id: string): Promise<InventoryResponseReadModel> {
+  /** Public: availability for one variant, without the vendor's stock policy. */
+  async getPublicInventoryByVariantId(id: string): Promise<InventoryPublicResponseReadModel> {
     const variantId = Id.create(id);
-    const varinat = await this.inventoryRepo.FindByVariantIdOrThrow(variantId);
-    return InventoryMapper.aggregateToResponseReadModel(varinat);
+    const inventory = await this.inventoryRepo.FindByVariantIdOrThrow(variantId);
+    return InventoryMapper.aggregateToPublicResponseReadModel(inventory);
   }
 
   async getInventoryById(id: string): Promise<InventoryResponseReadModel> {

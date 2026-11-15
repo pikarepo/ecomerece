@@ -138,3 +138,7 @@ bun test --watch            # watch mode
 - Auth middleware checks live DB state (ban/block/delete) after JWT verification
 - `lucide-react` pinned to `0.468.0` and `react`/`react-dom` pinned to `19.3.0` via root `overrides`
 - Production: `pm2 start ecosystem.config.js` (fork mode, Bun, port 8000)
+
+<API_TASKS>
+Before responding to any non-trivial API engineering task — designing, implementing, mocking, testing, monitoring, documenting, or deploying an API or Postman Flow — read `postman/skills/api-engineer/SKILL.md` and follow it. It is the default entry point for API work in this repository. Pure questions and trivial one-line edits do not need it.
+</API_TASKS>

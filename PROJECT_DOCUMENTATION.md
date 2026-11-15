@@ -55,7 +55,7 @@ settings, Supabase for identity, Cloudinary for image hosting.
 ## 1. What the system does
 
 A customer browses products (optionally filtered by category or vendor), opens a product page,
-reads reviews and adds items to a cart. Placing an order goes through `POST /order/create/my`,
+reads reviews and adds items to a cart. Placing an order goes through `POST /order/my`,
 which reserves stock through the inventory module, creates order items through the order-items
 module, and records a stats event. Vendors list products and variants, manage stock, see their
 sales stats, and can force-refresh their own stats (rate limited by a quota in Redis). Admins
@@ -200,17 +200,30 @@ registration-order semantics). It returns `{ success: true, message: 'OK' }`. Us
 probes; use `GET /stats/_health` for stats pipeline depth.
 
 **Route mounting.** `apps/api/index.ts` calls `createApplication()` from
-`apps/api/composition-root.ts` once, then `createRoutes(application)` mounts twelve prefixes and hands
-each route factory the controller the composition root already built:
+`apps/api/composition-root.ts` once, then `createRoutes(application)` mounts fourteen prefixes and
+hands each route factory the controller the composition root already built:
 
 ```ts
-/product  /product-variant  /review  /product-inventory  /order  /order-items
-/category /address          /users   /vendor             /home   /stats
+/product  /product-variant  /review  /product-inventory  /order      /cart
+/order-items  /order-request  /category  /address        /users      /vendor
+/home     /stats
 ```
 
-Route modules no longer construct anything: they only receive a controller (or, for `order-items`,
-nothing) and declare HTTP handlers. `/order-items` exposes no endpoints — the module is internal and
-its writer is injected into the order module as `IOrderItemsWriter`.
+Route modules no longer construct anything: they only receive a controller and declare HTTP
+handlers. Each prefix is split into `my` / `vendor` / `admin` paths (§14); no route is registered
+for two audiences.
+
+**Route-level guards** (`apps/api/middleware/`): `authMiddleware` verifies the Supabase token and
+then loads the live user row (ban/block/delete, role, actor) before any handler runs;
+`adminMiddleware` requires `role === 'admin'`; `vendorMiddleware` does **not** look at a role — it
+requires a signed-in user who owns an active (verified, non-deleted) vendor, and publishes that
+vendor id to the handler; `initAuthMiddleware` guards only `POST /users/init`. The stats view/access
+guards are described in §15.5 and §15.6.
+
+**Ownership is enforced twice on vendor routes**: `vendorMiddleware` proves *who* the caller's
+vendor is, and each application service re-checks that vendor against the concrete resource (order,
+order item, order request, product, variant, stock row, review) before reading or mutating it. A
+vendor route therefore has no `:vendorId` parameter and no unscoped `:id` read.
 
 **Shutdown.** SIGTERM/SIGINT: `statsBufferService.shutdown()` (final flush), then
 `productStatsSyncScheduler.stop()`, then `process.exit(0)`. There is no explicit Mongo/Redis
@@ -300,7 +313,7 @@ mounted anywhere; do not use it as-is.
 | `statsAccessGuard('throw')` / `statsAccessGuard('mask')` | entity-level stats access (see §15.6) |
 | `statsViewGuard` | write-path bot/dedupe/rate filtering (see §15.5) |
 
-Roles come from the user document: `customer`, `vendor`, `admin`. `POST /users/role` is the only
+Roles come from the user document: `customer`, `vendor`, `admin`. `POST /users/admin/role` is the only
 place that assigns them (admin only), and vendor lifecycle events also promote/demote
 automatically (§11.3).
 
@@ -720,14 +733,14 @@ middleware agree on the actor shape.
 
 ### 11.3 Flows that cross module boundaries
 
-**Create a product** (`POST /product/my`)
+**Create a product** (`POST /product/vendor`)
 
 1. `ProductApplicationService` resolves the caller's vendor via `IVendorQueries.getByUserId`.
 2. It validates the category with `ICategoryQueries.verifyAndGet`.
 3. Uploads images through `IImageStorage` (Cloudinary adapter).
 4. Saves the aggregate and publishes `product.created`.
 
-**Change a variant price** (`PATCH /product-variant/my/price`)
+**Change a variant price** (`PATCH /product-variant/vendor/price`)
 
 1. Variant aggregate raises `product-variant.price-updated` and is saved.
 2. The service calls the injected `IProductPricingUpdater` port
@@ -735,9 +748,7 @@ middleware agree on the actor shape.
 3. `ProductInternelService` recalcs the product's pricing summary and raises
    `product.pricing-summary-updated`.
 
-**Place an order** (`POST /order/create/my`)
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+**Place an order** (`POST /order/my`)
 
 
 1. Inside `UnitOfWork.transaction`: `EnsureUniqueImpodentKey`, then the service calls
@@ -748,8 +759,6 @@ middleware agree on the actor shape.
 3. The transaction commits; only then does the service publish the item + order events on the event
    bus (`order.created`). A rolled-back transaction publishes nothing.
 
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 
 **Vendor lifecycle changes a user's role**
 
@@ -768,8 +777,6 @@ click and page / category views are tracked directly by HTTP endpoints, not by d
 
 - `apps/api/middleware/db.middleware.ts` connects Mongoose once per process and short-circuits
   with a 503 envelope when the connection is unusable
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 .
 - `apps/api/core/repository/base.repository.ts` declares the repository contract;
   `apps/api/core/repository/mongo.repository.ts` implements generic helpers:
@@ -782,8 +789,6 @@ click and page / category views are tracked directly by HTTP endpoints, not by d
 - Transactions: `apps/api/core/database/transaction-context.ts` stores the Mongo session in
   `AsyncLocalStorage`; `UnitOfWork.transaction(callback)` opens a session, calls `startTransaction`,
   runs the callback inside the context, commits, and 
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 aborts on error. It retries up to 3 times only
   on `TransientTransactionError`, with exponential backoff (100 ms → 5 s). Nested calls reuse the
   ambient session. `MongoRepository` reads `getCurrentSession()` and attaches it to every read/write,
@@ -826,8 +831,6 @@ to each.
 
 ### 13.1 address
 
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 
 - Owns buyer shipping addresses. `AddressAggregate` keeps owner id, five address VOs, a default
   flag and delete info.
@@ -843,8 +846,6 @@ to each.
   `category.created` / `category.image-updated` / `category.meta-updated` / `category.deleted` /
   `category.blocked` / `category.recovered`.
 - `VerifyCategoryAndGetQuery` is used by products to 
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
 validate their category id.
 
 ### 13.3 home
@@ -852,7 +853,8 @@ validate their category id.
 - One document holds the whole storefront home layout: ordered `slides`, `promos`, `categories`,
   `features`, and `containers` (shelves of products).
 - Admin endpoints add/update/remove each collection; slides, categories and containers have
-  `/reorder` endpoints, and `PUT /home/features` replaces the whole feature set (`PATCH` updates one).
+  `/reorder` endpoints, and `PUT /home/admin/features` replaces the whole feature set (`PATCH`
+  updates one). Every write lives under `/home/admin`; the layout read is `GET /home`.
 - `HomeAggregate` raises granular events (`home.slide-added`, …) and bumps `version`.
 - The storefront reads it with `useGetHomeLayout()`; the dashboard edits it with the same hooks plus
   mutations.
@@ -868,8 +870,11 @@ validate their category id.
 
 - One document per variant (`variantId`, `productId`, `vendorId`), tracking quantity, reserved,
   available and a low-stock threshold.
-- Vendor endpoints: create stock (`POST /product-inventory/my/create`), buy more stock
-  (`…/my/:id/purchase`), change threshold (`…/my/:id/threshold`), remove stock (`…/:id/remove`).
+- Vendor endpoints (own vendor only): create stock (`POST /product-inventory/vendor`), buy more
+  stock (`/product-inventory/vendor/:id/purchase`), change threshold (`…/vendor/:id/threshold`),
+  remove stock (`…/vendor/:id/remove`), list and read own rows. The public read is
+  `GET /product-inventory/variant/:id`, which returns availability only — reservations, thresholds
+  and timestamps stay vendor/admin data.
 - The order-facing reservation path is the `IInventoryReservation` port (`InventoryReservationAdapter`
   in `infrastructure/`), not a command bus. It loads by variant ids, filters deleted rows, calls
   `aggregate.reserve(quantity, actorId)` and saves the batch.
@@ -886,14 +891,20 @@ validate their category id.
   version and delete info; creation is the only state transition implemented.
 - `createOrder` runs the cross-module verification + reservation + item-creation pipeline from §11.3
   inside `UnitOfWork.transaction`, saves, and publishes `order.created` only after the commit.
-- Buyers read their own orders with cursor pagination; admins read all orders.
+- Buyers read their own orders with cursor pagination (`/order/my`), vendors read only the orders
+  that contain one of their lines (`/order/vendor/...`, with `vendorSubtotal` computed from those
+  lines and the buyer id / cross-vendor totals withheld), admins read everything (`/order/admin/...`).
 
 ### 13.7 order-items
 
-- No routes. Exists to own line items and expose them through two contracts:
-  `GetOrderItemByIdQuery` and the `IOrderItemsWriter` port (`OrderItemsWriterAdapter`), whose `create`
-  writes every line inside the caller's unit of work and returns the `order-item.created` events
-  (the order module publishes them post-commit; stats consumes them).
+- Owns line items and exposes them through two contracts: `GetOrderItemByIdQuery` and the
+  `IOrderItemsWriter` port (`OrderItemsWriterAdapter`), whose `create` writes every line inside the
+  caller's unit of work and returns the `order-item.created` events (the order module publishes them
+  post-commit; stats consumes them).
+- HTTP surface is split by audience: buyers cancel their own lines (`/order-items/my/...`), vendors
+  read and advance only the lines of their own vendor after `vendorMiddleware` + an ownership check,
+  admins can address any line. Vendor reads use `VendorOrderItemResponseReadModel`, which drops the
+  vendor id echo.
 - The module itself does not open transactions — the order use case does (§12.1).
 
 ### 13.8 product
@@ -920,9 +931,10 @@ validate their category id.
 
 - `ReviewAggregate` stores product/author/order ids, author snapshot (name, avatar), rating, title,
   comment, images, likes/dislikes, report count + reasons, vendor reply and verified-purchase flag.
-- Wired endpoints are read + create only: list (paginated), list by product, get by id, create my
-  review, admin list. Like/dislike/report/vendor-reply/update/delete exist on the aggregate and emit
-  events, but no HTTP route calls them.
+- Public reads: paginated list, list by product, get by id. Buyer surface: `/review/my` (create,
+  list, update, delete) plus `/review/my/:id/{like,dislike,report}`. Vendor surface:
+  `/review/vendor/all` and `/review/vendor/:id/reply`, behind `vendorMiddleware`. Admin surface:
+  `/review/admin/all`, `/review/admin/:id/block`, `/review/admin/:id/unblock`.
 - `createReview` marks the review verified when the supplied `orderId` is an active order owned by
   the caller (`EnsureActiveOrderGetByIdQuery`).
 
@@ -935,10 +947,10 @@ aggregate and app service.
 ### 13.12 user
 
 - Mirrors Supabase identities into MongoDB. `POST /users/init` (guarded by `initAuth`) creates the
-  row from the token + profile; `GET /users/me` returns the current user.
+  row from the token + profile; `GET /users/my` returns the current user.
 - Admin moderation: block/unblock, ban (short/long), extend ban, lift ban, soft delete, recover,
   assign role.
-- Self service: `DELETE /users/me/soft`.
+- Self service: `DELETE /users/my`.
 - Internal: `promoteToVendor` / `demoteToCustomer` driven by vendor events.
 - Role values: `customer`, `vendor`, `admin`.
 
@@ -946,208 +958,331 @@ aggregate and app service.
 
 - Store profile: owner id, name, description, contact, image, verification state, stats settings,
   delete info.
-- Vendor surface: create my vendor, read my vendor, update meta/contact/image, toggle stats refresh,
-  soft delete.
-- Admin surface: verify, reject, recover, soft delete, list all.
-- Public surface: paginated list and vendor page.
+- Vendor surface (`/vendor/me...`): create, read, update meta/contact/image, toggle stats refresh,
+  soft delete. These are the caller's own vendor, so they only need `auth`.
+- Admin surface (`/vendor/admin...`): verify, reject, recover, soft delete, list all, and
+  `GET /vendor/admin/:id` for the full record.
+- Public surface: paginated list and `GET /vendor/:id`, which maps through
+  `VendorMapper.aggregateToPublicResponseReadModel` — owner id, contact details, verification
+  timestamps and stats settings are not part of the public model.
+- Vendor-owned writes elsewhere (products, variants, inventory, orders, order items, order requests,
+  reviews, stats) sit behind `vendorMiddleware`, which resolves the caller's own active vendor.
 - Verification/rejection events drive user role changes (§11.3).
 
 ---
 
 ## 14. HTTP endpoint catalog
 
-Access column: **Public** (no guard), **Auth** (`auth`), **Admin** (`auth, admin`), **Init**
-(`initAuth`), **View** (`statsViewGuard`), **Access:mask / Access:throw** (`statsAccessGuard`).
-All paths below are the effective paths after mounting; `:param` denotes a path parameter.
+Every path is scoped by audience before it names anything else:
 
-### Product — `/product` (21)
+`/<resource>/<scope>/<all|:id>/<command>`
 
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| GET | `/product` | Public | paginated catalogue (filter by category/vendor/search) |
-| GET | `/product/admin/all` | Admin | paginated including blocked/deleted |
-| GET | `/product/my` | Auth | the caller's vendor products |
-| GET | `/product/:id` | Public | single product |
-| POST | `/product/my` | Auth | create product (uploads images) |
-| DELETE | `/product/my/soft` | Auth | soft delete |
-| PATCH | `/product/my/recover` | Auth | recover own product |
-| POST | `/product/block` | Admin | block product |
-| POST | `/product/block/lift` | Admin | unblock product |
-| PATCH | `/product/state/my/public` | Auth | make public |
-| PATCH | `/product/state/my/private` | Auth | make private |
-| PATCH | `/product/my/meta` | Auth | name/description/category/price |
-| PATCH | `/product/my/disclaimer/toggle` | Auth | enable/disable disclaimers |
-| PATCH | `/product/my/disclaimer/add` | Auth | add disclaimers |
-| PATCH | `/product/my/disclaimer/remove` | Auth | remove disclaimers |
-| PATCH | `/product/my/images/add` | Auth | add gallery images |
-| PATCH | `/product/my/images/remove` | Auth | remove gallery images |
-| PATCH | `/product/my/images/default` | Auth | set default image |
-| PATCH | `/product/my/ingredients/toggle` | Auth | enable/disable ingredients |
-| PATCH | `/product/my/ingredients/add` | Auth | add ingredients |
-| PATCH | `/product/my/ingredients/remove` | Auth | remove ingredients |
+`scope` is `my` (the caller's own records), `vendor` (the caller's vendor, resolved from the
+token) or `admin`. No path is registered for two audiences. The one deliberate exception is the
+per-entity stats reads (`/stats/entity/:entityType/:entityId/...`): `statsAccessGuard` masks or
+refuses them per caller, so a second copy would only add drift.
 
-### Product variant — `/product-variant` (8)
+Commands that address a set by body use `/<resource>/<scope>/<noun>/<verb>` and carry no path id.
+
+Access column: **Public** (no guard), **Auth** (`auth`), **Vendor** (`auth`, `vendor`),
+**Admin** (`auth`, `admin`), **Init** (`initAuth`), **View** (`statsViewGuard`),
+**Access:mask** / **Access:throw** (`statsAccessGuard`).
+
+`vendor` means `vendorMiddleware` (§5): it does not read a role string. The credential is the
+signed-in user's own active, verified vendor, and the vendor use cases re-check that vendor against
+the concrete order, item, request, product or stock row before mutating it. There is no unscoped
+`/:id` read on any vendor surface.
+
+All paths are the effective paths after mounting; `:param` denotes a path parameter and
+`:entityType` is `product | category | vendor | page` depending on the read.
+
+### /product (24)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/product-variant/:id` | Public | single variant |
-| GET | `/product-variant/admin/all` | Admin | paginated variants |
-| POST | `/product-variant/my` | Auth | create variant under a product |
-| PATCH | `/product-variant/my/price` | Auth | change price (cascades pricing summary) |
-| PATCH | `/product-variant/my/meta` | Auth | name/meta update |
-| PATCH | `/product-variant/my/appereance/toggle` | Auth | toggle appearance *(path typo is in source)* |
-| DELETE | `/product-variant/my/delete/soft` | Auth | soft delete |
-| PATCH | `/product-variant/recover/:id` | Admin | recover variant |
+| GET | `/product` | Public | get paginated products |
+| GET | `/product/vendor/all` | Vendor (`auth`, `vendor`) | get my paginated products |
+| POST | `/product/vendor` | Vendor (`auth`, `vendor`) | create my product |
+| DELETE | `/product/vendor` | Vendor (`auth`, `vendor`) | soft delete my product |
+| PATCH | `/product/vendor/recover` | Vendor (`auth`, `vendor`) | recover my product |
+| PATCH | `/product/vendor/state/public` | Vendor (`auth`, `vendor`) | make my product public |
+| PATCH | `/product/vendor/state/private` | Vendor (`auth`, `vendor`) | make my product private |
+| PATCH | `/product/vendor/meta` | Vendor (`auth`, `vendor`) | update my product meta |
+| PATCH | `/product/vendor/stock` | Vendor (`auth`, `vendor`) | set my product in stock |
+| PATCH | `/product/vendor/disclaimer/toggle` | Vendor (`auth`, `vendor`) | toggle my product disclaimer |
+| PATCH | `/product/vendor/disclaimer/add` | Vendor (`auth`, `vendor`) | add my product disclaimers |
+| PATCH | `/product/vendor/disclaimer/remove` | Vendor (`auth`, `vendor`) | remove my product disclaimers |
+| PATCH | `/product/vendor/disclaimer/update` | Vendor (`auth`, `vendor`) | update my product disclaimer |
+| PATCH | `/product/vendor/images/add` | Vendor (`auth`, `vendor`) | add my product images |
+| PATCH | `/product/vendor/images/remove` | Vendor (`auth`, `vendor`) | remove my product images |
+| PATCH | `/product/vendor/images/default` | Vendor (`auth`, `vendor`) | set my product default image |
+| PATCH | `/product/vendor/ingredients/toggle` | Vendor (`auth`, `vendor`) | toggle my product ingredients |
+| PATCH | `/product/vendor/ingredients/add` | Vendor (`auth`, `vendor`) | add my product ingredients |
+| PATCH | `/product/vendor/ingredients/remove` | Vendor (`auth`, `vendor`) | remove my product ingredients |
+| PATCH | `/product/vendor/ingredients/clear` | Vendor (`auth`, `vendor`) | clear my product ingredients |
+| GET | `/product/admin/all` | Admin (`auth`, `admin`) | get admin paginated products |
+| PATCH | `/product/admin/block` | Admin (`auth`, `admin`) | block product |
+| PATCH | `/product/admin/block/lift` | Admin (`auth`, `admin`) | unblock product |
+| GET | `/product/:id` | Public | get product by id |
 
-### Inventory — `/product-inventory` (6)
-
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| GET | `/product-inventory/admin/all` | Admin | paginated inventory |
-| GET | `/product-inventory/:id` | Public | inventory by id |
-| POST | `/product-inventory/my/create` | Auth | create stock row for a variant |
-| PATCH | `/product-inventory/my/:id/purchase` | Auth | buy/add stock |
-| PATCH | `/product-inventory/my/:id/threshold` | Auth | set low-stock threshold |
-| PATCH | `/product-inventory/:id/remove` | Auth | remove stock |
-
-### Order — `/order` (3)
-
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| POST | `/order/create/my` | Auth | full checkout pipeline |
-| GET | `/order/my` | Auth | caller's orders (cursor paginated) |
-| GET | `/order/admin/all` | Admin | all orders |
-
-`/order-items` mounts no routes — it is an internal module (query + writer port). The empty router is
-still mounted in `routes/index.ts`; see §22.
-
-### Category — `/category` (6)
+### /product-variant (10)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/category` | Public | list categories |
-| GET | `/category/admin/all` | Admin | paginated categories |
-| GET | `/category/:id` | Public | single category |
-| POST | `/category/create` | Admin | create (image upload) |
-| PATCH | `/category/update` | Admin | update |
-| DELETE | `/category` | Admin | soft delete (id in body/query) |
+| GET | `/product-variant/product/:id` | Public | get variants by product id |
+| GET | `/product-variant/:id` | Public | get variant by id |
+| GET | `/product-variant/vendor/all` | Vendor (`auth`, `vendor`) | get my paginated variants |
+| POST | `/product-variant/vendor` | Vendor (`auth`, `vendor`) | create my product variant |
+| PATCH | `/product-variant/vendor/price` | Vendor (`auth`, `vendor`) | update my variant price |
+| PATCH | `/product-variant/vendor/meta` | Vendor (`auth`, `vendor`) | update my variant meta |
+| PATCH | `/product-variant/vendor/appearance/toggle` | Vendor (`auth`, `vendor`) | toggle my variant appearance |
+| DELETE | `/product-variant/vendor/soft` | Vendor (`auth`, `vendor`) | soft delete my variant |
+| GET | `/product-variant/admin/all` | Admin (`auth`, `admin`) | get admin paginated variants |
+| PATCH | `/product-variant/admin/:id/recover` | Admin (`auth`, `admin`) | recover variant |
 
-### Address — `/address` (7)
-
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| GET | `/address/my` | Auth | caller's addresses |
-| GET | `/address/admin/all` | Admin | paginated addresses |
-| POST | `/address/my` | Auth | create (max 4 per user) |
-| PATCH | `/address/my/:id/update` | Auth | update |
-| PATCH | `/address/my/:id/default` | Auth | set default |
-| DELETE | `/address/my/:id` | Auth | soft delete |
-| PATCH | `/address/my/:id/recover` | Admin | recover |
-
-### Users — `/users` (15)
+### /review (15)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| POST | `/users/init` | Init | create/lookup Mongo 
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
-user from Supabase identity |
-| GET | `/users/me` | Auth | current user |
-| DELETE | `/users/me/soft` | Auth | delete own account |
-| GET | `/users` | Auth | paginated users |
-| GET | `/users/admin/all` | Admin | paginated users (admin view) |
-| GET | `/users/:id` | Auth | single user |
-| DELETE | `/users/soft` | Admin | soft delete user |
-| PATCH | `/users/block` | Admin | block |
-| PATCH | `/users/block/lift` | Admin | unblock |
-| PATCH | `/users/ban` | Admin | ban |
-| PATCH | `/users/ban/short` | Admin | short ban |
-| PATCH | `/users/ban/extend` | Admin | extend ban |
-| PATCH | `/users/ban/lift` | Admin | lift ban |
-| PATCH | `/users/role` | Admin | assign role |
-| PATCH | `/users/recover` | Admin | recover deleted user |
+| GET | `/review` | Public | get paginated reviews |
+| GET | `/review/product/:id` | Public | get reviews by product id |
+| GET | `/review/my` | Auth | get my paginated reviews |
+| POST | `/review/my` | Auth | create |
+| PATCH | `/review/my/:id` | Auth | update my review |
+| DELETE | `/review/my/:id` | Auth | delete my review |
+| POST | `/review/my/:id/like` | Auth | like review |
+| POST | `/review/my/:id/dislike` | Auth | dislike review |
+| POST | `/review/my/:id/report` | Auth | report review |
+| GET | `/review/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated reviews |
+| POST | `/review/vendor/:id/reply` | Vendor (`auth`, `vendor`) | add vendor reply |
+| GET | `/review/admin/all` | Admin (`auth`, `admin`) | get admin paginated reviews |
+| PATCH | `/review/admin/:id/block` | Admin (`auth`, `admin`) | block review |
+| PATCH | `/review/admin/:id/unblock` | Admin (`auth`, `admin`) | unblock review |
+| GET | `/review/:id` | Public | get review by id |
 
-### Vendor — `/vendor` (14)
+### /product-inventory (15)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/vendor` | Public | list vendors |
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
+| GET | `/product-inventory/variant/:id` | Public | get public inventory by variant id |
+| GET | `/product-inventory/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated inventory |
+| GET | `/product-inventory/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor inventory by id |
+| POST | `/product-inventory/vendor` | Vendor (`auth`, `vendor`) | create my inventory |
+| DELETE | `/product-inventory/vendor/:id` | Vendor (`auth`, `vendor`) | delete my inventory |
+| PATCH | `/product-inventory/vendor/:id/purchase` | Vendor (`auth`, `vendor`) | buy my inventory |
+| PATCH | `/product-inventory/vendor/:id/threshold` | Vendor (`auth`, `vendor`) | update my low stock threshold |
+| PATCH | `/product-inventory/vendor/:id/remove` | Vendor (`auth`, `vendor`) | remove my inventory stock |
+| GET | `/product-inventory/admin/all` | Admin (`auth`, `admin`) | get admin paginated inventory |
+| GET | `/product-inventory/admin/:id` | Admin (`auth`, `admin`) | get admin inventory by id |
+| POST | `/product-inventory/admin` | Admin (`auth`, `admin`) | create inventory |
+| PATCH | `/product-inventory/admin/:id/restock` | Admin (`auth`, `admin`) | buy admin inventory |
+| PATCH | `/product-inventory/admin/:id/threshold` | Admin (`auth`, `admin`) | update admin low stock threshold |
+| PATCH | `/product-inventory/admin/:id/remove` | Admin (`auth`, `admin`) | remove admin inventory stock |
+| DELETE | `/product-inventory/admin/:id` | Admin (`auth`, `admin`) | delete admin inventory |
 
-| GET | `/vendor/admin/all` | Admin | paginated vendors |
-| GET | `/vendor/:id` | Public | vendor page |
-| POST | `/vendor/my` | Auth | create my vendor |
-| GET | `/vendor/my` | Auth | my vendor |
-| PATCH | `/vendor/my/meta` | Auth | name/description |
-| PATCH | `/vendor/my/contact` | Auth | contact info |
-| PATCH | `/vendor/my/image` | Auth | image upload |
-| PATCH | `/vendor/my/stats-refresh` | Auth | toggle stats auto-refresh |
-| DELETE | `/vendor/my` | Auth | soft delete my vendor |
-| DELETE | `/vendor/soft` | Admin | soft delete any vendor |
-| PATCH | `/vendor/recover` | Admin | recover |
-| PATCH | `/vendor/verify` | Admin | verify (promotes owner to vendor role) |
-| PATCH | `/vendor/reject` | Admin | reject (demotes owner) |
-
-### Home — `/home` (20, all Admin except the read)
+### /order (23)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/home` | Public | full home layout |
-| POST / PATCH / DELETE | `/home/categories` | Admin | add / update / remove a home category |
-| PATCH | `/home/categories/reorder` | Admin | reorder |
-| POST / PATCH / DELETE | `/home/slides` | Admin | slides |
-| PATCH | `/home/slides/reorder` | Admin | reorder |
-| POST / PATCH / DELETE | `/home/promos` | Admin | promos |
-| POST / PUT / PATCH / DELETE | `/home/features` | Admin | add / set-all / update / remove features |
-| POST / PATCH / DELETE | `/home/containers` | Admin | product shelves |
-| PATCH | `/home/containers/reorder` | Admin | reorder shelves |
+| GET | `/order/my` | Auth | get my orders |
+| POST | `/order/my` | Auth | create my order |
+| POST | `/order/my/buy-now` | Auth | buy now |
+| GET | `/order/my/:id` | Auth | get my order by id |
+| POST | `/order/my/:id/cancel` | Auth | cancel my order |
+| POST | `/order/my/:id/retry-items` | Auth | retry my order items |
+| POST | `/order/my/:id/retry-item` | Auth | retry my order item |
+| GET | `/order/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated orders |
+| GET | `/order/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor order by id |
+| POST | `/order/vendor/:id/confirm` | Vendor (`auth`, `vendor`) | confirm order |
+| POST | `/order/vendor/:id/complete` | Vendor (`auth`, `vendor`) | complete order |
+| POST | `/order/vendor/:id/return` | Vendor (`auth`, `vendor`) | return order |
+| POST | `/order/vendor/:id/refund` | Vendor (`auth`, `vendor`) | refund order |
+| GET | `/order/admin/all` | Admin (`auth`, `admin`) | get admin paginated orders |
+| GET | `/order/admin/:id` | Admin (`auth`, `admin`) | get admin order by id |
+| PATCH | `/order/admin/:id` | Admin (`auth`, `admin`) | update order |
+| DELETE | `/order/admin/:id` | Admin (`auth`, `admin`) | delete order |
+| PATCH | `/order/admin/:id/recover` | Admin (`auth`, `admin`) | recover order |
+| POST | `/order/admin/:id/cancel` | Admin (`auth`, `admin`) | cancel admin order |
+| POST | `/order/admin/:id/confirm` | Admin (`auth`, `admin`) | confirm admin order |
+| POST | `/order/admin/:id/complete` | Admin (`auth`, `admin`) | complete admin order |
+| POST | `/order/admin/:id/return` | Admin (`auth`, `admin`) | return admin order |
+| POST | `/order/admin/:id/refund` | Admin (`auth`, `admin`) | refund admin order |
 
-### Reviews — `/review` (5)
-
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| GET | `/review` | Public | paginated reviews |
-| GET | `/review/product/:id` | Public | reviews for a product |
-| GET | `/review/:id` | Public | single review |
-| POST | `/review/my` | Auth | create review (verified-purchase check) |
-| GET | `/review/admin/all` | Admin | paginated reviews for moderation |
-
-### Stats — `/stats` (19)
-
-| Method | Path | Access | Purpose |
-|---|---|---|---|
-| POST | `/stats/products/:productId/view` | View | record product view |
-| POST | `/stats/products/:productId/click` | Public | record product click |
-| POST | `/stats/categories/:categoryId/view` | View | record category view |
-| POST | `/stats/pages/:pageKey/view` | View | record page view |
-| GET | `/stats/settings` | Admin | read sync settings |
-| PATCH | `/stats/settings` | Admin | update sync settings |
-| POST | `/stats/denormalize` | Admin | request product/category/vendor denormalization |
-| GET | `/stats/:entityType/aggregate/timeseries` | Admin | aggregated series across entities |
-| GET | `/stats/:entityType/aggregate` | Admin | aggregated totals across entities |
-| GET | `/stats/:entityType/paginated` | Auth | paginated stat rows by metric |
-| GET | `/stats/product/:entityId/overview` | Auth + Access:throw | product overview (owner check) |
-| GET | `/stats/category/:entityId/overview` | Admin | category overview |
-| GET | `/stats/vendor/:entityId/overview` | Auth + Access:mask | vendor overview |
-| GET | `/stats/vendor/force-update/usage` | Auth | remaining force-refresh quota |
-| POST | `/stats/vendor/force-update` | Auth | force-refresh own vendor stats |
-| GET | `/stats/:entityType/:entityId/lifetime` | Access:mask (no auth) | lifetime totals |
-| GET | `/stats/:entityType/:entityId/timeseries` | Access:mask (no auth) | series for one entity |
-| GET | `/stats/:entityType/top` | Public | leaderboard by metric |
-| GET | `/stats/_health` | Public | buffer depth / pipeline health |
-
-Route order matters: `/stats/vendor/force-update/usage`, `/stats/product|category|vendor/:entityId/overview`
-and `/stats/_health` are registered so the literal segments win before the generic
-`/:entityType/...` patterns.
-
-### Misc
+### /cart (5)
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| GET | `/health` | Public | liveness, bypasses all middleware (§5) |
+| GET | `/cart/my` | Auth | get my cart |
+| POST | `/cart/my` | Auth | init my cart |
+| POST | `/cart/my/items` | Auth | add item |
+| POST | `/cart/my/checkout` | Auth | checkout items |
+| DELETE | `/cart/admin/:id` | Admin (`auth`, `admin`) | delete cart |
 
----
+### /order-items (18)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/order-items/my/order/:orderId` | Auth | get my order items by order id |
+| POST | `/order-items/my/cancel` | Auth | cancel my order items |
+| GET | `/order-items/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated order items |
+| GET | `/order-items/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor order item by id |
+| PATCH | `/order-items/vendor/:id` | Vendor (`auth`, `vendor`) | update vendor order item |
+| POST | `/order-items/vendor/:id/confirm` | Vendor (`auth`, `vendor`) | vendor confirm order item |
+| POST | `/order-items/vendor/:id/complete` | Vendor (`auth`, `vendor`) | vendor complete order item |
+| POST | `/order-items/vendor/:id/return` | Vendor (`auth`, `vendor`) | vendor return order item |
+| POST | `/order-items/vendor/:id/refund` | Vendor (`auth`, `vendor`) | vendor refund order item |
+| GET | `/order-items/admin/all` | Admin (`auth`, `admin`) | get admin paginated order items |
+| GET | `/order-items/admin/:id` | Admin (`auth`, `admin`) | get order item by id |
+| PATCH | `/order-items/admin/:id` | Admin (`auth`, `admin`) | update order item |
+| DELETE | `/order-items/admin/:id` | Admin (`auth`, `admin`) | delete order item |
+| POST | `/order-items/admin/:id/recover` | Admin (`auth`, `admin`) | recover order item |
+| POST | `/order-items/admin/:id/confirm` | Admin (`auth`, `admin`) | confirm order item |
+| POST | `/order-items/admin/:id/complete` | Admin (`auth`, `admin`) | complete order item |
+| POST | `/order-items/admin/:id/return` | Admin (`auth`, `admin`) | return order item |
+| POST | `/order-items/admin/:id/refund` | Admin (`auth`, `admin`) | refund order item |
+
+### /order-request (13)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/order-request/my` | Auth | get my order requests |
+| POST | `/order-request/my` | Auth | create my order request |
+| GET | `/order-request/my/:id` | Auth | get my order request by id |
+| PATCH | `/order-request/my/:id/cancel` | Auth | cancel my order request |
+| GET | `/order-request/vendor/all` | Vendor (`auth`, `vendor`) | get vendor order requests |
+| GET | `/order-request/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor order request by id |
+| POST | `/order-request/vendor/:id/accept` | Vendor (`auth`, `vendor`) | accept vendor order request |
+| POST | `/order-request/vendor/:id/reject` | Vendor (`auth`, `vendor`) | reject vendor order request |
+| GET | `/order-request/admin/all` | Admin (`auth`, `admin`) | get admin order requests |
+| GET | `/order-request/admin/:id` | Admin (`auth`, `admin`) | get admin order request by id |
+| POST | `/order-request/admin/:id/accept` | Admin (`auth`, `admin`) | accept admin order request |
+| POST | `/order-request/admin/:id/reject` | Admin (`auth`, `admin`) | reject admin order request |
+| POST | `/order-request/admin/:id/cancel` | Admin (`auth`, `admin`) | cancel admin order request |
+
+### /category (8)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/category` | Public | get paginated |
+| GET | `/category/admin/all` | Admin (`auth`, `admin`) | get admin paginated |
+| POST | `/category/admin` | Admin (`auth`, `admin`) | create category |
+| PATCH | `/category/admin` | Admin (`auth`, `admin`) | update category |
+| DELETE | `/category/admin` | Admin (`auth`, `admin`) | delete category |
+| PATCH | `/category/admin/:id/block` | Admin (`auth`, `admin`) | block category |
+| PATCH | `/category/admin/:id/unblock` | Admin (`auth`, `admin`) | unblock category |
+| GET | `/category/:id` | Public | get category |
+
+### /address (8)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/address/my` | Auth | get my addresses |
+| POST | `/address/my` | Auth | create my address |
+| GET | `/address/my/:id` | Auth | get address by id |
+| PATCH | `/address/my/:id` | Auth | update my address |
+| DELETE | `/address/my/:id` | Auth | delete my address |
+| PATCH | `/address/my/:id/default` | Auth | set my address as default |
+| GET | `/address/admin/all` | Admin (`auth`, `admin`) | get admin paginated addresses |
+| PATCH | `/address/admin/:id/recover` | Admin (`auth`, `admin`) | recover address |
+
+### /users (14)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/users/init` | Init | init user |
+| GET | `/users/my` | Auth | get me |
+| DELETE | `/users/my` | Auth | soft delete me |
+| GET | `/users/admin/all` | Admin (`auth`, `admin`) | get admin paginated users |
+| GET | `/users/admin/:id` | Admin (`auth`, `admin`) | get user by id |
+| PATCH | `/users/admin/block` | Admin (`auth`, `admin`) | block user |
+| PATCH | `/users/admin/block/lift` | Admin (`auth`, `admin`) | block lift |
+| PATCH | `/users/admin/ban` | Admin (`auth`, `admin`) | ban user |
+| PATCH | `/users/admin/ban/lift` | Admin (`auth`, `admin`) | ban lift |
+| PATCH | `/users/admin/ban/extend` | Admin (`auth`, `admin`) | extend ban |
+| PATCH | `/users/admin/ban/short` | Admin (`auth`, `admin`) | short ban |
+| PATCH | `/users/admin/role` | Admin (`auth`, `admin`) | assign role |
+| PATCH | `/users/admin/recover` | Admin (`auth`, `admin`) | recover |
+| DELETE | `/users/admin/soft` | Admin (`auth`, `admin`) | soft delete |
+
+### /vendor (15)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/vendor` | Public | get paginated vendors |
+| GET | `/vendor/me` | Auth | get my vendor |
+| POST | `/vendor/me` | Auth | create my vendor |
+| PATCH | `/vendor/me/meta` | Auth | update my vendor meta |
+| PATCH | `/vendor/me/contact` | Auth | update my vendor contact |
+| PATCH | `/vendor/me/image` | Auth | update my vendor image |
+| PATCH | `/vendor/me/stats-refresh` | Auth | update my stats refresh |
+| DELETE | `/vendor/me` | Auth | delete my vendor |
+| GET | `/vendor/admin/all` | Admin (`auth`, `admin`) | get admin paginated vendors |
+| GET | `/vendor/admin/:id` | Admin (`auth`, `admin`) | get admin vendor by id |
+| DELETE | `/vendor/admin/soft` | Admin (`auth`, `admin`) | soft delete vendor |
+| PATCH | `/vendor/admin/recover` | Admin (`auth`, `admin`) | recover vendor |
+| PATCH | `/vendor/admin/verify` | Admin (`auth`, `admin`) | verify vendor |
+| PATCH | `/vendor/admin/reject` | Admin (`auth`, `admin`) | reject vendor verification |
+| GET | `/vendor/:id` | Public | get public vendor by id |
+
+### /home (20)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/home` | Public | get home |
+| POST | `/home/admin/categories` | Admin (`auth`, `admin`) | add category |
+| PATCH | `/home/admin/categories` | Admin (`auth`, `admin`) | update category |
+| DELETE | `/home/admin/categories` | Admin (`auth`, `admin`) | remove category |
+| PATCH | `/home/admin/categories/reorder` | Admin (`auth`, `admin`) | reorder categories |
+| POST | `/home/admin/slides` | Admin (`auth`, `admin`) | add slide |
+| PATCH | `/home/admin/slides` | Admin (`auth`, `admin`) | update slide |
+| DELETE | `/home/admin/slides` | Admin (`auth`, `admin`) | remove slide |
+| PATCH | `/home/admin/slides/reorder` | Admin (`auth`, `admin`) | reorder slides |
+| POST | `/home/admin/promos` | Admin (`auth`, `admin`) | add promo |
+| PATCH | `/home/admin/promos` | Admin (`auth`, `admin`) | update promo |
+| DELETE | `/home/admin/promos` | Admin (`auth`, `admin`) | remove promo |
+| POST | `/home/admin/features` | Admin (`auth`, `admin`) | add feature |
+| PUT | `/home/admin/features` | Admin (`auth`, `admin`) | set features |
+| PATCH | `/home/admin/features` | Admin (`auth`, `admin`) | update feature |
+| DELETE | `/home/admin/features` | Admin (`auth`, `admin`) | remove feature |
+| POST | `/home/admin/containers` | Admin (`auth`, `admin`) | add container |
+| PATCH | `/home/admin/containers` | Admin (`auth`, `admin`) | update container |
+| DELETE | `/home/admin/containers` | Admin (`auth`, `admin`) | remove container |
+| PATCH | `/home/admin/containers/reorder` | Admin (`auth`, `admin`) | reorder containers |
+
+### /stats (20)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/stats/public/products/:productId/view` | View (`statsViewGuard`) | record product view |
+| POST | `/stats/public/products/:productId/click` | Public | record product click |
+| POST | `/stats/public/categories/:categoryId/view` | View (`statsViewGuard`) | record category view |
+| POST | `/stats/public/pages/:pageKey/view` | View (`statsViewGuard`) | record page view |
+| GET | `/stats/admin/settings` | Admin (`auth`, `admin`) | get settings |
+| PATCH | `/stats/admin/settings` | Admin (`auth`, `admin`) | update settings |
+| POST | `/stats/admin/denormalize` | Admin (`auth`, `admin`) | trigger denormalization |
+| GET | `/stats/admin/aggregate/:entityType` | Admin (`auth`, `admin`) | get aggregate |
+| GET | `/stats/admin/aggregate/:entityType/timeseries` | Admin (`auth`, `admin`) | get aggregate time series |
+| GET | `/stats/admin/:entityType/paginated` | Admin (`auth`, `admin`) | get paginated entity stats |
+| GET | `/stats/admin/:entityType/top` | Admin (`auth`, `admin`) | get top entities |
+| GET | `/stats/admin/product/:entityId/overview` | Admin (`auth`, `admin`) | get product stats overview |
+| GET | `/stats/admin/category/:entityId/overview` | Admin (`auth`, `admin`) | get category stats overview |
+| GET | `/stats/admin/vendor/:entityId/overview` | Admin + Access:mask | get vendor stats overview |
+| GET | `/stats/vendor/me/overview` | Vendor (`auth`, `vendor`) | get my vendor stats overview |
+| GET | `/stats/vendor/me/force-update/usage` | Vendor (`auth`, `vendor`) | get vendor force refresh usage |
+| POST | `/stats/vendor/me/force-update` | Vendor (`auth`, `vendor`) | force refresh my vendor stats |
+| GET | `/stats/entity/:entityType/:entityId/lifetime` | Access:mask | get lifetime stats |
+| GET | `/stats/entity/:entityType/:entityId/timeseries` | Access:mask | get time series |
+| GET | `/stats/_health` | Public | get health |
+
+### Misc — `/health` (1)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/health` | Public | liveness probe; mounted before every guard (§5) |
+
+Route order matters in five modules: `/product/:id`, `/product-variant/:id`, `/review/:id`,
+`/category/:id` and `/vendor/:id` are registered last, after every literal segment, so a public
+lookup only ever answers a single-segment path.
 
 ## 15. Stats subsystem
 
@@ -1221,10 +1356,14 @@ Two modes, passed at mount time:
 | `throw` | product overview | 403 unless the caller owns the vendor/product or is admin |
 | `mask` | vendor overview, lifetime, timeseries | serves the row but zeroes financial metrics (revenue/refund amounts) for non-owners |
 
-The `mask` routes are mounted without `authMiddleware`: an anonymous caller gets the masked view,
-an authenticated owner gets the full one. Masking is why `GET /stats/vendor/:id/overview` can be
-called by any authenticated user without leaking revenue; the same is not true of the
-paginated/aggregate/top endpoints (§22).
+Both modes run on `authMiddleware`: the caller is always a signed-in user. `statsAccessGuard` then
+compares the requested entity with the vendor the user owns (or the vendor selling the requested
+product) and either refuses (`throw`) or zeroes the financial metrics (`mask`) — this is what lets
+`GET /stats/entity/:entityType/:entityId/{lifetime,timeseries}` serve owners and admins from one
+route without leaking revenue.
+
+Vendor-owned reporting does not need the mask: `/stats/vendor/me/overview` resolves the vendor from
+`vendorMiddleware`, and the admin-only overviews sit behind `adminMiddleware` (§22).
 
 ### 15.7 Denormalization pipeline￼
  ZeroGPT
@@ -1240,7 +1379,7 @@ Register
 Login
 
 
-`POST /stats/denormalize` (admin) publishes `stats.product-denormalization-requested`; three
+`POST /stats/admin/denormalize` (admin) publishes `stats.product-denormalization-requested`; three
 handlers run in registration order:
 
 1. `ProductStatsDenormalizationHandler` — recomputes product slots from source collections and
@@ -1283,8 +1422,9 @@ writing them; a rerun or the next scheduled refresh reconciles it (see §22).
 - `ProductStatsSyncScheduler.start(60_000)` ticks every minute, finds vendors due for refresh
   (interval/staleness), and runs the same vendor refresh path.
 - `VendorForceRefreshQuotaService` enforces the per-vendor daily quota for
-  `POST /stats/vendor/force-update`; `GET /stats/vendor/force-update/usage` reports what is left.
-- Settings are admin-editable through `GET|PATCH /stats/settings` and surfaced in the dashboard
+  `POST /stats/vendor/me/force-update`; `GET /stats/vendor/me/force-update/usage` reports what is
+  left. Both resolve the vendor from `vendorMiddleware`, so neither accepts a vendor id.
+- Settings are admin-editable through `GET|PATCH /stats/admin/settings` and surfaced in the dashboard
   `SyncSettingsPanel`.
 
 ---
@@ -1480,8 +1620,8 @@ These are real issues observed in the code, not TODOs invented for this document
 2. Stats bypasses the DDD layering (controller → `StatsQueryService`/`StatsRepository`/`StatsModel`,
    no domain aggregate or port), and `stats.module.ts` still injects `connectDB` into its handlers
    instead of a storage port.
-3. `routes/index.ts` mounts `/order-items`, but the module is internal and the router is empty — a
-   dead mount with no endpoints.
+3. `GET /product-inventory/vendor/all` accepts no `variantId` (or product) filter, so a vendor's
+   stock list can only be paged, not narrowed to one variant.
 4. There is no transactional outbox (P8 deferred): order events are published after the commit, so a
    crash between `commitTransaction` and `eventBus.publish` loses them.
 5. `InMemoryEventBus` runs handlers for one event concurrently (`Promise.allSettled`). The three
@@ -1492,21 +1632,23 @@ These are real issues observed in the code, not TODOs invented for this document
 
 **Behaviour / security**
 
-7. `GET /stats/:entityType/top` is **public** and returns raw `revenue`/`refundAmount` metrics;
-   `GET /stats/:entityType/paginated` requires only a login. Only `vendor/overview`, `lifetime` and
-   `timeseries` mask financial metrics.
-8. `GET /users` is available to any authenticated user and returns paginated user documents.
+7. `/stats/admin/:entityType/top` and `/stats/admin/:entityType/paginated` return raw
+   `revenue`/`refundAmount`; both are admin-only now. The masked reads are `/stats/entity/...`
+   (`lifetime`, `timeseries`). `GET /stats/admin/vendor/:entityId/overview` still carries a mask
+   guard behind `adminMiddleware`, where it can never trigger — dead defence, not a hole.
+8. `GET /vendor` and `POST /users/init` stay unauthenticated by design; `POST /users/init` only
+   mirrors the Supabase identity and refuses a token that is not already valid.
 9. The web dashboard renders for any signed-in user; role enforcement is API-only.
 10. `middleware/seller.ts` reads `c.get('profile')`, which nothing sets, and is not mounted.
-11. `POST /stats/products/:id/click` has no bot/dedupe guard, unlike `/view`.
+11. `POST /stats/public/products/:productId/click` has no bot/dedupe guard, unlike `/view`.
 12. The inventory reservation loop pairs requested quantities with a *filtered* inventory array by
     index (`inventoryItems[i]` over `buyableInventories`); a missing/deleted line can apply the wrong
     quantity to the wrong variant.
 
 **Incomplete features**
 
-13. Review like/dislike/report/vendor-reply/update/delete exist on the aggregate and emit events but
-    have no HTTP route.
+13. Review moderation is manual: `/review/admin/:id/block` and `/unblock` are the only moderation
+    paths; there is no auto-flag or reputation pipeline.
 14. `OrderAggregate` only raises `order.created`; cancel/confirm/complete/refund/return methods and
     events are unused, and `order.returnded` is misspelled.
 15. `apps/mobile` contains no files.
@@ -1517,14 +1659,14 @@ These are real issues observed in the code, not TODOs invented for this document
 
 18. The root `README.md` describes an older state of the system (including a “900-line” doc and
     claims about unwired reviews/stats). This file supersedes it.
-19. Product `my/...` routes are registered without a leading slash; Hono normalises them when mounted
-    under `/product`, but do not copy that style.
-20. Persistent typos in API surface and filenames: `product-varaint.routes.ts`,
-    `/product-variant/my/appereance/toggle`, `cloudnary-image.type.ts`, `order.returnded`,
-    `user.logged-in` vs `user.signed-in`, and the placeholder address deletion reason. The inventory
-    module also has `InventoryReposityory`, `InventoryInternalServcie`, `getInventoryByVarientId`,
-    and `inventoryReaponseReadModel`; they are harmless but spread across presentation, application,
-    and infrastructure, so rename them in a dedicated change.
+19. Persistent typos in API surface and filenames: `product-varaint.routes.ts` (and
+    `createProductVaraintModule`), `cloudnary-image.type.ts`, `order.returnded`,
+    `user.logged-in` vs `user.signed-in`, the placeholder address deletion reason, and the
+    controller methods `createMyProudct`, `getVarientsByProductId`,
+    `toggleMyVaraintAppearance` and `updateMylowStockThreshold`. The inventory module also has
+    `InventoryReposityory`, `InventoryInternalServcie`, `getInventoryByVarientId` and
+    `inventoryReaponseReadModel`; they are harmless but spread across presentation, application and
+    infrastructure, so rename them in a dedicated change.
 21. `apps/api/dist/` exists as a local build artifact; do not edit or review it as source.
 
 **Standards audit (2026-11-14, all API and package modules)**
@@ -1638,7 +1780,7 @@ Not applied — needs a decision:
   comment that restates code is worse than none. Conventions are in §8.5.
 - Keep §8.6 and the Engineering Standards section in `AGENTS.md` in sync. This document is
   authoritative; the agent file is the condensed, always-loaded version.
-- Verified against the tree on 2026-11-14: 13 API modules, 12 Mongoose models, 124 mounted routes +
-  `/health`, 11 aggregates, 30 value objects, 110 event classes, 14 contract queries, 8 contract
-  ports, 127 SDK hooks, 27 web pages, 19 test files (115 tests).
+- Verified against the tree on 2026-11-15: 15 module folders (14 of them mount HTTP routes), 13
+  Mongoose models, 208 mounted routes + `/health`, 13 aggregates, 129 event classes, 19 contract
+  ports, 197 SDK hooks, 27 web pages, 573 tests across 48 files.
 

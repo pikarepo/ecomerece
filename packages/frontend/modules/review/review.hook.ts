@@ -1,12 +1,22 @@
 // review.hook.ts
 
 import {
+  addVendorReplyDto,
+  type addVendorReplyDtoType,
+  blockReviewDto,
+  type blockReviewDtoType,
   createMyReviewDtoSchema,
   type createMyReviewDtoType,
+  deleteMyReviewDto,
+  type deleteMyReviewDtoType,
   type GetAdminPaginatedReviewsQueryDto,
   type GetPaginatedReviewsQueryDto,
   getAdminPaginatedReviewsQuerySchema,
   getPaginatedReviewsQuerySchema,
+  reportReviewDto,
+  type reportReviewDtoType,
+  updateMyReviewDto,
+  type updateMyReviewDtoType,
 } from '@ecomerece/shared';
 import { type QueryClient, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { type ReviewMutationResult, reviewService } from './review.service';
@@ -69,6 +79,97 @@ export function useCreateMyReview() {
   return useMutation({
     mutationFn: (data: createMyReviewDtoType) =>
       reviewService.createMyReview(createMyReviewDtoSchema.parse(data)),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+// ── Buyer ───────────────────────────────────────────────────────────────────
+
+export function useGetMyPaginatedReviews(params: GetPaginatedReviewsQueryDto) {
+  return useQuery({
+    queryKey: [...REVIEW_QUERY_KEY, 'my', params],
+    queryFn: () =>
+      reviewService.getMyPaginatedReviews(getPaginatedReviewsQuerySchema.parse(params)),
+  });
+}
+
+export function useUpdateMyReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: updateMyReviewDtoType }) =>
+      reviewService.updateMyReview(id, updateMyReviewDto.parse(data)),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+export function useDeleteMyReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: deleteMyReviewDtoType }) =>
+      reviewService.deleteMyReview(id, deleteMyReviewDto.parse(data)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: REVIEW_QUERY_KEY }),
+  });
+}
+
+export function useLikeReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reviewService.likeReview(id),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+export function useDislikeReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reviewService.dislikeReview(id),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+export function useReportReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: reportReviewDtoType }) =>
+      reviewService.reportReview(id, reportReviewDto.parse(data)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: REVIEW_QUERY_KEY }),
+  });
+}
+
+// ── Vendor ──────────────────────────────────────────────────────────────────
+
+export function useGetVendorPaginatedReviews(params: GetPaginatedReviewsQueryDto) {
+  return useQuery({
+    queryKey: [...REVIEW_QUERY_KEY, 'vendor', params],
+    queryFn: () =>
+      reviewService.getVendorPaginatedReviews(getPaginatedReviewsQuerySchema.parse(params)),
+  });
+}
+
+export function useReplyToReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: addVendorReplyDtoType }) =>
+      reviewService.replyToReview(id, addVendorReplyDto.parse(data)),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+// ── Admin ───────────────────────────────────────────────────────────────────
+
+export function useBlockReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: blockReviewDtoType }) =>
+      reviewService.blockReview(id, blockReviewDto.parse(data)),
+    onSuccess: (data) => applyReviewMutationResult(queryClient, data),
+  });
+}
+
+export function useUnblockReview() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => reviewService.unblockReview(id),
     onSuccess: (data) => applyReviewMutationResult(queryClient, data),
   });
 }

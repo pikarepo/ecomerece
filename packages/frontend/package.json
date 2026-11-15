@@ -60,6 +60,18 @@
       "types": "./modules/order/index.ts",
       "default": "./modules/order/index.ts"
     },
+    "./order-items": {
+      "types": "./modules/order-items/index.ts",
+      "default": "./modules/order-items/index.ts"
+    },
+    "./order-request": {
+      "types": "./modules/order-request/index.ts",
+      "default": "./modules/order-request/index.ts"
+    },
+    "./cart": {
+      "types": "./modules/cart/index.ts",
+      "default": "./modules/cart/index.ts"
+    },
     "./review": {
       "types": "./modules/review/index.ts",
       "default": "./modules/review/index.ts"

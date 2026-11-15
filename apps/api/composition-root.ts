@@ -105,7 +105,6 @@ export function createApplication() {
     eventBus,
     productStats: product.productStats,
     vendorStats: vendor.vendorStats,
-    vendorQueries: vendor.queries,
   });
 
   configureAuthUserLookup(new UserAuthLookupAdapter());

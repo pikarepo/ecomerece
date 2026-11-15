@@ -20,6 +20,14 @@ export function useGetMyAddresses() {
   });
 }
 
+export function useGetMyAddressById(id: string) {
+  return useQuery({
+    queryKey: [...ADDRESS_QUERY_KEY, 'one', id],
+    queryFn: () => addressService.getMyAddressById(id),
+    enabled: Boolean(id),
+  });
+}
+
 export function useGetAdminPaginatedAddresses(params: GetAdminPaginatedAddressesQueryDto) {
   return useQuery({
     queryKey: [...ADDRESS_QUERY_KEY, 'admin-paginated', params],

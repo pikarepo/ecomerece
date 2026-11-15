@@ -1,103 +1,121 @@
 import { Hono } from 'hono';
 import { adminMiddleware } from '../../../middleware/admin';
 import { authMiddleware } from '../../../middleware/auth';
+import { vendorMiddleware } from '../../../middleware/vendor';
 import { createStatsAccessGuardMiddleware } from '../../../middleware/statsAccessGuard.middleware';
 import { createStatsViewGuardMiddleware } from '../../../middleware/statsViewGuard.middleware';
 import type { CreateStatsModule } from '../stats.module';
 
 type StatsController = ReturnType<typeof CreateStatsModule>['statsController'];
 
+/**
+ * Tracking beacons are public, admin reporting lives under `/admin`, and the
+ * vendor's own reporting lives under `/vendor`. The per-entity lifetime and
+ * time-series reads stay audience-aware: the access guard masks or rejects
+ * based on the caller, so one route can safely serve admins and owners.
+ */
 export function createStatsRoutes(statsController: StatsController) {
   const statsRouter = new Hono();
 
+  // Public beacons
   statsRouter.post(
-    '/products/:productId/view',
+    '/public/products/:productId/view',
     createStatsViewGuardMiddleware('product', 'productId'),
     statsController.recordProductView,
   );
-  statsRouter.post('/products/:productId/click', statsController.recordProductClick);
+  statsRouter.post('/public/products/:productId/click', statsController.recordProductClick);
   statsRouter.post(
-    '/categories/:categoryId/view',
+    '/public/categories/:categoryId/view',
     createStatsViewGuardMiddleware('category', 'categoryId'),
     statsController.recordCategoryView,
   );
   statsRouter.post(
-    '/pages/:pageKey/view',
+    '/public/pages/:pageKey/view',
     createStatsViewGuardMiddleware('page', 'pageKey'),
     statsController.recordPageView,
   );
 
-  statsRouter.get('/settings', authMiddleware, adminMiddleware, statsController.getSettings);
-  statsRouter.patch('/settings', authMiddleware, adminMiddleware, statsController.updateSettings);
+  // Admin
+  statsRouter.get('/admin/settings', authMiddleware, adminMiddleware, statsController.getSettings);
+  statsRouter.patch(
+    '/admin/settings',
+    authMiddleware,
+    adminMiddleware,
+    statsController.updateSettings,
+  );
   statsRouter.post(
-    '/denormalize',
+    '/admin/denormalize',
     authMiddleware,
     adminMiddleware,
     statsController.triggerDenormalization,
   );
-
   statsRouter.get(
-    '/:entityType/aggregate/timeseries',
-    authMiddleware,
-    adminMiddleware,
-    statsController.getAggregateTimeSeries,
-  );
-  statsRouter.get(
-    '/:entityType/aggregate',
+    '/admin/aggregate/:entityType',
     authMiddleware,
     adminMiddleware,
     statsController.getAggregate,
   );
   statsRouter.get(
-    '/:entityType/paginated',
+    '/admin/aggregate/:entityType/timeseries',
+    authMiddleware,
+    adminMiddleware,
+    statsController.getAggregateTimeSeries,
+  );
+  statsRouter.get(
+    '/admin/:entityType/paginated',
     authMiddleware,
     adminMiddleware,
     statsController.getPaginatedEntityStats,
   );
   statsRouter.get(
-    '/product/:entityId/overview',
+    '/admin/:entityType/top',
     authMiddleware,
-    createStatsAccessGuardMiddleware({
-      mode: 'throw',
-      productOnly: true,
-      entityIdParam: 'entityId',
-    }),
+    adminMiddleware,
+    statsController.getTopEntities,
+  );
+  statsRouter.get(
+    '/admin/product/:entityId/overview',
+    authMiddleware,
+    adminMiddleware,
     statsController.getProductStatsOverview,
   );
-
   statsRouter.get(
-    '/category/:entityId/overview',
+    '/admin/category/:entityId/overview',
     authMiddleware,
     adminMiddleware,
     statsController.getCategoryStatsOverview,
   );
 
+  // Vendor
   statsRouter.get(
-    '/vendor/:entityId/overview',
+    '/admin/vendor/:entityId/overview',
     authMiddleware,
-    createStatsAccessGuardMiddleware({
-      mode: 'mask',
-      vendorOnly: true,
-      entityIdParam: 'entityId',
-    }),
+    adminMiddleware,
+    createStatsAccessGuardMiddleware({ mode: 'mask', vendorOnly: true, entityIdParam: 'entityId' }),
     statsController.getVendorStatsOverview,
   );
-
-  // Vendor-triggered force refresh (quota-limited). Only refreshes this vendor's
-  // data — products, vendor roll-up, and the categories it sells in.
   statsRouter.get(
-    '/vendor/force-update/usage',
+    '/vendor/me/overview',
     authMiddleware,
+    vendorMiddleware,
+    statsController.getMyVendorStatsOverview,
+  );
+  statsRouter.get(
+    '/vendor/me/force-update/usage',
+    authMiddleware,
+    vendorMiddleware,
     statsController.getVendorForceRefreshUsage,
   );
   statsRouter.post(
-    '/vendor/force-update',
+    '/vendor/me/force-update',
     authMiddleware,
+    vendorMiddleware,
     statsController.forceRefreshMyVendorStats,
   );
 
+  // Owner-or-admin reads, masked per caller by the access guard.
   statsRouter.get(
-    '/:entityType/:entityId/lifetime',
+    '/entity/:entityType/:entityId/lifetime',
     authMiddleware,
     createStatsAccessGuardMiddleware({
       mode: 'mask',
@@ -107,7 +125,7 @@ export function createStatsRoutes(statsController: StatsController) {
     statsController.getLifetimeStats,
   );
   statsRouter.get(
-    '/:entityType/:entityId/timeseries',
+    '/entity/:entityType/:entityId/timeseries',
     authMiddleware,
     createStatsAccessGuardMiddleware({
       mode: 'mask',
@@ -115,12 +133,6 @@ export function createStatsRoutes(statsController: StatsController) {
       entityIdParam: 'entityId',
     }),
     statsController.getTimeSeries,
-  );
-  statsRouter.get(
-    '/:entityType/top',
-    authMiddleware,
-    adminMiddleware,
-    statsController.getTopEntities,
   );
 
   statsRouter.get('/_health', statsController.getHealth);

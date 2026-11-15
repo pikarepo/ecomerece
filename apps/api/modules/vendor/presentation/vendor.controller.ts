@@ -19,7 +19,14 @@ import { BaseController } from '../../../core/controller/base.controller';
 import type { VendorAppService } from '../application/vendor.app.service';
 
 export class VendorController extends BaseController<VendorAppService> {
-  getVendorById = async (c: Context) => {
+  /** Public storefront profile. */
+  getPublicVendorById = async (c: Context) => {
+    const vendorId = this.param(c, 'id', VendorParamDtoSchema);
+    return this.ok(c, await this.service.getPublicVendorById(vendorId));
+  };
+
+  /** Admin record, including contact details and stats. */
+  getAdminVendorById = async (c: Context) => {
     const vendorId = this.param(c, 'id', VendorParamDtoSchema);
     return this.ok(c, await this.service.getVendorById(vendorId));
   };

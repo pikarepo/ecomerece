@@ -13,6 +13,7 @@ import type {
   UpdateMyVendorMetaDto,
   UpdateVendorStatsRefreshDto,
   VendorListItemReadModel,
+  VendorPublicResponseReadModel,
   VendorResponseReadModel,
   VerifyVendorDto,
 } from '@ecomerece/shared';
@@ -25,52 +26,52 @@ export type VendorMutationResult = {
 };
 
 export class VendorService {
-  getVendorById(id: string): Promise<VendorResponseReadModel> {
-    return http.get<VendorResponseReadModel>(`/vendor/${id}`);
+  getVendorById(id: string): Promise<VendorPublicResponseReadModel> {
+    return http.get<VendorPublicResponseReadModel>(`/vendor/${id}`);
   }
 
   getMyVendor(): Promise<VendorResponseReadModel> {
-    return http.get<VendorResponseReadModel>('/vendor/my');
+    return http.get<VendorResponseReadModel>('/vendor/me');
   }
 
   createMyVendor(data: CreateVendorDto): Promise<VendorMutationResult> {
-    return http.post<VendorMutationResult>('/vendor/my', data);
+    return http.post<VendorMutationResult>('/vendor/me', data);
   }
 
   deleteMyVendor(data: DeleteMyVendorDto): Promise<VendorMutationResult> {
-    return http.delete<VendorMutationResult>('/vendor/my', data);
+    return http.delete<VendorMutationResult>('/vendor/me', data);
   }
 
   softDeleteVendor(data: DeleteVendorDto): Promise<VendorMutationResult> {
-    return http.delete<VendorMutationResult>('/vendor/soft', data);
+    return http.delete<VendorMutationResult>('/vendor/admin/soft', data);
   }
 
   recoverVendor(data: RecoverVendorDto): Promise<VendorMutationResult> {
-    return http.patch<VendorMutationResult>('/vendor/recover', data);
+    return http.patch<VendorMutationResult>('/vendor/admin/recover', data);
   }
 
   verifyVendor(data: VerifyVendorDto): Promise<VendorMutationResult> {
-    return http.patch<VendorMutationResult>('/vendor/verify', data);
+    return http.patch<VendorMutationResult>('/vendor/admin/verify', data);
   }
 
   rejectVendorVerification(data: RejectVendorDto): Promise<VendorMutationResult> {
-    return http.patch<VendorMutationResult>('/vendor/reject', data);
+    return http.patch<VendorMutationResult>('/vendor/admin/reject', data);
   }
 
   updateMyStatsRefresh(data: UpdateVendorStatsRefreshDto): Promise<VendorResponseReadModel> {
-    return http.patch<VendorResponseReadModel>('/vendor/my/stats-refresh', data);
+    return http.patch<VendorResponseReadModel>('/vendor/me/stats-refresh', data);
   }
 
   updateMyVendorMeta(data: UpdateMyVendorMetaDto): Promise<VendorResponseReadModel> {
-    return http.patch<VendorResponseReadModel>('/vendor/my/meta', data);
+    return http.patch<VendorResponseReadModel>('/vendor/me/meta', data);
   }
 
   updateMyVendorContact(data: UpdateMyVendorContactDto): Promise<VendorResponseReadModel> {
-    return http.patch<VendorResponseReadModel>('/vendor/my/contact', data);
+    return http.patch<VendorResponseReadModel>('/vendor/me/contact', data);
   }
 
   updateMyVendorImage(data: UpdateMyVendorImageDto): Promise<VendorResponseReadModel> {
-    return http.patch<VendorResponseReadModel>('/vendor/my/image', data);
+    return http.patch<VendorResponseReadModel>('/vendor/me/image', data);
   }
 
   getPaginatedVendors(params: GetPaginatedVendorsQueryDto): Promise<{
@@ -105,6 +106,10 @@ export class VendorService {
     const url = query ? `/vendor/admin/all?${query}` : '/vendor/admin/all';
 
     return http.get(url);
+  }
+
+  getAdminVendorById(id: string): Promise<VendorResponseReadModel> {
+    return http.get<VendorResponseReadModel>(`/vendor/admin/${id}`);
   }
 }
 

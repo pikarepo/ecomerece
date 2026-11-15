@@ -27,6 +27,10 @@ export class AddressService {
     return http.get<AddressResponseReadModel[]>('/address/my');
   }
 
+  getMyAddressById(id: string): Promise<AddressResponseReadModel> {
+    return http.get<AddressResponseReadModel>(`/address/my/${id}`);
+  }
+
   getAdminPaginatedAddresses(
     params: GetAdminPaginatedAddressesQueryDto,
   ): Promise<PaginatedAddressesResult> {
@@ -44,7 +48,7 @@ export class AddressService {
     return http.post<AddressMutationResult>('/address/my', data);
   }
   updateMyAddress(data: createMyAddressDtoType, id: string): Promise<AddressMutationResult> {
-    return http.patch<AddressMutationResult>(`/address/my/${id}/update`, data);
+    return http.patch<AddressMutationResult>(`/address/my/${id}`, data);
   }
 
   deleteMyAddress(id: string): Promise<AddressMutationResult> {
@@ -56,7 +60,7 @@ export class AddressService {
   }
 
   recoverAddress(id: string): Promise<AddressMutationResult> {
-    return http.patch<AddressMutationResult>(`/address/my/${id}/recover`);
+    return http.patch<AddressMutationResult>(`/address/admin/${id}/recover`);
   }
 }
 

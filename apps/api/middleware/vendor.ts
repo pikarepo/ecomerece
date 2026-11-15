@@ -11,17 +11,15 @@ export function configureVendorQueries(queries: IVendorQueries): void {
 }
 
 /**
- * Protects vendor-owned actions: the caller must have the vendor role and
- * must own an active (verified, non-deleted) vendor. Admins use their own
- * routes instead and are not granted access here.
+ * Protects vendor-owned actions.
+ *
+ * The credential is the authenticated user's own vendor record, not a role
+ * string: any signed-in user who owns an active (verified, non-deleted) vendor
+ * may act for it, and everyone else is refused. The vendor id resolved here is
+ * the only vendor the handlers may touch; each use case re-checks ownership of
+ * the concrete resource before mutating it.
  */
 export const vendorMiddleware = createMiddleware(async (c, next) => {
-  const role = c.get('role');
-
-  if (role !== 'vendor') {
-    throw new ForbiddenError('Vendor access is required for this action.');
-  }
-
   if (!vendorQueries) {
     throw new Error('Vendor queries are not configured.');
   }

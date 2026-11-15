@@ -5,52 +5,83 @@ import type { createHomeModule } from '../home.module';
 
 type HomeController = ReturnType<typeof createHomeModule>['homeController'];
 
+/** The home page is public; every edit is admin-only under `/admin`. */
 export function createHomeRoutes(homeController: HomeController) {
   const homeRoutes = new Hono();
 
-  // Public Read
+  // Public
   homeRoutes.get('/', homeController.getHome);
 
-  // Admin Writes (Protected)
-  // Categories
-  homeRoutes.post('/categories', authMiddleware, adminMiddleware, homeController.addCategory);
-  homeRoutes.patch('/categories', authMiddleware, adminMiddleware, homeController.updateCategory);
-  homeRoutes.delete('/categories', authMiddleware, adminMiddleware, homeController.removeCategory);
+  // Admin
+  homeRoutes.post('/admin/categories', authMiddleware, adminMiddleware, homeController.addCategory);
   homeRoutes.patch(
-    '/categories/reorder',
+    '/admin/categories',
+    authMiddleware,
+    adminMiddleware,
+    homeController.updateCategory,
+  );
+  homeRoutes.delete(
+    '/admin/categories',
+    authMiddleware,
+    adminMiddleware,
+    homeController.removeCategory,
+  );
+  homeRoutes.patch(
+    '/admin/categories/reorder',
     authMiddleware,
     adminMiddleware,
     homeController.reorderCategories,
   );
 
-  // Slides
-  homeRoutes.post('/slides', authMiddleware, adminMiddleware, homeController.addSlide);
-  homeRoutes.patch('/slides', authMiddleware, adminMiddleware, homeController.updateSlide);
-  homeRoutes.delete('/slides', authMiddleware, adminMiddleware, homeController.removeSlide);
+  homeRoutes.post('/admin/slides', authMiddleware, adminMiddleware, homeController.addSlide);
+  homeRoutes.patch('/admin/slides', authMiddleware, adminMiddleware, homeController.updateSlide);
+  homeRoutes.delete('/admin/slides', authMiddleware, adminMiddleware, homeController.removeSlide);
   homeRoutes.patch(
-    '/slides/reorder',
+    '/admin/slides/reorder',
     authMiddleware,
     adminMiddleware,
     homeController.reorderSlides,
   );
 
-  // Promos
-  homeRoutes.post('/promos', authMiddleware, adminMiddleware, homeController.addPromo);
-  homeRoutes.patch('/promos', authMiddleware, adminMiddleware, homeController.updatePromo);
-  homeRoutes.delete('/promos', authMiddleware, adminMiddleware, homeController.removePromo);
+  homeRoutes.post('/admin/promos', authMiddleware, adminMiddleware, homeController.addPromo);
+  homeRoutes.patch('/admin/promos', authMiddleware, adminMiddleware, homeController.updatePromo);
+  homeRoutes.delete('/admin/promos', authMiddleware, adminMiddleware, homeController.removePromo);
 
-  // Features
-  homeRoutes.post('/features', authMiddleware, adminMiddleware, homeController.addFeature);
-  homeRoutes.put('/features', authMiddleware, adminMiddleware, homeController.setFeatures);
-  homeRoutes.patch('/features', authMiddleware, adminMiddleware, homeController.updateFeature);
-  homeRoutes.delete('/features', authMiddleware, adminMiddleware, homeController.removeFeature);
-
-  // Product Containers
-  homeRoutes.post('/containers', authMiddleware, adminMiddleware, homeController.addContainer);
-  homeRoutes.patch('/containers', authMiddleware, adminMiddleware, homeController.updateContainer);
-  homeRoutes.delete('/containers', authMiddleware, adminMiddleware, homeController.removeContainer);
+  homeRoutes.post('/admin/features', authMiddleware, adminMiddleware, homeController.addFeature);
+  homeRoutes.put('/admin/features', authMiddleware, adminMiddleware, homeController.setFeatures);
   homeRoutes.patch(
-    '/containers/reorder',
+    '/admin/features',
+    authMiddleware,
+    adminMiddleware,
+    homeController.updateFeature,
+  );
+  homeRoutes.delete(
+    '/admin/features',
+    authMiddleware,
+    adminMiddleware,
+    homeController.removeFeature,
+  );
+
+  homeRoutes.post(
+    '/admin/containers',
+    authMiddleware,
+    adminMiddleware,
+    homeController.addContainer,
+  );
+  homeRoutes.patch(
+    '/admin/containers',
+    authMiddleware,
+    adminMiddleware,
+    homeController.updateContainer,
+  );
+  homeRoutes.delete(
+    '/admin/containers',
+    authMiddleware,
+    adminMiddleware,
+    homeController.removeContainer,
+  );
+  homeRoutes.patch(
+    '/admin/containers/reorder',
     authMiddleware,
     adminMiddleware,
     homeController.reorderContainers,
