@@ -1,0 +1,31 @@
+$kind: http-request
+id: 02a6fbdbd4ed93f0cfca35bf
+name: PATCH /order-items/vendor/{{orderItemId}}
+description: vendor route
+method: PATCH
+url: '{{baseUrl}}/order-items/vendor/{{orderItemId}}'
+body:
+  type: json
+  content: |-
+    {
+      "quantity": 1,
+      "waitingTime": {},
+      "price": 1
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /order-items/vendor/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 5000

@@ -1,0 +1,23 @@
+$kind: http-request
+id: c1ac8b35b28986c3c67e0d9b
+name: POST /order-items/admin/{{orderItemId}}/complete
+description: admin route
+method: POST
+url: '{{baseUrl}}/order-items/admin/{{orderItemId}}/complete'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /order-items/admin/:id/complete returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 16000

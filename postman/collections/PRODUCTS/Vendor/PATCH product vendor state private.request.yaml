@@ -1,0 +1,29 @@
+$kind: http-request
+id: 14a1aa802649cd665e8b1c26
+name: PATCH /product/vendor/state/private
+description: vendor route
+method: PATCH
+url: '{{baseUrl}}/product/vendor/state/private'
+body:
+  type: json
+  content: |-
+    {
+      "productId": "{{productId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /product/vendor/state/private returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

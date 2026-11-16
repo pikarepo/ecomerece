@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product-variant/vendor/soft'
+method: DELETE
+body:
+  type: json
+  content: |-
+    {
+         "productId": "019febc9-2e2e-712c-ac71-5bd2aa2421fd",
+        "variantId": "019ffaa3-8bad-7788-afb8-6c5a3dd88fe1",
+        "reason": "This is my reason that i want"
+    }
+settings: {}
+order: 4000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

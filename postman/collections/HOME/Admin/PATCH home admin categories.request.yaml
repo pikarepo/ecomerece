@@ -1,0 +1,33 @@
+$kind: http-request
+id: f265bd3926e8fa4ce56ab11c
+name: PATCH /home/admin/categories
+description: admin route
+method: PATCH
+url: '{{baseUrl}}/home/admin/categories'
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{id}}",
+      "name": "Name example",
+      "image": "Image example",
+      "accent": "Accent example",
+      "icon": "Icon example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /home/admin/categories returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

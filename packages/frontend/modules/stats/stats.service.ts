@@ -103,6 +103,13 @@ export interface VendorForceRefreshResult {
   remaining: number;
 }
 
+export interface TopEntitiesResponse {
+  entityType: string;
+  aggregation: string;
+  metric: string;
+  results: Array<Record<string, unknown>>;
+}
+
 export interface StatsSyncSettings {
   intervalHours: number;
   lastRun: number | null;
@@ -222,6 +229,41 @@ export class StatsService {
 
   triggerProductStatsDenormalization(): Promise<{ accepted: boolean }> {
     return http.post('/stats/admin/denormalize', {});
+  }
+
+  getTopEntities(
+    entityType: EntityType,
+    params: { metric?: string; aggregation?: StatsAggregationLevel; limit?: number } = {},
+  ): Promise<TopEntitiesResponse> {
+    const searchParams = new URLSearchParams();
+    if (params.metric) searchParams.set('metric', params.metric);
+    if (params.aggregation) searchParams.set('aggregation', params.aggregation);
+    if (params.limit) searchParams.set('limit', String(params.limit));
+    const qs = searchParams.toString();
+    return http.get(`/stats/admin/${entityType}/top${qs ? `?${qs}` : ''}`);
+  }
+
+  // Public tracking beacons: the server answers 202 and may skip silently, so a
+  // caller must not depend on an envelope here.
+  recordProductView(productId: string): Promise<Record<string, never> | null> {
+    return http.post(`/stats/public/products/${productId}/view`);
+  }
+
+  recordProductClick(productId: string, source?: string): Promise<Record<string, never> | null> {
+    const qs = source ? `?source=${encodeURIComponent(source)}` : '';
+    return http.post(`/stats/public/products/${productId}/click${qs}`);
+  }
+
+  recordCategoryView(categoryId: string): Promise<Record<string, never> | null> {
+    return http.post(`/stats/public/categories/${categoryId}/view`);
+  }
+
+  recordPageView(pageKey: string): Promise<Record<string, never> | null> {
+    return http.post(`/stats/public/pages/${encodeURIComponent(pageKey)}/view`);
+  }
+
+  getHealth(): Promise<{ pendingInBuffer: number }> {
+    return http.get('/stats/_health');
   }
 }
 

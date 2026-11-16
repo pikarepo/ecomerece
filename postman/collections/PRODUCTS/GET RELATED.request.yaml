@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product-variant/product/{{productId}}'
+method: GET
+description: related products changed shape
+body:
+  type: text
+  content: |-
+    {
+        "userId": "user_3FIvUYe9JQh90biPbCtBxFXWTQw",
+        "reason":"Beacaure its my merzi to deleet any one"
+    }
+settings: {}
+order: 18000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

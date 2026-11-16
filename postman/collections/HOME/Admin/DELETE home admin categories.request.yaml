@@ -1,0 +1,29 @@
+$kind: http-request
+id: b6ee2a8a5da294fdeea2413a
+name: DELETE /home/admin/categories
+description: admin route
+method: DELETE
+url: '{{baseUrl}}/home/admin/categories'
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{id}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('DELETE /home/admin/categories returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/home/admin/categories'
+method: POST
+body:
+  type: json
+  content: |-
+    {
+         "name": "Mo",
+        "image": "https://www.google.com/search?sxsrf=APpeQnvLqP1GsN1EjNbXI5JHcWJ99npmYg:1789046369261&udm=2&q=images",
+        "accent": "#10B981"
+    }
+settings: {}
+order: 2000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

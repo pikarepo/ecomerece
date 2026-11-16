@@ -1,0 +1,36 @@
+$kind: http-request
+id: 3cdeaab6e991b4afec31bb98
+name: PUT /home/admin/features
+description: admin route
+method: PUT
+url: '{{baseUrl}}/home/admin/features'
+body:
+  type: json
+  content: |-
+    {
+      "features": [
+        {
+          "title": "Title example",
+          "detail": "Detail example",
+          "accent": "Accent example",
+          "icon": "Icon example"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PUT /home/admin/features returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 11000

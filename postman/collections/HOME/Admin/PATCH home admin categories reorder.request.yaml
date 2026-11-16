@@ -1,0 +1,31 @@
+$kind: http-request
+id: f1d840681c8f13f7effac86d
+name: PATCH /home/admin/categories/reorder
+description: admin route
+method: PATCH
+url: '{{baseUrl}}/home/admin/categories/reorder'
+body:
+  type: json
+  content: |-
+    {
+      "orderedIds": [
+        "{{orderedId}}"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /home/admin/categories/reorder returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 3000

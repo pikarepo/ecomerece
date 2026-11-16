@@ -1,0 +1,23 @@
+$kind: http-request
+id: ce130c792c8351b267c733e3
+name: GET /order-request/admin/{{orderRequestId}}
+description: admin route
+method: GET
+url: '{{baseUrl}}/order-request/admin/{{orderRequestId}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /order-request/admin/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 7000

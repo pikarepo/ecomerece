@@ -1,0 +1,29 @@
+$kind: http-request
+id: x5s04z3u6w1t9v247y8t03wx
+name: PATCH /product-inventory/vendor/{{inventoryId}}/purchase
+description: vendor route — restock (buy more) inventory for a variant
+method: PATCH
+url: '{{baseUrl}}/product-inventory/vendor/{{inventoryId}}/purchase'
+body:
+  type: json
+  content: |-
+    {
+      "quantity": 50
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /product-inventory/vendor/:id/purchase returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 4000

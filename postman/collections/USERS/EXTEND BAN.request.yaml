@@ -1,0 +1,30 @@
+$kind: http-request
+id: n1h60p9k2m7j5l813o4j69mn
+name: PATCH /users/admin/ban/extend
+description: admin route — extend a user's active ban by additional days
+method: PATCH
+url: '{{baseUrl}}/users/admin/ban/extend'
+body:
+  type: json
+  content: |-
+    {
+      "userId": "{{userId}}",
+      "forDays": 5
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /users/admin/ban/extend returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 9000

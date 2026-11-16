@@ -1,0 +1,23 @@
+$kind: http-request
+id: 09f9b8a91307d7d2d18dcdb1
+name: GET /address/my/{{addressId}}
+description: buyer route
+method: GET
+url: '{{baseUrl}}/address/my/{{addressId}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /address/my/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

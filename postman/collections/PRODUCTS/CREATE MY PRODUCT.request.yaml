@@ -1,0 +1,41 @@
+$kind: http-request
+url: '{{baseUrl}}/product/vendor'
+method: POST
+body:
+  type: json
+  content: |-
+    {
+
+      "title": "Premium Organic Green Tea Leaves no 4",
+      "appearance": "public",
+      "categoryId":"01a0a4ba-6660-714e-a85d-e95b3d442fb2",
+      "description": "Hand-picked organic green tea from the highlands of Sri Lanka.",
+      "ingredient": {
+        "ingredients": ["Camellia sinensis leaves", "Natural flavors"]
+      },
+      "disclaimer": {
+        "disclaimers": [
+          {
+            "name": "Disclaimerss",
+            "title": "This product is not intended to diagnose, treat, cure, or prevent any disease."
+          }
+        ]
+      },
+      "image": {
+        "images": [
+          {
+            "url": "https://example.com/images/green-tea-main.jpg",
+            "alt": "Packaged organic green tea"
+          }
+        ]
+      }
+    }
+settings: {}
+order: 2000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

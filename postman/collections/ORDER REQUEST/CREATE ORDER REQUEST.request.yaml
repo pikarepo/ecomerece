@@ -1,0 +1,37 @@
+$kind: http-request
+id: c4d93e2f5b0f8a136d7e92bc
+name: POST /order-request/my
+description: buyer route — create a new order request (e.g. return, refund, exchange)
+method: POST
+url: '{{baseUrl}}/order-request/my'
+body:
+  type: json
+  content: |-
+    {
+      "orderId": "{{orderId}}",
+      "orderItemId": "{{orderItemId}}",
+      "type": "return",
+      "reason": "Product received in damaged condition.",
+      "note": "The product arrived with a broken screen. I would like to return it.",
+      "images": [
+        "https://example.com/images/damaged-product-1.jpg",
+        "https://example.com/images/damaged-product-2.jpg"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /order-request/my returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

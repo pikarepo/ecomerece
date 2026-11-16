@@ -1,0 +1,17 @@
+$kind: http-request
+url: '{{baseUrl}}/address/admin/{{addressId}}/recover'
+method: PATCH
+description: admin recovery
+auth:
+  type: bearer
+  credentials:
+    token: "{{supabaseAdmin}}"
+settings: {}
+order: 4000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

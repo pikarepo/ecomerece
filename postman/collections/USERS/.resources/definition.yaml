@@ -1,0 +1,17 @@
+$kind: collection
+auth:
+  - id: c66f0b95-631f-4316-bc8e-3df2633dda35
+    type: bearer
+    name: bearer auth (supabaseAdmin — active)
+    credentials:
+      token: "{{supabaseAdmin}}"
+  # Switch the collection to a buyer or vendor identity by putting its token in
+  # the environment and commenting out the admin block above.
+  # - type: bearer
+  #   name: bearer auth (supabaseUser)
+  #   credentials:
+  #     token: "{{supabaseUser}}"
+  # - type: bearer
+  #   name: bearer auth (supabaseVendor)
+  #   credentials:
+  #     token: "{{supabaseVendor}}"

@@ -1,0 +1,32 @@
+$kind: http-request
+id: fa6fb7b45d51296d383d2be5
+name: POST /home/admin/features
+description: admin route
+method: POST
+url: '{{baseUrl}}/home/admin/features'
+body:
+  type: json
+  content: |-
+    {
+      "title": "Title example",
+      "detail": "Detail example",
+      "accent": "Accent example",
+      "icon": "Icon example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /home/admin/features returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 10000

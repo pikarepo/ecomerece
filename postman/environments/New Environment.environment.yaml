@@ -1,0 +1,68 @@
+name: New Environment
+values:
+  - key: supabaseAdmin
+    value: ""
+    secret: true
+  - key: supabaseUser
+    value: ""
+    secret: true
+  - key: supabaseVendor
+    value: ""
+    secret: true
+  - key: baseUrl
+    value: http://localhost:8000
+    secret: false
+  - key: addressId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: cartId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: cartItemId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: categoryId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: entityId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: id
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: idempotentKey
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: inventoryId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: itemId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: orderId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: orderItemId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: orderRequestId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: orderedId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: productId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: reviewId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: userId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: variantId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false
+  - key: vendorId
+    value: 01900000-0000-7000-8000-000000000000
+    secret: false

@@ -1,0 +1,31 @@
+$kind: http-request
+id: 302a74397988cea14cf23309
+name: PATCH /category/admin
+description: admin route
+method: PATCH
+url: '{{baseUrl}}/category/admin'
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{id}}",
+      "title": "Title example",
+      "image": "Image example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /category/admin returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 3000

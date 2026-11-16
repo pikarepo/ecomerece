@@ -1,0 +1,23 @@
+$kind: http-request
+id: s0n59u8p1r6o4q792t3o58rs
+name: GET /order/vendor/all
+description: vendor route — paginated list of orders containing the vendor's items
+method: GET
+url: '{{baseUrl}}/order/vendor/all'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /order/vendor/all returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

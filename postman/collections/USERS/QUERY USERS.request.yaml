@@ -1,0 +1,23 @@
+$kind: http-request
+id: t7n26v5q8s3p1r479u0p25st
+name: GET /users/admin/all
+description: admin route — paginated list of all users with optional filters
+method: GET
+url: '{{baseUrl}}/users/admin/all'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /users/admin/all returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 15000

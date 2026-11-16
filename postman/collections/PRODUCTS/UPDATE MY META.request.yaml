@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product/vendor/meta'
+method: PATCH
+body:
+  type: text
+  content: |-
+    {
+       "title":"This is the new title of product",
+        "productId": "019fe22f-02ad-700d-afff-197467eb2b1c",
+         "description":"This is also teh new description of product"
+    }
+settings: {}
+order: 8000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

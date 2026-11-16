@@ -1,0 +1,29 @@
+$kind: http-request
+id: c01ca4da8654947741930fdd
+name: DELETE /product-inventory/admin/{{inventoryId}}
+description: admin route
+method: DELETE
+url: '{{baseUrl}}/product-inventory/admin/{{inventoryId}}'
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Reason example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('DELETE /product-inventory/admin/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 10000

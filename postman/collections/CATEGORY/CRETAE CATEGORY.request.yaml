@@ -1,0 +1,19 @@
+$kind: http-request
+url: '{{baseUrl}}/category/admin'
+method: POST
+body:
+  type: json
+  content: |-
+    {
+       "title": "Cars",
+     "image":"https://sitebulb.com/hints/security/https-url-links-to-an-http-url/"
+    }
+settings: {}
+order: 2000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

@@ -1,0 +1,36 @@
+$kind: http-request
+id: b18dc54805b09156996dacb5
+name: POST /review/my
+description: buyer route
+method: POST
+url: '{{baseUrl}}/review/my'
+body:
+  type: json
+  content: |-
+    {
+      "productId": "{{productId}}",
+      "orderId": "{{orderId}}",
+      "rating": 1,
+      "title": "Title example",
+      "comment": "Comment example",
+      "images": [
+        "Image example"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /review/my returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 4000

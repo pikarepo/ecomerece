@@ -1,0 +1,30 @@
+$kind: http-request
+id: 24f5cf79a4d9200017d7bde4
+name: PATCH /vendor/me/image
+description: owner route — update the vendor's logo and banner image URLs
+method: PATCH
+url: '{{baseUrl}}/vendor/me/image'
+body:
+  type: json
+  content: |-
+    {
+      "logo": "https://example.com/logo.png",
+      "banner": "https://example.com/banner.jpg"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /vendor/me/image returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 3000

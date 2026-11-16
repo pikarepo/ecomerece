@@ -1,0 +1,23 @@
+$kind: http-request
+id: b3c82f1d4a9e7f025c6d81ab
+name: GET /order-request/my
+description: buyer route — paginated list of the caller's own order requests
+method: GET
+url: '{{baseUrl}}/order-request/my'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /order-request/my returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

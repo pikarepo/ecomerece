@@ -1,0 +1,30 @@
+$kind: http-request
+id: o2i71q0l3n8k6m924p5k70no
+name: PATCH /users/admin/ban/short
+description: admin route — shorten a user's active ban by a number of days
+method: PATCH
+url: '{{baseUrl}}/users/admin/ban/short'
+body:
+  type: json
+  content: |-
+    {
+      "userId": "{{userId}}",
+      "forDays": 2
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /users/admin/ban/short returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 10000

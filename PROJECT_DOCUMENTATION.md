@@ -86,7 +86,7 @@ Bun workspaces monorepo:
 │   └── frontend            headless SDK: HTTP client, React Query hooks, Zustand stores
 ├── AGENTS.md               contributor instructions
 ├── PROJECT_DOCUMENTATION.md this file
-├── README.md               older, partly stale overview (see §22)
+├── README.md               entry-point overview; this document is the reference
 ├── biome.json              formatter config (2 spaces, 100 cols, single quotes)
 ├── ecosystem.config.js     pm2 config for production (fork mode, bun, port 8000)
 ├── package.json            workspace scripts, overrides (react 19.3.0, lucide-react 0.468.0)
@@ -557,6 +557,60 @@ Follow-ups: unrelated issues noticed.
 Checks: typecheck / lint / tests -> pass | fail | not run (reason).
 Assumptions: anything you guessed.
 ```
+
+### 8.7 Keeping the API, the SDK and the Postman collection in agreement
+
+Three surfaces describe one HTTP contract, and only one of them is authoritative.
+
+| Surface | Location | Role |
+|---|---|---|
+| API | `apps/api/modules/*/presentation/*.routes.ts` | source of truth |
+| SDK | `packages/frontend/modules/<module>/<module>.service.ts` | typed client that `apps/web` calls |
+| Collection | `postman/collections/<MODULE>` | executable contract, pushed to the Postman workspace |
+
+Rules for a change that adds or alters a route:
+
+1. Route file first. Paths, methods and audience scopes come from the route file; never edit the API
+   to match a stale collection or a stale SDK method. A path/method change is a public-API change
+   and needs the §8.6 hard-stop check.
+2. Update all three in the same change. A route without an SDK method is a hole the next page author
+   fills by hand; a route without a request is a contract nobody executes.
+3. Export new modules. `packages/frontend/modules/index.ts` is the SDK surface — a module folder that
+   is not exported there is invisible to `apps/web` even though its service compiles.
+4. One service method per route. Two methods calling the same path (`getPaginatedUsers` and
+   `getAdminPaginatedUsers` both hit `/users/admin/all`) drift apart on the next change.
+5. One request per method+path per collection, filed under its audience folder (`Public`, `Buyer`,
+   `Vendor`, `Admin`). A second copy at collection root rots silently: it stops tracking the folder
+   copy, and a name like `GET ORDERS ITMES` hides which route it really calls.
+6. Path ids come from environment variables. A literal UUID in a request is a bug; `{{addressId}}`
+   is the contract.
+7. Only reference variables the environment defines. `postman workspace lint` passes for `{{clerk}}`
+   even when no environment defines `clerk`, so the request fails at run time with 401. Grep the
+   collection for `{{` keys against `postman/environments/*` before pushing.
+8. `GET` and `DELETE` requests carry no body. Every body-on-a-GET found in this repo was a
+   copy-paste from a neighbouring mutation, and it survives merges because an absent field is not a
+   deletion.
+9. Reconcile §14 with the collection after the change: every endpoint listed there has a request,
+   and no request resolves to an endpoint that is not listed.
+
+**Running the contract locally**
+
+- `postman collection run <collection> -e "postman/environments/…"` needs tokens in
+  `supabaseAdmin` / `supabaseUser` / `supabaseVendor`. Empty values return 401 on every
+  authenticated request; that is a missing credential, not a contract defect.
+- Placeholder ids produce domain 404s (`"Product not found."`, `"Vendor not found."`), which are
+  also not contract defects. Seed real ids into the environment before judging a run.
+- The rate limiter defaults to 60 requests/minute per IP (`RATE_LIMIT_MAX`), so a full-suite run
+  throttles itself. Raise the limit on the local server instead of reading 429s as failures.
+- `apps/api/index.ts` sets `reusePort: true`, so a restarted server can share `:8000` with the
+  process it was meant to replace, silently mixing both rate limits. Check
+  `ss -ltnp | grep :8000` before trusting any result.
+- Collections that contain only folders (`ORDER ITEMS`, `REVIEW`, `STATS` at the time of writing)
+  fail as a whole with `No transform for item type: ""`; run each folder path instead.
+- `postman workspace push` merges, so a field removed locally is not removed in the cloud. Give the
+  field its new value (`content: ""`); `body: null` fails collection lint.
+- `postman workspace diff` can report a request as `modified` when a fresh `pull` shows identical
+  content. Confirm with a pull before chasing it.
 
 ---
 
@@ -1592,6 +1646,9 @@ fake deps; importing routes is no longer needed to register handlers.
 
 There is no `.env.example` in the repo; document new variables here and in the deploy config.
 
+Running the Postman collections drives this same server. §8.7 lists the rate-limit and `reusePort`
+pitfalls that make a healthy run look broken.
+
 ### 21.2 Web environment
 
 | Variable | Used by | Default |
@@ -1657,8 +1714,9 @@ These are real issues observed in the code, not TODOs invented for this document
 
 **Naming / housekeeping**
 
-18. The root `README.md` describes an older state of the system (including a “900-line” doc and
-    claims about unwired reviews/stats). This file supersedes it.
+18. The root `README.md` was rewritten on 2026-11-16 as an entry point that defers to this document
+    for detail; where the two disagree, this file wins. The older claims (a “900-line” doc, unwired
+    reviews/stats) are gone.
 19. Persistent typos in API surface and filenames: `product-varaint.routes.ts` (and
     `createProductVaraintModule`), `cloudnary-image.type.ts`, `order.returnded`,
     `user.logged-in` vs `user.signed-in`, the placeholder address deletion reason, and the
@@ -1668,6 +1726,24 @@ These are real issues observed in the code, not TODOs invented for this document
     `inventoryReaponseReadModel`; they are harmless but spread across presentation, application and
     infrastructure, so rename them in a dedicated change.
 21. `apps/api/dist/` exists as a local build artifact; do not edit or review it as source.
+
+**Contract surfaces (2026-11-16)**
+
+1. `postman/` is gitignored (`.gitignore:142`), so collections are reviewed only in the Postman
+   workspace, never in a pull request. A route change can merge alongside a stale collection, which
+   is how the defects in §8.7 accumulated.
+2. The collection carried 19 duplicate or non-existent requests: four artifacts with no matching
+   route (`USERS/HARD DELETE`, `USERS/LOGIN USER`, `VENDOR/CREATE VENDOR`, `HOME/ADD FEATURE`) and
+   fifteen root-level copies of folder requests. They are removed; nothing stops a re-import or a
+   careless save from bringing them back.
+3. `PRODUCTS` still holds `GET /product-variant/product/:id` under the name `GET RELATED`,
+   duplicating the `PRODUCT-VARIANTS` request for the same route.
+4. `UserService` exposes `getPaginatedUsers` and `getAdminPaginatedUsers`, both calling
+   `GET /users/admin/all`.
+5. `PRODUCTS/QUERY PRODUCT` is reported `modified` by `postman workspace diff` although a fresh pull
+   shows identical content; it is CLI serialization, not drift.
+6. Nothing automated checks that the three surfaces agree. §8.7 is review-enforced until a
+   route/collection comparison exists in CI.
 
 **Standards audit (2026-11-14, all API and package modules)**
 
@@ -1753,7 +1829,8 @@ Not applied — needs a decision:
 |---|---|
 | Add a rule to a business concept | `packages/domain/modules/<m>/<m>.aggregate.ts` (+ event if other modules care) |
 | Add a field to a product / vendor / user | aggregate + `infrastructure/<m>.mapper.ts` + Mongoose model + `request-dtos` + web form |
-| Add an endpoint | controller method → route file → `request-dtos` schema → SDK service/hook → page |
+| Add an endpoint | controller method → route file → `request-dtos` schema → SDK service/hook → web page → Postman request in the owning collection (§8.7) |
+| Check for contract drift | §8.7; compare `apps/api/modules/*/presentation/*.routes.ts` against `postman/collections/*` and `packages/frontend/modules/*/*.service.ts` |
 | Add a cross-module read | define the Query class in `packages/contracts/modules/<owner>` + re-export it from the owner's `application/queries` + register its handler in the owner module factory; consumers import it from `@ecomerece/contracts` |
 | Add a cross-module write/port | define the port interface in `packages/contracts/modules/<owner>` + implement an adapter in the owner's `infrastructure/` + expose it from the owner module factory + inject it via `createApplication()` |
 | Make another module react to a change | raise an event in the aggregate + `eventBus.register('<type>', handler)` in the consumer module factory |
@@ -1780,6 +1857,12 @@ Not applied — needs a decision:
   comment that restates code is worse than none. Conventions are in §8.5.
 - Keep §8.6 and the Engineering Standards section in `AGENTS.md` in sync. This document is
   authoritative; the agent file is the condensed, always-loaded version.
+- A route change is a three-surface change (route file, SDK service, Postman request). §8.7 holds
+  the rules; §22 records the drift that is still open.
+- Update §14 and the matching collection in the same commit-sized change; an endpoint catalog that
+  disagrees with the collection is worse than no catalog, because both look authoritative.
+- Keep credentials out of `postman/environments/*`: use Postman secrets or an ignored environment.
+  A committed secret cannot be reviewed or rotated safely.
 - Verified against the tree on 2026-11-15: 15 module folders (14 of them mount HTTP routes), 13
   Mongoose models, 208 mounted routes + `/health`, 13 aggregates, 129 event classes, 19 contract
   ports, 197 SDK hooks, 27 web pages, 573 tests across 48 files.

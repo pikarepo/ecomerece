@@ -1,0 +1,23 @@
+$kind: http-request
+id: d85f106847326921a278980c
+name: GET /product-variant/admin/all
+description: admin route
+method: GET
+url: '{{baseUrl}}/product-variant/admin/all'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /product-variant/admin/all returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

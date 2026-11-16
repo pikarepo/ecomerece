@@ -1,0 +1,29 @@
+$kind: http-request
+id: a23c59a62b5bd2206dc5e728
+name: PATCH /category/admin/{{categoryId}}/block
+description: admin route — block a category from appearing in the storefront
+method: PATCH
+url: '{{baseUrl}}/category/admin/{{categoryId}}/block'
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Category contains prohibited content."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /category/admin/:id/block returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 5000

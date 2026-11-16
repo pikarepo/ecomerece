@@ -3,6 +3,7 @@
 import type {
   blockLiftProductDtoType,
   blockProductDtoType,
+  clearIngredientsDtoType,
   CreateMyProductDto,
   deafultImageDtoType,
   disclaimerItemsDtoType,
@@ -14,10 +15,12 @@ import type {
   ProductPublicSort,
   ProductResponseReadModel,
   productAppereanceDtoType,
+  productStockDtoType,
   recoverProductDtoType,
   softDeleteMyProductDtoType,
   toggleDiscalimerDtoType,
   toggleIngredientsDtoType,
+  updateDisclaimerDtoType,
   updateProductMetaDtoType,
 } from '@ecomerece/shared';
 import { http } from './../../lib';
@@ -172,6 +175,18 @@ export class ProductService {
 
   removeMyProductIngredients(data: ingredientsDtotype): Promise<ProductMutationResult> {
     return http.patch<ProductMutationResult>('/product/vendor/ingredients/remove', data);
+  }
+
+  clearMyProductIngredients(data: clearIngredientsDtoType): Promise<ProductMutationResult> {
+    return http.patch<ProductMutationResult>('/product/vendor/ingredients/clear', data);
+  }
+
+  updateMyProductDisclaimer(data: updateDisclaimerDtoType): Promise<ProductMutationResult> {
+    return http.patch<ProductMutationResult>('/product/vendor/disclaimer/update', data);
+  }
+
+  setMyProductInStock(data: productStockDtoType): Promise<ProductMutationResult> {
+    return http.patch<ProductMutationResult>('/product/vendor/stock', data);
   }
 }
 

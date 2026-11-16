@@ -1,0 +1,27 @@
+$kind: http-request
+url: '{{baseUrl}}/vendor/{{vendorId}}'
+method: GET
+body:
+  type: json
+  content: |-
+    {
+      "storeName": "Ahad Electronics",
+      "slug": "ahad-electronics",
+      "description": "We sell laptops and accessories.",
+      "logo": "https://example.com/logo.png",
+      "banner": "https://example.com/banner.png",
+      "contact": {
+        "phone": "+923001234567",
+        "email": "contact@ahadelectronics.com",
+        "address": "Gujranwala, Punjab, Pakistan"
+      }
+    }
+settings: {}
+order: 2000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

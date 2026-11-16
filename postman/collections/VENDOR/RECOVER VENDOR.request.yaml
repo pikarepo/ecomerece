@@ -1,0 +1,29 @@
+$kind: http-request
+id: a4u93c2x5z0w8y146b7w92za
+name: PATCH /vendor/admin/recover
+description: admin route — recover a soft-deleted vendor account
+method: PATCH
+url: '{{baseUrl}}/vendor/admin/recover'
+body:
+  type: json
+  content: |-
+    {
+      "vendorId": "{{vendorId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /vendor/admin/recover returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 7000

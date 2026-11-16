@@ -1,0 +1,29 @@
+$kind: http-request
+id: y6t15a4v7x2u0w358z9u14xy
+name: PATCH /product-inventory/vendor/{{inventoryId}}/threshold
+description: vendor route — update the low-stock alert threshold for a variant
+method: PATCH
+url: '{{baseUrl}}/product-inventory/vendor/{{inventoryId}}/threshold'
+body:
+  type: json
+  content: |-
+    {
+      "lowStockThreshold": 10
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /product-inventory/vendor/:id/threshold returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 5000

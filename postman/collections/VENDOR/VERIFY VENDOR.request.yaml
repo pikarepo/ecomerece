@@ -1,0 +1,29 @@
+$kind: http-request
+id: y2s71a0v3x8u6w924z5u70xy
+name: PATCH /vendor/admin/verify
+description: admin route — verify (approve) a vendor's KYC application
+method: PATCH
+url: '{{baseUrl}}/vendor/admin/verify'
+body:
+  type: json
+  content: |-
+    {
+      "vendorId": "{{vendorId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /vendor/admin/verify returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 5000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product-variant/vendor/appearance/toggle'
+method: PATCH
+body:
+  type: json
+  content: |-
+    {
+      "productId": "01a1d5fa-f16c-71b9-9d2f-f3f30b7aef98",
+      "variantId":"01a1d5fc-6443-7441-b9ff-4b9547767e41",
+      "appearance":true
+    }
+settings: {}
+order: 6000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

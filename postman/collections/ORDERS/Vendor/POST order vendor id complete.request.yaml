@@ -1,0 +1,23 @@
+$kind: http-request
+id: q8l37s6n9p4m2o570r1m36pq
+name: POST /order/vendor/{{orderId}}/complete
+description: vendor route — mark the order as fulfilled and completed
+method: POST
+url: '{{baseUrl}}/order/vendor/{{orderId}}/complete'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /order/vendor/:id/complete returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 3000

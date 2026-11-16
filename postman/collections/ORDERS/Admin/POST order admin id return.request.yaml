@@ -1,0 +1,29 @@
+$kind: http-request
+id: 5ac0564291cbbf1bb735e935
+name: POST /order/admin/{{orderId}}/return
+description: admin route
+method: POST
+url: '{{baseUrl}}/order/admin/{{orderId}}/return'
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Reason example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /order/admin/:id/return returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 13000

@@ -1,0 +1,23 @@
+$kind: http-request
+id: b406650d4c36f6bf6db48bd0
+name: PATCH /order/admin/{{orderId}}/recover
+description: admin route
+method: PATCH
+url: '{{baseUrl}}/order/admin/{{orderId}}/recover'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /order/admin/:id/recover returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 10000

@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product/vendor'
+method: DELETE
+body:
+  type: json
+  content: |-
+    {
+        "reason":"My own reason due to me",
+        "productId": "019febc9-2e2e-712c-ac71-5bd2aa2421fd"
+
+    }
+settings: {}
+order: 4000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

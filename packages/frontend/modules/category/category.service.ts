@@ -1,6 +1,7 @@
 // category.service.ts
 
 import type {
+  blockCategoryDtoType,
   categoryResponseReadModels,
   createCategoryDtoType,
   deleteCategoryType,
@@ -69,6 +70,14 @@ export class CategoryService {
 
   deleteCategoryById(data: deleteCategoryType): Promise<CategoryMutationResult> {
     return http.delete<CategoryMutationResult>('/category/admin', data);
+  }
+
+  blockCategory(id: string, data: blockCategoryDtoType): Promise<CategoryMutationResult> {
+    return http.patch<CategoryMutationResult>(`/category/admin/${id}/block`, data);
+  }
+
+  unblockCategory(id: string): Promise<CategoryMutationResult> {
+    return http.patch<CategoryMutationResult>(`/category/admin/${id}/unblock`);
   }
 }
 

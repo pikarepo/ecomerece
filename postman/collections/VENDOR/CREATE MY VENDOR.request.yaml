@@ -1,0 +1,46 @@
+$kind: http-request
+id: v9p48x7s0u5r3t691w2r47uv
+name: POST /vendor/me
+description: owner route — create the vendor profile for the signed-in user
+method: POST
+url: '{{baseUrl}}/vendor/me'
+body:
+  type: json
+  content: |-
+    {
+      "title": "My Store Name",
+      "slug": "my-store-name",
+      "description": "A brief description of the store.",
+      "contacts": {
+        "phone": "+15551234567",
+        "email": "store@example.com",
+        "address": {
+          "streetAddress": "123 Main Street",
+          "city": "Lahore",
+          "state": "Punjab",
+          "postalCode": "54000",
+          "country": "Pakistan"
+        }
+      },
+      "image": {
+        "logo": "https://example.com/logo.png",
+        "banner": "https://example.com/banner.jpg"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /vendor/me returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

@@ -1,0 +1,26 @@
+workspace:
+  id: "18a19ffd-cff1-4ca4-86c7-b753abbc8656"
+  name: "Abdul Ahad's Workspace"
+
+# Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
+cloudResources:
+  collections:
+    ../postman/collections/ADDRESS: 55459816-50230a9e-9fd4-488c-b660-6bbfe9d3ee7b
+    ../postman/collections/CART: 55459816-a6785828-6f20-4a8f-a3fe-38e642a4f825
+    ../postman/collections/CATEGORY: 55459816-12b25cca-5718-416c-bfc7-214f6c8579d3
+    ../postman/collections/HOME: 55459816-e56a1475-167b-4f5a-a3ac-5976009877e4
+    ../postman/collections/INVENTORY: 55459816-cbd4f7d7-4283-4f7c-ad5c-5df6cbebba21
+    ../postman/collections/ORDER ITEMS: 55459816-8da380e9-6a6a-4647-b57e-ddea73a62427
+    ../postman/collections/ORDER REQUEST: 55459816-41e5ebdb-dc92-487a-8ff8-993b617cb4e1
+    ../postman/collections/ORDERS: 55459816-0f71f63f-ee82-4330-b85a-b8c2142408dd
+    ../postman/collections/PRODUCT-VARIENTS: 55459816-edcc9d72-cec6-4ecc-ae53-1add395d1a7b
+    ../postman/collections/PRODUCTS: 55459816-7ebcdf31-d927-43e2-a750-8e950eaa25d6
+    ../postman/collections/REVIEW: 55459816-e89fb978-018b-4b12-96cf-60f28695e968
+    ../postman/collections/STATS: 55459816-792014e3-9d1b-45a3-a60b-762070f2458a
+    ../postman/collections/USERS: 55459816-da5324b0-11fe-428b-aa71-6d650f220ae1
+    ../postman/collections/VENDOR: 55459816-d48bb33b-c596-439d-a874-f92bddd8967d
+    ../postman/collections/HEALTH: 55459816-ed65dab1-b24f-45a6-8261-28063ee2f5a3
+  environments:
+    ../postman/environments/New Environment.environment.yaml: 55459816-604c9f3b-0f2a-4f2b-86ea-99182e50dd3f
+  globals:
+    ../postman/globals/workspace.globals.yaml: 2695abcc-105e-4851-813f-42ce7ce0e11d

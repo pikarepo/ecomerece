@@ -1,0 +1,23 @@
+$kind: http-request
+id: b5v04d3y6a1x9z257c8x03ab
+name: DELETE /vendor/me
+description: owner route — soft-delete the signed-in user's vendor account
+method: DELETE
+url: '{{baseUrl}}/vendor/me'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('DELETE /vendor/me returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 8000

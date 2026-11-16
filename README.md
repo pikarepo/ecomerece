@@ -1,607 +1,385 @@
-# E-Commerce Monorepo — Multi-Platform Commerce Platform
+# Ecomerece
 
-An  multi-vendor e-commerce platform engineered around **Domain-Driven Design (DDD)**, **Hexagonal / Clean Architecture (Ports & Adapters)**, and **Command-Query Responsibility Segregation (CQRS)** — spanning a high-performance Hono API, a Next.js storefront + admin backoffice, and a shared cross-platform client SDK.
+A multi-vendor marketplace: one Bun/Hono API backed by MongoDB, Redis, Supabase and Cloudinary, one
+Next.js app that serves the storefront, the buyer account area and the admin/vendor dashboard, and a
+headless TypeScript SDK shared by that app (and intended for mobile).
 
-> **Full engineering manual:** [PROJECT_DOCUMENTATION.md](./PROJECT_DOCUMENTATION.md) contains the complete 1,400-line architecture guide (DDD mental models, the 4-layer model, the Aggregate Fortress pattern, all cross-module decoupling patterns, the persistence & Unit-of-Work design, full API endpoint catalog, and the developer cheatsheet).
->
-> **Hands-on playbook:** [docs/architecture-guide.html](./docs/architecture-guide.html) is a single-file interactive HTML course that builds a new module from scratch, step by step, and then explains cross-module communication in depth. Open it directly in a browser — no server or build step.
+The backend is a DDD + CQRS + hexagonal codebase: every business module owns a pure domain layer,
+a repository, an application service that orchestrates `load → mutate → save → publish`, and a thin
+HTTP layer. Modules never import each other's internals — cross-module reads go through typed
+contracts, reactions go through domain events.
 
----
-
-## Table of Contents
-
-1. [Goals & Vision](#-goals--vision)
-2. [Tech Stack](#-tech-stack)
-3. [Repository Layout](#-repository-layout)
-4. [Architecture Overview](#-architecture-overview)
-   - [Infrastructure Topology (Deployment View)](#infrastructure-topology-deployment-view)
-   - [API Internal Component Structure](#api-internal-component-structure)
-   - [Anatomy of a Single Module (product example)](#anatomy-of-a-single-module-product-example)
-   - [Request Lifecycle (full round-trip)](#request-lifecycle-full-round-trip)
-   - [Unit-of-Work Transaction Flow](#unit-of-work-transaction-flow)
-5. [Domain Model: Aggregates & Events](#-domain-model-aggregates--events)
-6. [Cross-Module Communication (CQRS Buses)](#-cross-module-communication-cqrs-buses)
-7. [The 4 Layers — The Iron Law of Dependencies](#-the-4-layers--the-iron-law-of-dependencies)
-8. [Persistence & Unit of Work](#-persistence--unit-of-work)
-9. [API Security & Defensive Middleware](#-api-security--defensive-middleware)
-10. [Full API Endpoints](#-full-api-endpoints)
-11. [Frontend & Client SDK](#-frontend--client-sdk)
-12. [Getting Started](#-getting-started)
-13. [Development Commands](#-development-commands)
-14. [Adding a New Module (DDD Build Order)](#-adding-a-new-module-ddd-build-order)
-15. [Contribution Guidelines](#-contribution-guidelines)
-16. [Roadmap & Known Gaps](#-roadmap--known-gaps)
+The full, verified description of how the system behaves is
+**[`PROJECT_DOCUMENTATION.md`](./PROJECT_DOCUMENTATION.md)**. This README is the entry point; the
+document is the reference.
 
 ---
 
-## 🎯 Goals & Vision
+## What it is for
 
-The platform is being built to deliver a complete, production-grade commerce experience with these core goals:
+| Surface | Path prefix | Audience | Auth |
+|---|---|---|---|
+| Storefront | `/`, `/products`, `/categories`, `/vendors`, `/reviews` | anonymous visitors | none |
+| Buyer account | `/account/**` | signed-in customers | Supabase session |
+| Admin / seller dashboard | `/dashboard/**`, `/account/products`, `/account/vendor` | admins; vendors partially | Supabase session + API role checks |
 
-| Goal | How the codebase achieves it |
-| :--- | :--- |
-| **Multi-platform reach** | One headless domain + one client SDK (`packages/frontend`) power both a Web storefront (Next.js) and a native mobile app (React Native/Expo placeholder). |
-| **Multi-vendor marketplace** | Independent vendor registration with KYC verification workflow (`verify` / `reject`), vendor-scoped product management, and per-vendor order items. |
-| **Moderation-first user lifecycle** | Entirely domain-enforced user lifecycle: roles, indefinite block, timed ban with extend/shorten/lift, and soft-delete/recover — each raising its own domain event. |
-| **Atomic sales & inventory integrity** | Stock reservation, fulfillment completion, restocking, and low-stock threshold management inside one aggregate; multi-vendor checkout as an atomic transaction via Unit of Work. |
-| **Editorial / CMS-driven storefront** | A `HomeDashboard` aggregate and REST surface let admins compose hero slides, promos, category chips, feature blobs, and product shelves with full reordering. |
-| **Architectural purity & testability** | Every business rule lives in exactly one place (an Aggregate). Domain is pure TypeScript with zero runtime deps; infrastructure (MongoDB, Redis, Auth) is swappable behind Ports & Adapters. |
-| **Security-first API** | Guarded payload/buffer limits, Redis-backed rate limiting, JWT verification plus live user-state checks (block/ban/delete) on every authenticated request. |
+What the system actually does:
 
----
-
-## 🧰 Tech Stack
-
-| Concern | Technology |
-| :--- | :--- |
-| Package manager / runtime | **Bun** (v1.4+) |
-| Backend | **Hono v4**, TypeScript, port `8000` |
-| Database | **MongoDB** (Mongoose 8, replica set for transactions) |
-| Cache / rate limiting | **Redis** (sliding token bucket) |
-| Identity provider | **Supabase Auth** (Admin SDK) · Clerk + Google OAuth (web storefront) |
-| Storefront / admin | **Next.js 16**, React 19, **Material UI (MUI)** (default component library), Zustand, TanStack Query 5 |
-| Mobile (placeholder) | **React Native / Expo** |
-| Contracts / validation | **Zod v4** schemas + API envelopes in `packages/shared` |
-| Quality gates | TypeScript strict checking, Bun test runner, ESLint (web), Biome (format) |
+- Buyers browse products by category or vendor, read and write reviews, keep an address book, hold a
+  cart, and place orders. `POST /order/my` reserves stock through the inventory module, creates order
+  items, and records stats — inside one transaction.
+- Vendors create products and variants, manage stock and low-stock thresholds, set images,
+  ingredients and disclaimers, answer reviews, and read their own sales stats (with a Redis-backed
+  quota for forced refreshes).
+- Admins moderate users (block/ban/soft-delete/recover), verify or reject vendors, block products
+  and categories, moderate reviews, edit the home-page layout, and inspect the stats pipeline.
+- Almost every "delete" is a soft delete with a matching recover endpoint; `deleted`, `blocked` and
+  `banned` state is re-checked on every authenticated request.
 
 ---
 
-## 📦 Repository Layout
+## Repository layout
 
-Bun-workspaces monorepo — every workspace is an independently versioned package:
-
-| Path | Role |
-| :--- | :--- |
-| `apps/api` | Modular **Hono v4 API** (Bun). Each module follows the 4-layer DDD scaffold. |
-| `apps/web` | **Next.js 16** customer storefront, account portal, and admin backoffice. |
-| `apps/mobile` | **React Native / Expo** app placeholder (roadmap). |
-| `packages/domain` | Pure TS domain — Aggregates, Value Objects, Domain Events, CQRS Ports. **Zero runtime deps.** The star of the architecture. |
-| `packages/shared` | Zod schemas, request DTOs, API envelope contracts shared by all clients. |
-| `packages/frontend` | Headless client SDK — cross-platform adapters (`.web` / `.native`), React Query hooks, Zustand stores. |
-
-**Path aliases** (`tsconfig.json`) used across the monorepo:
+Bun workspaces monorepo.
 
 ```
-@ecomerece/domain    -> packages/domain/index.ts
-@ecomerece/shared    -> packages/shared/index.ts
-@ecomerece/frontend  -> packages/frontend/index.ts
+.
+├── apps
+│   ├── api        Hono v4 API on Bun (port 8000)
+│   ├── web        Next.js 16 App Router, Material UI (port 3000)
+│   └── mobile     placeholder, contains no source files
+├── packages
+│   ├── domain     aggregates, value objects, events, ports, read models (pure TypeScript)
+│   ├── contracts  the only cross-module surface: query interfaces, ports, actor types
+│   ├── shared     Zod schemas, DTO types, response read models, stats types
+│   └── frontend   headless SDK: HTTP client, React Query hooks, Zustand stores
+├── postman        collections + environment (gitignored; pushed to a Postman workspace)
+├── docs           architecture-guide.html, the step-by-step module playbook
+├── ecosystem.config.js  pm2 production config (fork mode, Bun, port 8000)
+└── PROJECT_DOCUMENTATION.md
 ```
+
+Path aliases (root `tsconfig.json`): `@ecomerece/domain`, `@ecomerece/contracts`,
+`@ecomerece/shared`, `@ecomerece/frontend`.
 
 ---
 
-## 🏗️ Architecture Overview
+## Stack
+
+| Concern | Choice |
+|---|---|
+| Runtime / package manager | Bun (runs TypeScript directly) |
+| HTTP API | Hono v4 |
+| Database | MongoDB via Mongoose 8 (transactions require a replica set) |
+| Cache, counters, runtime settings | Redis (`redis` v6) |
+| Identity | Supabase — JWT verification and Google OAuth |
+| Validation | Zod 4 in `packages/shared` (shared by API and web forms) |
+| Web | Next.js 16 App Router, React 19.3, Material UI |
+| Client data layer | TanStack React Query 5 + Zustand 5 |
+| Images | Cloudinary |
+| Formatting | Biome (2 spaces, 100 cols, single quotes) |
+| Linting | Next.js ESLint, `apps/web` only |
+| Tests | `bun:test` |
+
+---
+
+## Getting started
+
+Prerequisites: Bun, a MongoDB instance (replica set if you need transactions), Redis, and Supabase
+credentials.
+
+```bash
+bun install           # install all workspace deps
+bun run dev           # API on :8000 and web on :3000 together
+bun run dev:api       # API only
+bun run typecheck     # tsc --noEmit across workspaces
+bun run lint          # Next.js ESLint (apps/web only)
+bun run format        # Biome for apps/web and packages (not apps/api)
+bun test              # test suite
+bun run build         # build API, then next build
+```
+
+`.env` lives at the repo root and in `apps/api`; both are read by the API process.
+
+### API environment
+
+| Variable | Purpose |
+|---|---|
+| `MONGO_URI` | MongoDB connection; add `?replicaSet=rs0` for transactions |
+| `REDIS_URL` | rate limiter, stats settings, vendor quota |
+| `SUPABASE_URL` | auth middleware |
+| `SUPABASE_SECRET_KEY` | service-role key used for server-side `getUser` (never ship to the client) |
+| `CORS_ORIGIN` | comma-separated allowed origins |
+| `RATE_LIMIT_WINDOW_MS`, `RATE_LIMIT_MAX` | rate limiter window and cap (default `60000` / `60`) |
+| `IMAGE_STORAGE_PROVIDER` | selects the Cloudinary adapter |
+| `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | image uploads |
+| `CLOUDINARY_SECURE`, `CLOUDINARY_FOLDER` | optional upload behaviour |
+| `NODE_ENV` | `production` hides error messages and stacks |
+| `JWT_SECRET` | legacy from the pre-Supabase auth; not used for request verification |
+
+### Web environment
+
+| Variable | Purpose |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | SDK base URL (default `/api`, same origin) |
+| `API_PROXY_TARGET` | Next rewrite target (falls back to `NEXT_PUBLIC_API_URL`, then `http://localhost:8000`) |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser Supabase client |
+
+### Ports and proxying
+
+The API always listens on `8000` (hardcoded in `apps/api/index.ts`); Next dev serves `3000`. The
+browser never calls the API cross-origin in development: `apps/web/next.config.ts` rewrites
+`/api/:path*` to the API, and the SDK's base URL defaults to `/api`. In production, run the API with
+`pm2 start ecosystem.config.js` and deploy the web app with `next build` / `next start`; add the web
+origin to `CORS_ORIGIN` only if it calls the API cross-origin.
+
+---
+
+## How a request flows
+
+`apps/api/index.ts` mounts middleware in this exact order:
+
+```
+logger → secureHeaders → cors → requestGuards → rateLimiter → dbMiddleware
+      → OPTIONS preflight → routes → error handler (onError + notFound)
+```
+
+`GET /health` is registered earlier, in `app.ts`, so it bypasses all of it and is safe for liveness
+probes. `GET /stats/_health` reports how many stats events are buffered.
+
+| Stage | What it does |
+|---|---|
+| `requestGuards` | caps URL/query/param length, body size, JSON depth and node count (`413`/`414` envelopes) |
+| `rateLimiter` | Redis sliding-window counter keyed on `cf-connecting-ip` → `x-forwarded-for` → `unknown` |
+| `dbMiddleware` | connects Mongoose once per process; requests get a `503` if MongoDB is down |
+| `authMiddleware` | verifies the Supabase token, then loads the live user row (ban/block/delete, role) |
+| `adminMiddleware` | requires `role === 'admin'` |
+| `vendorMiddleware` | requires a signed-in owner of an active vendor; publishes the vendor id |
+
+Ownership is checked twice on vendor routes: the middleware proves *which* vendor the caller owns, and
+the application service re-checks that vendor against the concrete order, product, stock row or
+review. That is why vendor routes carry no `:vendorId` parameter.
+
+### Response contract
+
+```jsonc
+// success
+{ "success": true, "data": { /* or { data: [...], meta: {...} } for lists */ } }
+
+// failure
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "…", "issues": [] } }
+```
+
+`ZodError` → 400 `VALIDATION_ERROR`; app errors keep their own status and code; Mongo duplicate key
+→ 409 `CONFLICT`; Mongoose cast errors → 400 `INVALID_ID`; unmatched routes → 404 `NOT_FOUND`.
+
+---
+
+## Architecture
+
+### How the pieces fit together
 
 ```mermaid
-flowchart TB
-    subgraph Clients["Clients"]
-        Web["apps/web (Next.js 16 + React 19)"]
-        Mobile["apps/mobile (React Native / Expo)"]
-    end
+flowchart LR
+  UI["apps/web<br/>Next.js pages: storefront, account, dashboard"]
+  SDK["packages/frontend<br/>HTTP client + React Query hooks"]
 
-    subgraph Sdk["Shared Client SDK"]
-        FrontendPkg["packages/frontend (adapters, React Query, Zustand)"]
-    end
+  subgraph API["apps/api - Hono on Bun, port 8000"]
+    MW["middleware<br/>guards, rate limit, auth, db"]
+    MOD["modules<br/>product, order, inventory, ..."]
+    BUS["InProcessEventBus"]
+  end
 
-    subgraph Contracts["Contracts"]
-        Shared["packages/shared (Zod schemas, DTOs, envelopes)"]
-    end
+  DOM["packages/domain<br/>aggregates, value objects, events, ports"]
+  CON["packages/contracts<br/>query interfaces, cross-module ports"]
 
-    subgraph Domain["Domain (pure TS, zero deps)"]
-        DomainPkg["packages/domain (aggregates, VOs, events, ports)"]
-    end
+  MONGO[("MongoDB")]
+  REDIS[("Redis")]
+  SUPA["Supabase<br/>identity"]
+  CLOUD["Cloudinary<br/>images"]
 
-    subgraph Api["API Layer"]
-        API["apps/api (Hono v4 + Bun)"]
-        Buses["In-memory Query/Event Buses"]
-        UoW["Unit of Work & MongoRepository (transactions)"]
-    end
-
-    subgraph Infra["Infrastructure"]
-        Mongo[("MongoDB (Mongoose 8)")]
-        Redis[("Redis (rate limiter)")]
-        Supabase["Supabase Auth (Admin SDK)"]
-    end
-
-    Web --> FrontendPkg
-    Mobile -.-> FrontendPkg
-    FrontendPkg --> Shared
-    API --> Shared
-    API --> Domain
-    API --> UoW
-    API --> Buses
-    UoW --> Mongo
-    API --> Redis
-    API --> Supabase
+  UI --> SDK
+  SDK -->|"HTTP /api/*"| MW
+  MW --> MOD
+  MW --> SUPA
+  MW --> REDIS
+  MOD --> DOM
+  MOD --> CON
+  MOD --> MONGO
+  MOD --> CLOUD
+  MOD -->|"domain events"| BUS
+  BUS -->|"stats fan-out"| MOD
 ```
 
-**The pattern at a glance:** the client calls the API → the API's **Presentation** layer extracts plain IDs → the **Application** layer orchestrates *Load → Command → Save → Events* → the **Domain** aggregate enforces invariants and raises events → a **Port** (repository interface) is implemented by the **Infrastructure** layer that persists to MongoDB inside a Unit-of-Work transaction.
+Only `packages/frontend` talks to the API, and only the API talks to the datastores. A module
+reaches another module through `packages/contracts` or through an event on the bus, never by
+importing its internals.
 
-The rest of this section drills into the infrastructure with four detail views: the **[runtime topology](#infrastructure-topology-deployment-view)**, the **[internal component structure](#api-internal-component-structure)**, the **[anatomy of a single module](#anatomy-of-a-single-module-product-example)**, and the **[unit-of-work transaction flow](#unit-of-work-transaction-flow)**.
+### Anatomy of a module
+
+Per module, built bottom-up:
+
+```
+packages/domain/modules/<name>/      aggregate, value objects, events, ports (pure, no I/O)
+packages/contracts/modules/<name>/   typed query interfaces + cross-module ports
+apps/api/modules/<name>/
+  infrastructure/                    Mongoose model, mapper, repository implementation
+  application/                       app service (load → domain method → save → publish)
+  presentation/                      controller (extends BaseController) + routes
+  <name>.module.ts                   module factory: builds the graph, registers handlers
+```
+
+- `apps/api/composition-root.ts` is the single composition root. `createApplication()` builds the
+  event bus, the unit of work and every module factory, then returns the graph; route files only
+  receive controllers and declare URLs.
+- Aggregates keep private state, expose intention methods and buffer events (`raise`), which the
+  application service publishes only after the write commits.
+- `OrderApplicationService.createMyOrder` is the deliberate exception: it runs inside a transaction
+  and publishes order/order-item events after commit, so consumers never see a rolled-back write.
+- Ids are always generated server-side (`Id.create()`, UUID v7); client-supplied ids are only used to
+  address existing resources.
+- Formatting is Biome; `bun run format` covers `apps/web` and `packages`, so format API files
+  explicitly with `bunx biome format --write apps/api/modules/<name>/...`.
 
 ---
 
-### Infrastructure Topology (Deployment View)
+## API at a glance
 
-```mermaid
-flowchart TB
-    subgraph Clients["Clients"]
-        Web["apps/web — Next.js 16 (Storefront · Account · Admin)"]
-        Mobile["apps/mobile — React Native / Expo (placeholder)"]
-        SDK["packages/frontend — Headless SDK (React Query + adapters)"]
-    end
+208 routes across 14 prefixes, plus `/health`.
 
-    subgraph ApiApp["apps/api — Hono v4 + Bun runtime (port 8000)"]
-        Entry["index.ts bootstrap — logger · secureHeaders · cors · requestGuards · dbMiddleware · rateLimiter"]
-        Routers["routes/index.ts — 12 mounted routers"]
-        Modules["12 module packages — 4-layer DDD scaffolds"]
-        Core["core infrastructure — buses · UnitOfWork · MongoRepository · BaseController"]
-        Adapters["lib/ — mongo · redis · supabase · clerk · jwt"]
-        Entry --> Routers
-        Routers --> Modules
-        Modules --> Core
-        Core --> Adapters
-    end
+| Prefix | Routes | Audience split |
+|---|---|---|
+| `/product` | 24 | public reads, `/vendor`, `/admin` |
+| `/product-variant` | 10 | public reads, `/vendor`, `/admin` |
+| `/review` | 15 | public reads, `/my`, `/vendor`, `/admin` |
+| `/product-inventory` | 15 | public variant availability, `/vendor`, `/admin` |
+| `/order` | 23 | `/my`, `/vendor`, `/admin` |
+| `/cart` | 5 | `/my`, `/admin` |
+| `/order-items` | 18 | `/my`, `/vendor`, `/admin` |
+| `/order-request` | 13 | `/my`, `/vendor`, `/admin` |
+| `/category` | 8 | public reads, `/admin` |
+| `/address` | 8 | `/my`, `/admin` |
+| `/users` | 14 | `/my`, `/admin`, plus `POST /users/init` |
+| `/vendor` | 15 | public reads, `/me`, `/admin` |
+| `/home` | 20 | public read, `/admin` |
+| `/stats` | 20 | public beacons, `/vendor/me`, `/admin`, owner-or-admin entity reads |
 
-    subgraph SharedContracts["Monorepo Packages"]
-        Domain["packages/domain — pure TS (aggregates · VOs · events · ports)"]
-        Shared["packages/shared — Zod schemas · DTOs · API envelopes"]
-        Domain -.->|"implemented by"| Modules
-        Shared -.->|"validates"| Routers
-    end
+The full per-route catalog, guard by guard, is §14 of `PROJECT_DOCUMENTATION.md`. Roles are
+`customer`, `vendor` and `admin`; `PATCH /users/admin/role` is the only manual assignment.
 
-    subgraph DataServices["Data & Identity Services"]
-        Mongo[("MongoDB — replica set (transactions)")]
-        Redis[("Redis — rate limiting")]
-        Supabase["Supabase Auth — Admin SDK (JWT verify)"]
-        Clerk["Clerk / Google OAuth — web storefront login"]
-    end
+### Core flows
 
-    Web --> SDK
-    Mobile -.-> SDK
-    Web -->|"HTTP / JSON envelopes"| ApiApp
-    Mobile -.->|"HTTP / JSON envelopes"| ApiApp
-    SDK -->|"HTTP / JSON envelopes"| ApiApp
-    Adapters --> Mongo
-    Adapters --> Redis
-    Adapters --> Supabase
-    Adapters --> Clerk
-```
+- **Place an order** — `POST /order/my` validates the address and cart, asks inventory to reserve
+  stock, creates order items, and commits; the stats module records the event. Vendor and admin
+  command routes (`confirm`, `complete`, `return`, `refund`, `cancel`) act on the same aggregate.
+- **Soft delete and recover** — most `DELETE` endpoints set `deleted` state; the paired `recover`
+  route restores it. Moderation state (`blocked`, `banned`) is enforced by the auth middleware.
+- **Stats pipeline** — public beacons (`/stats/public/...`) feed an in-process buffer that flushes
+  every 5 s; a scheduler ticks every 60 s to refresh vendor stats; `POST /stats/admin/denormalize`
+  rebuilds product slots, then rolls them up to categories and vendors. Settings live in Redis and
+  are editable by admins.
 
----
-
-### API Internal Component Structure
-
-Depicts how a single `apps/api` process is wired from bootstrap to persistence:
-
-```mermaid
-flowchart TB
-    subgraph Bootstrap["apps/api/index.ts — edge bootstrap"]
-        Hono["Hono app"]
-        Pipeline["Global middleware pipeline (applied in order)"]
-        Err["registerErrorHandler — centralized error mapping"]
-    end
-
-    subgraph Middleware["middleware/ — pipeline order"]
-        M1["logger (hono)"]
-        M2["secureHeaders — CSP · X-Frame-Options: DENY · nosniff"]
-        M3["cors — localhost:3000, credentials"]
-        M4["requestguards — url(200) · query(100) · param(20) · body(1KB) · jsonDepth(5) · jsonNodes(50)"]
-        M5["dbMiddleware — shared Mongo connection"]
-        M6["rateLimiter — Redis sliding token bucket (10 burst / 1 per sec)"]
-        M7["Auth guards — auth · admin · initAuth · seller (per-route)"]
-    end
-
-    subgraph Routers["routes/index.ts — 12 mounted routers"]
-        R1["/users · /product · /product-variant"]
-        R2["/product-inventory · /order · /order-items"]
-        R3["/category · /address · /vendor · /home"]
-        R4["/review · /stats"]
-    end
-
-    subgraph ModuleLayers["Every module = 4 layers"]
-        P["presentation — messages · controller (BaseController) · routes · module.ts"]
-        A["application — query/command DTOs + handlers · internel.service · app.service"]
-        D["domain (packages/domain) — aggregate · VOs · events · ports"]
-        I["infrastructure — Mongoose model · mapper · repository"]
-    end
-
-    subgraph CoreInfra["core/ — shared infrastructure"]
-        Bus["Buses — InMemoryQueryBus · InMemoryEventBus"]
-        Uow["UnitOfWork — AsyncLocalStorage session propagation + transient retry"]
-        Repo["BaseRepository · MongoRepository (session-aware CRUD)"]
-        Ctrl["BaseController — typed responses / error binding"]
-    end
-
-    subgraph ExternalAdapters["lib/ — swappable adapters"]
-        L1["mongo · redis"]
-        L2["supabase · clerkClient"]
-        L3["jwt · getBearerToken · sanitizeObj · toSlug"]
-    end
-
-    Hono --> Pipeline
-    Pipeline --> Routers
-    Routers --> P
-    P --> A
-    A --> D
-    I -.->|"implements domain ports"| D
-    A --> Uow
-    I --> Repo
-    P --> Ctrl
-    A --> Bus
-    Bus --> CoreInfra
-    Repo --> L1
-    Hono --> Err
-```
-
----
-
-### Anatomy of a Single Module (product example)
-
-Every bounded context mirrors this exact skeleton (referenced paths are real); the same shape exists for `user`, `vendor`, `inventory`, `category`, `address`, `home`, `order`, `order-items`, `product-variant`, and `reviews`:
-
-```mermaid
-flowchart TB
-    subgraph Http["HTTP boundary"]
-        Routes["presentation/product.routes.ts — PATCH /product/my/price"]
-        Controller["presentation/product.controller.ts — extends BaseController"]
-    end
-
-    subgraph AppLayer["application/"]
-        AppSvc["product.app.service.ts — Load → Command → Save → Events"]
-        Internel["product.internel.service.ts — intra-module API"]
-        Cmd["commands/update-price.command.ts + command-handlers/update-price.command-handler.ts"]
-        Queries["queries/verify-product-and-get.query.ts + query-handlers/"]
-    end
-
-    subgraph DomainLayer["domain — packages/domain/modules/product/"]
-        Agg["product.aggregate.ts — ProductAggregate → updatePrice() raises ProductVariantPriceUpdatedEvent"]
-        Evts["events/ — 24 event classes"]
-        Port["ports/i-product-repository.ts"]
-        Read["read-models/product.read-model.ts"]
-    end
-
-    subgraph InfraLayer["infrastructure/"]
-        Model["product.model.ts — Mongoose schema"]
-        Mapper["product.mapper.ts — doc ↔ aggregate (4 methods)"]
-        Repo["product.repository.ts — implements IProductRepository"]
-    end
-
-    subgraph Wiring["product.module.ts — DI composition"]
-        Wire["new ProductRepository() → new InternelService(repo) → new AppService(queryBus, repo) → new Controller(...)"]
-        Reg["registers handlers on queryBus / commandBus"]
-    end
-
-    Routes --> Controller
-    Controller --> AppSvc
-    AppSvc --> Agg
-    AppSvc --> Internel
-    Internel --> Cmd
-    Internel --> Queries
-    Agg --> Evts
-    Repo -.->|implements| Port
-    Mapper --> Agg
-    Repo --> Mapper
-    Repo --> Model
-    Wire --> Repo
-    Wire --> AppSvc
-    Wire --> Reg
-    Agg -.->|read model| Read
-```
-
----
-
-### Request Lifecycle (full round-trip)
-
-What happens to an authenticated `PATCH /product/my/price` call, end to end:
+**Order placement, end to end**
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    participant C as Client (browser / SDK)
-    participant P as Middleware pipeline
-    participant RT as Router (routes/index.ts)
-    participant CT as Controller (presentation)
-    participant AS as App Service (application)
-    participant AGG as ProductAggregate (domain)
-    participant U as UnitOfWork (AsyncLocalStorage)
-    participant R as ProductRepository (infrastructure)
-    participant M as MongoDB (replica set)
-    participant B as EventBus
-
-    C->>P: PATCH /product/my/price (Bearer JWT)
-    P->>P: requestGuards — bounds URL/query/params/body/JSON
-    P->>P: rateLimiter — Redis token bucket
-    P->>P: auth — verify JWT (Supabase) + live state check
-    P->>RT: forward with verified user context
-    RT->>CT: route to product controller
-    CT->>CT: parse & validate DTO (Zod)
-    CT->>AS: appService.updatePrice(...)
-
-    activate U
-    AS->>U: uow.transaction(async () => {...})
-    U->>U: start MongoDB session + AsyncLocalStorage context
-    AS->>R: repository.FindByIdOrThrow(variantId)  (session-aware)
-    R->>M: findOne on session
-    R-->>AS: variant aggregate (rehydrated)
-    AS->>AGG: variant.updatePrice(price, discounted, actor)
-    AGG->>AGG: enforce price invariants + raise ProductVariantPriceUpdatedEvent
-    AS->>R: repository.Update(id, payload)  (session-aware)
-    R->>M: findByIdAndUpdate on same session
-    AS->>U: uow.transaction resolves → commitTransaction (atomic)
-    deactivate U
-
-    AS->>B: variant.pullEvents() → eventBus.publish(events)
-    B-->>CT: (handlers run — none registered for this type yet)
-    CT-->>C: 200 { data, message, success: true } envelope
+  autonumber
+  participant B as Buyer
+  participant A as API /order/my
+  participant O as Order app service
+  participant I as Inventory
+  participant OI as Order items
+  participant E as EventBus
+  participant S as Stats
+  B->>A: addressId, items[], idempotentKey
+  A->>O: createMyOrder (unit of work)
+  O->>I: reserve stock per variant
+  I-->>O: reserved, or a failure reason
+  O->>OI: create order items
+  O->>O: commit transaction
+  O->>E: publish order events after commit
+  E->>S: stats event buffered, flushed every 5 s
+  O-->>A: order + message
+  A-->>B: success envelope
 ```
 
----
+The publish happens after the commit, so a rolled-back order never emits events that inventory,
+order-items or stats could act on.
 
-### Unit-of-Work Transaction Flow
-
-Why a multi-write operation (e.g. multi-vendor checkout) is still atomic: every repository inherits the session propagated through `AsyncLocalStorage`, so reads, writes and commits share one MongoDB transaction.
+**Stats pipeline**
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    participant S as App Service
-    participant U as UnitOfWork
-    participant TX as AsyncLocalStorage (transactionContext)
-    participant R1 as OrderItemsRepository
-    participant R2 as OrderRepository
-    participant MO as MongoDB (transaction)
-
-    S->>U: uow.transaction(callback, retries=3)
-    alt No active session yet (new transaction)
-        U->>MO: mongoose.startSession()
-        U->>MO: session.startTransaction()
-        U->>TX: transactionContext.run({ session }, callback)
-        TX->>R1: getCurrentSession() -> session
-        R1->>MO: inserts on session
-        TX->>R2: getCurrentSession() -> same session
-        R2->>MO: update on session
-        TX-->>U: callback resolves
-        U->>MO: commitTransaction
-    else Already inside a transaction (nested call)
-        U-->>S: run callback directly (reuse outer session)
-    end
-    Note over U, MO: TransientTransactionError → exponential backoff retry (100ms → 5s cap)
+flowchart LR
+  BEACON["public beacon<br/>POST /stats/public/..."] --> BUF["StatsBufferService<br/>in-process buffer"]
+  BUF -->|"flush every 5 s"| EVENTS[("stat events")]
+  EVENTS --> QUERY["StatsQueryService<br/>lifetime, timeseries, top, paginated"]
+  SCHED["ProductStatsSyncScheduler<br/>tick every 60 s"] --> DENORM["denormalize"]
+  DENORM --> PROD["product slots"]
+  PROD --> CATROLL["category roll-up"]
+  PROD --> VENROLL["vendor roll-up"]
 ```
 
----
-
-## 🧩 Domain Model: Aggregates & Events
-
-All business logic lives in self-contained aggregates under `packages/domain/modules/<module>`. Each aggregate owns its private state and the invariants that protect it.
-
-| Bounded Context | Aggregate | Domain responsibilities |
-| :--- | :--- | :--- |
-| `user` | `UserAggregate` | Roles, block, timed bans (extend/shorten/lift), soft delete/recover, login/sign-in. |
-| `vendor` | `VendorAggregate` | Vendor profile, owner verification, KYC verify/reject, delete/recover. |
-| `product` | `ProductAggregate` | Gallery, ingredients, disclaimers, pricing summary, ratings, public/private appearance, in-stock flag. |
-| `product-variant` | `ProductVariantAggregate` | SKU-level title, pricing, active state, soft delete/recover. |
-| `inventory` | `InventoryAggregate` | Atomic reserve/complete, restock, low-stock threshold, stock removal. |
-| `order` | `OrderAggregate` | Multi-vendor checkout, idempotency-key protection, atomic creation. |
-| `order-items` | `OrderItemsAggregate` | Order line item snapshot (quantity, price, vendor, status). |
-| `category` | `CategoryAggregate` | Catalog hierarchy, image/meta updates, block, soft delete/recover. |
-| `address` | `AddressAggregate` | Delivery addresses, default-address toggle, soft delete/recover. |
-| `home` | `HomeAggregate` | CMS layout: slides, promos, feature blobs, category chips, product shelves + reordering. |
-| `reviews` | `ReviewAggregate` | Ratings, likes/dislikes, reports, vendor reply, soft delete. *(scaffold — not yet exposed over HTTP)* |
-
-**Value Objects (30+):** every scalar is a self-validating, immutable wrapper — `Id`, `Money`, `Quantity`, `EffectiveDate`, `ExpirationDate`, `DateVO`, `EmailVO`, `PhoneNumber`, `UrlVO`, `FullAddressVO`, `BanInfoVO`, `BlockInfoVO`, `DeleteInfoVO`, `AppearanceVO`, `ColorVO`, `Title`, `Description`, `Slug`, `Reason`, and more.
-
-**Domain Events (100+):** one event class per mutation, named `<module>.<change>` (e.g. `user.banned`, `product.created`, `inventory.reserved`, `home.slide-added`). Events are **raised** inside the aggregate (`this.raise(...)`), **drained** with `pullEvents()`, and **pushed** through the `EventBus`. The full per-module catalog lives in the project documentation.
-
-> **Design rule — ID generation:** IDs are never accepted from API clients on create paths. Document/aggregate IDs are always generated server-side with `Id.create()` (UUID v7). Client-supplied IDs are only used to address an existing resource (update/delete/recover/lookup).
 
 ---
 
-## 🚌 Cross-Module Communication (CQRS Buses)
+## Frontend SDK and web app
 
-Modules never import each other directly. Cross-module traffic uses two in-memory buses plus ports, all declared in `packages/contracts` and wired once in `apps/api/composition-root.ts`:
+`packages/frontend` is framework-agnostic and the only way `apps/web` talks to the API:
 
-| Channel | When to use | Example |
-| :--- | :--- | :--- |
-| **QueryBus** | Synchronous cross-module **reads**, keyed by the query class exported from `packages/contracts` | `GetProductByIdQuery` answered by the product module's handler |
-| **EventBus** | Asynchronous reactive **broadcast**, published after the transaction commits | `user.signed-in` → `UserSignedInHandler` |
-| **Ports** | Synchronous cross-module **writes / lookups** that need to run inside the caller's transaction | `IInventoryReservation` implemented by inventory, called by the order app service |
+- `lib/http-client.ts` attaches the Supabase token, maps failures to `HttpError`, unwraps the
+  response envelope, and returns `null` for `204`;
+- `modules/<name>/*.service.ts` holds one method per API route; `*.hook.ts` wraps them in React Query;
+- adapters (`auth`, `storage`, `theme`, `navigation`) have web and native implementations, selected by
+  the `react-native` export condition.
 
-There is **no CommandBus**: cross-module writes go through ports, so the caller states intent while the owning module keeps control of its own aggregate and invariants. Handlers and adapters are registered centrally in the composition root — never as an import side effect.
-
-Dependency rule across modules: communication happens via bus contracts (small, stable data bags), never via direct class imports — so renaming a method in one module can never cascade-compile-fail another.
-
----
-
-## 🧱 The 4 Layers — The Iron Law of Dependencies
-
-Every module inside `apps/api/modules/<module>/` mirrors the domain module and is split into exactly four layers:
-
-```
-<module>/
- ├── domain/          packages/domain/modules/<module>/   ← Aggregates, VOs, events, ports, read models
- ├── infrastructure/  models.ts · mapper.ts · repository.ts
- ├── application/     query DTOs + handlers · command DTOs + handlers · internal.service · app.service
- └── presentation/    messages.ts · controller.ts · routes.ts · <module>.module.ts
-```
-
-> **Iron Law:** Domain never imports Infrastructure. Infrastructure never imports Presentation. The Domain package has **zero** external runtime dependencies — it knows nothing about MongoDB, Hono, or HTTP.
-
-The Application layer never makes business decisions; it only orchestrates *Load → Command → Save → Publish Events*.
+`apps/web` is Next.js App Router with Material UI. All pages are client components hydrated through
+React Query — there is no server-side data fetching. `RequireAuth` guards `/account/**` and
+`/dashboard/**`; role checks are enforced by the API, not the client.
 
 ---
 
-## 🗄️ Persistence & Unit of Work
-
-- **Mappers** (`infrastructure/*.mapper.ts`) translate between Mongoose documents and aggregates (`aggregateToPersistence`, `persistenceToAggregate`, `aggregateToReadModel`, `persistenceToReadModel`).
-- **Repositories** implement domain-defined **ports** (`I<Module>Repository`), keeping persistence swappable (swap MongoDB for Postgres by writing a new repository class — zero domain changes).
-- **Unit of Work** uses `AsyncLocalStorage` to propagate a shared MongoDB session across repositories, giving multi-document operations the same ACID transaction as a single write, with transient-error retries.
-
----
-
-## 🛡️ API Security & Defensive Middleware
-
-| Guard | Mechanism |
-| :--- | :--- |
-| Request guards | Max URL 200ch, query 100ch, param 20ch, body 1 KB, JSON depth 5, JSON AST nodes 50 — defends DoS / buffer / parser-exploit vectors. |
-| Rate limiting | Distributed sliding **token bucket** on Redis (10-token burst, 1 token/s refill), keyed on `cf-connecting-ip` / `x-forwarded-for`. |
-| Auth pipeline | JWT verified via Supabase Admin SDK **then** live MongoDB user state checked — deleted → 401, blocked → 403, banned → 403. |
-| Transactions | Every multi-write operation runs in a Unit-of-Work MongoDB transaction. |
-| Server-generated IDs | Create endpoints never trust client-supplied IDs (UUID v7 via `Id.create()`). |
-
----
-
-## 🧾 Full API Endpoints
-
-All routes are mounted from `apps/api/routes/index.ts` under the following routers:
-
-```
-/product   /product-variant   /product-inventory   /order   /order-items
-/category   /address   /users   /vendor   /home   /review   /stats
-```
-
-The **complete endpoint catalog** (method × path × access guard × action) is tabulated in the project documentation — covering user moderation, product & variant management, inventory ops, multi-vendor checkout, category management, address book, vendor KYC, and the full Home CMS surface.
-
----
-
-## 💻 Frontend & Client SDK
-
-- **`packages/frontend`** is a headless SDK decoupled from any UI framework: cross-platform auth/storage **adapters** (`.web.ts` / `.native.ts`) selected via conditional exports, TanStack React Query hooks per domain module, Zustand navigation stores, and a unified HTTP client with typed error envelopes. The same SDK powers Web and Mobile.
-- **`apps/web`** (Next.js 16 App Router, React 19 Server Components, Material UI / MUI as the default component library):
-  - **Storefront** `/client/home`, `/client/product/[id]` — SSR product discovery.
-  - **Account portal** `/account/profile`, `/account/address` — profile stats, danger zone, address management.
-  - **Admin dashboard** `/admin/home` — drag-and-drop CMS curation of the home layout.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Bun** v1.4+
-- **MongoDB** running as a replica set (transactions require `?replicaSet=rs0`)
-- **Redis** server running
-- **Supabase** project (service-role + anon keys); optional Clerk/Google OAuth keys for web login
-
-### Environment
-
-**Backend** (`apps/api/.env`):
+## Tests and checks
 
 ```bash
-MONGO_URI=mongodb://root:password@127.0.0.1:27017/ecommerce?replicaSet=rs0&authSource=admin
-REDIS_URL=redis://localhost:6379
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SECRET_KEY=eyJhbGciOi...            # Supabase service-role key
-JWT_SECRET=super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
+bun test                     # bun:test suite
+bun test <path>              # one area, e.g. bun test apps/api/modules/stats
+bun run typecheck            # tsc --noEmit
+bun run lint                 # apps/web only
 ```
 
-**Web** (`apps/web/.env.local`):
+Coverage concentrates on domain behaviour (value objects, aggregates, stats fan-out and
+denormalization) and order/order-items/inventory application logic. There is no HTTP integration
+harness and no test database.
+
+Known pre-existing failures: `bun run arch` points at a missing `scripts/arch-check.ts`, and
+`bun run typecheck` fails on `apps/api/index.ts` (`CORS_ORIGIN` possibly `undefined`). Both predate
+current feature work — see §22 of the documentation.
+
+---
+
+## API contract in Postman
+
+`postman/` holds one collection per module (15 collections, 210 requests) plus an environment, and is
+pushed to the bound Postman workspace:
 
 ```bash
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOi...
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...   # optional
-CLERK_SECRET_KEY=sk_test_...                     # optional
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
-FRONTEND_URL=http://localhost:3000
+postman workspace lint                     # validate local collections
+postman workspace push -m "what changed"    # publish to the workspace
+postman workspace diff                      # local vs cloud drift
 ```
 
-### Install & run
-
-```bash
-bun install        # install every workspace dependency
-bun run dev        # API (:8000) + Web (:3000) concurrently
-```
-
-### Quality gates (run in this order)
-
-```bash
-bun run lint      # Next.js ESLint (apps/web)
-bun run typecheck # strict TS across all workspaces
-bun run arch      # cross-module / layering boundary scan
-bun test          # test suite (78 tests across 13 files)
-```
+The API route files are the source of truth; the collections and the SDK must match them. The rules,
+and the run pitfalls (empty tokens → 401, placeholder ids → domain 404s, the 60 req/min limiter,
+`reusePort` sharing `:8000` with a stale server), are in §8.7 of the documentation. Note that
+`postman/` is gitignored, so collection changes are reviewed in the workspace rather than in PRs.
 
 ---
 
-## 🔨 Development Commands
+## Documentation map
 
-| Command | Purpose |
-| :--- | :--- |
-| `bun run dev` | Run API + Web concurrently in watch mode |
-| `bun run build` | Build the API workspace |
-| `bun run typecheck` | `tsc --noEmit` across all workspaces |
-| `bun run arch` | Architecture boundary scan (`scripts/arch-check.ts`) |
-| `bun test` / `bun run test:watch` | Run the test suite (plain / watch) |
-| `bun run lint` / `bun run format` | Next.js ESLint (web) & Biome format |
-| `pm2 start ecosystem.config.js` | Production process manager (Bun, fork mode, port 8000) |
-
----
-
-## 🧪 Adding a New Module (DDD Build Order)
-
-Build **bottom-up** — never create a file that depends on something you haven't written:
-
-1. `packages/domain/modules/<name>/` — VOs → events → ports (interfaces) → read models → **aggregate** (invariants + raises).
-2. `apps/api/modules/<name>/infrastructure/` — Mongoose model → mapper (4 methods) → repository implementing the port.
-3. `apps/api/modules/<name>/application/` — query/command DTOs → handlers → internal service → **app service** (`Load → Command → Save → Publish Events`).
-4. `apps/api/modules/<name>/presentation/` — messages → controller (`BaseController`) → routes → `<name>.module.ts` (DI wiring + bus registration).
-5. Register the router in `apps/api/routes/index.ts`.
-
-**Domain-first discipline:** rules go in the aggregate; the app service orchestrates; buses decouple; infrastructure adapts.
-
----
-
-## 🤝 Contribution Guidelines
-
-1. **Respect the Iron Law** — domain purity, 4-layer boundaries, bus-based cross-module communication.
-2. **Enforce IDs server-side** — `Id.create()` on every create/add path.
-3. **Every mutation raises a domain event** — raise inside the aggregate, drain + publish from the app service.
-4. **Never ship a create endpoint that accepts a client-supplied document ID.**
-5. **Ran the quality gates:** `lint` → `typecheck` → `test` before opening a PR.
-6. When touching messages files, keep user-facing strings clean and correct — identifiers may intentionally keep historical typos, but visible messages never should.
-
----
-
-## 🛣️ Roadmap & Known Gaps
-
-| Item | Status |
-| :--- | :--- |
-| `reviews` module HTTP surface | Mounted at `/review`; aggregate + events + routes wired. |
-| Event publishing | Aggregates raise events and app services publish them after commit; `stats` and `user` modules consume them via the EventBus. |
-| `order` lifecycle events | `confirm`/`complete`/`cancel`/`refund`/`return` events defined but only `order.created` is raised. |
-| `sellerMiddleware` | Exists but not yet wired to any route (vendor scoping enforced in app services/controllers today). |
-| `bun run arch` | Architecture boundary checker (`scripts/arch-check.ts`) — replaces the old broken `lint:imports` script. |
-| Biome lint scripts | `bun run format` works; Biome is used for formatting only, ESLint covers linting. |
-| Mobile app | Placeholder; real navigation + storefront flows pending. |
-| Distributed event bus | In-memory EventBus is swappable behind `IEventBus` (Kafka/RabbitMQ) — not yet implemented. |
-
----
-
-## 📘 Documentation
-
-- **Architecture & engineering manual:** [`PROJECT_DOCUMENTATION.md`](./PROJECT_DOCUMENTATION.md) — the definitive reference for how every pattern in this system works and why.
-- **Hands-on playbook:** [`docs/architecture-guide.html`](./docs/architecture-guide.html) — build a module from scratch in 12 steps, then learn cross-module reads, actions, events, middleware ports and transactions, with a verification ladder and cookbook.
-- **Agent/contributor brief:** [`AGENTS.md`](./AGENTS.md) — commands, conventions, and gotchas for automated tooling.
+| File | Contents |
+|---|---|
+| [`PROJECT_DOCUMENTATION.md`](./PROJECT_DOCUMENTATION.md) | the authoritative description: pipeline, auth, module catalog, every endpoint, stats subsystem, known gaps |
+| [`docs/architecture-guide.html`](./docs/architecture-guide.html) | step-by-step playbook for building a module in this style |
+| [`AGENTS.md`](./AGENTS.md) | commands, boundaries and hard stops for contributors and agents |
+| [`LICENSE`](./LICENSE) | MIT |

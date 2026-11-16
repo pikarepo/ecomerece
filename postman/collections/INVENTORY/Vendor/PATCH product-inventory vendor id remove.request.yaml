@@ -1,0 +1,29 @@
+$kind: http-request
+id: z7u26b5w8y3v1x469a0v25yz
+name: PATCH /product-inventory/vendor/{{inventoryId}}/remove
+description: vendor route — remove (write-off) a quantity of stock from inventory
+method: PATCH
+url: '{{baseUrl}}/product-inventory/vendor/{{inventoryId}}/remove'
+body:
+  type: json
+  content: |-
+    {
+      "quantity": 5
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /product-inventory/vendor/:id/remove returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 6000

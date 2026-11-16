@@ -1,0 +1,29 @@
+$kind: http-request
+id: q4k93s2n5p0m8o146r7m92pq
+name: PATCH /users/admin/recover
+description: admin route — recover a soft-deleted user account
+method: PATCH
+url: '{{baseUrl}}/users/admin/recover'
+body:
+  type: json
+  content: |-
+    {
+      "userId": "{{userId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /users/admin/recover returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 12000

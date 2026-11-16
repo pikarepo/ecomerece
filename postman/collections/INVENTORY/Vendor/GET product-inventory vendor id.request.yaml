@@ -1,0 +1,23 @@
+$kind: http-request
+id: 2732f1697a343b2befe0c11f
+name: GET /product-inventory/vendor/{{inventoryId}}
+description: vendor route
+method: GET
+url: '{{baseUrl}}/product-inventory/vendor/{{inventoryId}}'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /product-inventory/vendor/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 3000

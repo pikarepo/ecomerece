@@ -1,0 +1,33 @@
+$kind: http-request
+id: b5cb40713acb2f807d56b423
+name: PATCH /address/my/{{addressId}}
+description: buyer route
+method: PATCH
+url: '{{baseUrl}}/address/my/{{addressId}}'
+body:
+  type: json
+  content: |-
+    {
+      "streetAddress": "StreetAddress example",
+      "city": "City example",
+      "state": "State example",
+      "postalCode": "PostalCode example",
+      "country": "Country example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /address/my/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

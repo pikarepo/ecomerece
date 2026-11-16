@@ -1,0 +1,29 @@
+$kind: http-request
+id: 14eb87d73769b0483f3b783e
+name: DELETE /product-inventory/vendor/{{inventoryId}}
+description: vendor route
+method: DELETE
+url: '{{baseUrl}}/product-inventory/vendor/{{inventoryId}}'
+body:
+  type: json
+  content: |-
+    {
+      "reason": "Reason example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('DELETE /product-inventory/vendor/:id returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 4000

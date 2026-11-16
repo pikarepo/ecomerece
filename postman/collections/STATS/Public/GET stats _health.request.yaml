@@ -1,0 +1,23 @@
+$kind: http-request
+id: 3e312143f7c9f9dca8526b57
+name: GET /stats/_health
+description: public route
+method: GET
+url: '{{baseUrl}}/stats/_health'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /stats/_health returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 20000

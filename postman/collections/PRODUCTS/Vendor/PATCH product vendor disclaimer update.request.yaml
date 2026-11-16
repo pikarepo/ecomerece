@@ -1,0 +1,31 @@
+$kind: http-request
+id: bb1bc09d085637602c9cae3b
+name: PATCH /product/vendor/disclaimer/update
+description: vendor route
+method: PATCH
+url: '{{baseUrl}}/product/vendor/disclaimer/update'
+body:
+  type: json
+  content: |-
+    {
+      "productId": "{{productId}}",
+      "name": "Name example",
+      "title": "Title example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /product/vendor/disclaimer/update returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 4000

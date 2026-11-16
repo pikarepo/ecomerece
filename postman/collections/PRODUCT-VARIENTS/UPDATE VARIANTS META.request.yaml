@@ -1,0 +1,22 @@
+$kind: http-request
+url: '{{baseUrl}}/product-variant/vendor/meta'
+method: PATCH
+body:
+  type: text
+  content: |-
+    {
+      "productId": "019febc9-2e2e-712c-ac71-5bd2aa2421fd",
+        "variantId":"019ffaa0-1759-7303-a2a5-f593cd6749a5",
+      "title":"This is  new title of variant 1"
+
+
+    }
+settings: {}
+order: 5000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

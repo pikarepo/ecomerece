@@ -1,0 +1,37 @@
+$kind: http-request
+id: c6c54746643f93837f6bc33c
+name: PATCH /vendor/me/contact
+description: owner route — update the vendor's contact phone, email, and address
+method: PATCH
+url: '{{baseUrl}}/vendor/me/contact'
+body:
+  type: json
+  content: |-
+    {
+      "phone": "+15551234567",
+      "email": "store@example.com",
+      "address": {
+        "streetAddress": "123 Main Street",
+        "city": "Lahore",
+        "state": "Punjab",
+        "postalCode": "54000",
+        "country": "Pakistan"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /vendor/me/contact returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 2000

@@ -1,0 +1,23 @@
+$kind: http-request
+id: u8o37w6r9t4q2s580v1q36tu
+name: GET /vendor
+description: public route — paginated list of verified vendors
+method: GET
+url: '{{baseUrl}}/vendor'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('GET /vendor returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

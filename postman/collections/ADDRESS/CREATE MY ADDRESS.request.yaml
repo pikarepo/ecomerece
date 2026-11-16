@@ -1,0 +1,26 @@
+$kind: http-request
+url: '{{baseUrl}}/address/my'
+method: POST
+body:
+  type: json
+  content: |-
+    {
+      "streetAddress": "Adeel shawarma raiwind",
+        "city": "Lahore",
+        "state": "Punjab",
+        "postalCode":"50055",
+        "country": "Pakistan"
+    }
+auth:
+  type: bearer
+  credentials:
+    token: "{{supabaseUser}}"
+settings: {}
+order: 1000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

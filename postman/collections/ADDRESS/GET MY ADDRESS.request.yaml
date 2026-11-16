@@ -1,0 +1,19 @@
+$kind: http-request
+url: '{{baseUrl}}/address/my'
+method: GET
+body:
+  type: text
+  content: ""
+auth:
+  type: bearer
+  credentials:
+    token: "{{supabaseUser}}"
+settings: {}
+order: 2000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

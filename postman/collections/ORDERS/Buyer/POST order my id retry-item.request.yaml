@@ -1,0 +1,29 @@
+$kind: http-request
+id: v3q82x1s4u9r7t025w6r81uv
+name: POST /order/my/{{orderId}}/retry-item
+description: buyer route — retry a single failed order item by id
+method: POST
+url: '{{baseUrl}}/order/my/{{orderId}}/retry-item'
+body:
+  type: json
+  content: |-
+    {
+      "orderItemId": "{{orderItemId}}"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /order/my/:id/retry-item returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 6000

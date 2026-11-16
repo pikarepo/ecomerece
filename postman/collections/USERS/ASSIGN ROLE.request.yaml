@@ -1,0 +1,30 @@
+$kind: http-request
+id: p3j82r1m4o9l7n035q6l81op
+name: PATCH /users/admin/role
+description: admin route — assign or change a user's role
+method: PATCH
+url: '{{baseUrl}}/users/admin/role'
+body:
+  type: json
+  content: |-
+    {
+      "userId": "{{userId}}",
+      "role": "vendor"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /users/admin/role returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 11000

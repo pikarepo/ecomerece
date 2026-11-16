@@ -1,0 +1,20 @@
+$kind: http-request
+url: '{{baseUrl}}/product/admin/block/lift'
+method: PATCH
+body:
+  type: text
+  content: |-
+    {
+       
+        "productId": "019fe22f-02ad-700d-afff-197467eb2b1c"
+
+    }
+settings: {}
+order: 6000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

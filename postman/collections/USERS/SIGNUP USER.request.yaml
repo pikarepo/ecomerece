@@ -1,0 +1,23 @@
+$kind: http-request
+id: g4b93i2d5f0c8e136h7c92fg
+name: POST /users/init
+description: initAuth route — provision the app-side user record after signup
+method: POST
+url: '{{baseUrl}}/users/init'
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /users/init returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 9000

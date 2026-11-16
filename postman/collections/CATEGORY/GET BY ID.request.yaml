@@ -1,0 +1,38 @@
+$kind: http-request
+url: '{{baseUrl}}/category/{{categoryId}}'
+method: GET
+body:
+  type: text
+  content: |-
+    {
+        "addressId": "01a00972-42dd-75cd-9dfc-ec61c2a72ecb",
+        "idempotentKey":"01a031ba-735f-715a-995e-37440d4f4136",
+        "waitingTime":"2026-08-21T12:00:18.302+00:00",
+        "items": [
+            {
+                "variantId": "019ffaa0-1759-7303-a2a5-f593cd6749a5",
+                "quantity": 5,
+                "unitPrice": 2500
+            },
+                 {
+                "variantId": "019ffaa3-8bad-7788-afb8-6c5a3dd88fe1",
+                "quantity": 6,
+                "unitPrice": 2500
+            },
+                 {
+                "variantId": "019ffaa3-a081-761b-96fd-b705e9b71248",
+                "quantity": 8,
+                "unitPrice": 2500
+            }
+        ]
+
+    }
+settings: {}
+order: 1000
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('request succeeds', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.below(400);
+      });
+    language: text/javascript

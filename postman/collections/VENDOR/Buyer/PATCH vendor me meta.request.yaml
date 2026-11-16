@@ -1,0 +1,31 @@
+$kind: http-request
+id: 4820725a28541a53244c1963
+name: PATCH /vendor/me/meta
+description: owner route — update the vendor's title, slug, and description
+method: PATCH
+url: '{{baseUrl}}/vendor/me/meta'
+body:
+  type: json
+  content: |-
+    {
+      "title": "My Store Name",
+      "slug": "my-store-name",
+      "description": "A brief description of the store."
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /vendor/me/meta returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000

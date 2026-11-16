@@ -1,0 +1,34 @@
+$kind: http-request
+id: 6f40b61f8b17aed435482538
+name: PATCH /home/admin/promos
+description: admin route
+method: PATCH
+url: '{{baseUrl}}/home/admin/promos'
+body:
+  type: json
+  content: |-
+    {
+      "id": "{{id}}",
+      "title": "Title example",
+      "subtitle": "Subtitle example",
+      "image": "Image example",
+      "accent": "Accent example",
+      "link": "Link example"
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('PATCH /home/admin/promos returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 8000

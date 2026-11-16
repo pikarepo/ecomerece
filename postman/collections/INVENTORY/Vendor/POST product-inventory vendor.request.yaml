@@ -1,0 +1,31 @@
+$kind: http-request
+id: w4r93y2t5v0s8u136x7s92vw
+name: POST /product-inventory/vendor
+description: vendor route — create a new inventory record for a product variant
+method: POST
+url: '{{baseUrl}}/product-inventory/vendor'
+body:
+  type: json
+  content: |-
+    {
+      "variantId": "{{variantId}}",
+      "lowStockThreshold": 10,
+      "available": 100
+    }
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('POST /product-inventory/vendor returns a success status', () => {
+        pm.expect(pm.response.code, pm.response.text().slice(0, 300)).to.be.oneOf([200, 201, 202, 204]);
+      });
+      
+      pm.test('response is a JSON envelope', () => {
+        if (pm.response.code === 204 || !pm.response.text()) { return; }
+        const body = pm.response.json();
+        pm.expect(body).to.be.an('object');
+        if (Object.prototype.hasOwnProperty.call(body, 'success')) {
+          pm.expect(body.success).to.be.true;
+        }
+      });
+    language: text/javascript
+order: 1000
