@@ -1,0 +1,5 @@
+$kind: http-request
+name: GET payment my all
+method: GET
+url: '{{baseUrl}}/payment/my/all'
+order: 2000

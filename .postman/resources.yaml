@@ -5,21 +5,23 @@ workspace:
 # Each entry here maps a local resource to one or more corresponding objects in Postman Cloud
 cloudResources:
   collections:
-    ../postman/collections/ADDRESS: 55459816-50230a9e-9fd4-488c-b660-6bbfe9d3ee7b
-    ../postman/collections/CART: 55459816-a6785828-6f20-4a8f-a3fe-38e642a4f825
-    ../postman/collections/CATEGORY: 55459816-12b25cca-5718-416c-bfc7-214f6c8579d3
-    ../postman/collections/HOME: 55459816-e56a1475-167b-4f5a-a3ac-5976009877e4
-    ../postman/collections/INVENTORY: 55459816-cbd4f7d7-4283-4f7c-ad5c-5df6cbebba21
-    ../postman/collections/ORDER ITEMS: 55459816-8da380e9-6a6a-4647-b57e-ddea73a62427
-    ../postman/collections/ORDER REQUEST: 55459816-41e5ebdb-dc92-487a-8ff8-993b617cb4e1
-    ../postman/collections/ORDERS: 55459816-0f71f63f-ee82-4330-b85a-b8c2142408dd
-    ../postman/collections/PRODUCT-VARIENTS: 55459816-edcc9d72-cec6-4ecc-ae53-1add395d1a7b
-    ../postman/collections/PRODUCTS: 55459816-7ebcdf31-d927-43e2-a750-8e950eaa25d6
-    ../postman/collections/REVIEW: 55459816-e89fb978-018b-4b12-96cf-60f28695e968
-    ../postman/collections/STATS: 55459816-792014e3-9d1b-45a3-a60b-762070f2458a
-    ../postman/collections/USERS: 55459816-da5324b0-11fe-428b-aa71-6d650f220ae1
-    ../postman/collections/VENDOR: 55459816-d48bb33b-c596-439d-a874-f92bddd8967d
-    ../postman/collections/HEALTH: 55459816-ed65dab1-b24f-45a6-8261-28063ee2f5a3
+    ../postman/collections/ADDRESS: 55459816-40d7c971-ced5-452e-9428-53c6ca860547
+    ../postman/collections/CART: 55459816-7282a777-879f-4af9-bd15-1b175d0c6b93
+    ../postman/collections/CATEGORY: 55459816-ae729fe4-7d7c-4ad0-a261-fd31d323113f
+    ../postman/collections/HEALTH: 55459816-24b0ee41-5104-4998-ac91-98498f153e81
+    ../postman/collections/HOME: 55459816-04f2c852-262b-476d-a272-88c73b65499f
+    ../postman/collections/INVENTORY: 55459816-5fc18176-f8b3-4fc2-bcd3-31bb28256011
+    ../postman/collections/ORDER ITEMS: 55459816-561efbd1-e340-4f4c-b071-e49d10faa08d
+    ../postman/collections/ORDER REQUEST: 55459816-090d0fa9-6cfc-46cb-95c1-3a82329f75da
+    ../postman/collections/ORDERS: 55459816-c17ac4fb-9fd3-4d0b-926f-784af9e88464
+    ../postman/collections/PAYMENTS: 55459816-2994cc3e-5c29-48cf-9841-5da485bc2b14
+    ../postman/collections/PAYOUTS: 55459816-8bd73091-4634-46d0-825d-a445d348129d
+    ../postman/collections/PRODUCT-VARIENTS: 55459816-0ce79f8c-599f-4d05-b0a4-302c8f02604c
+    ../postman/collections/REVIEW: 55459816-20311533-928f-498e-bf12-8433bcdf9e36
+    ../postman/collections/STATS: 55459816-acb83cf2-8a59-4554-a775-a7fa857fbecb
+    ../postman/collections/USERS: 55459816-25c5d84d-4881-47c7-b98d-ff5dab89cff6
+    ../postman/collections/VENDOR: 55459816-78cb1820-390e-4a56-a2f2-7638780ab2e9
+    ../postman/collections/PRODUCTS: 55459816-b59d8bb6-d867-4402-9b8b-3bf8772fd5e7
   environments:
     ../postman/environments/New Environment.environment.yaml: 55459816-604c9f3b-0f2a-4f2b-86ea-99182e50dd3f
   globals:

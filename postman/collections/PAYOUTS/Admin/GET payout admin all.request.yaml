@@ -1,0 +1,5 @@
+$kind: http-request
+name: GET payout admin all
+method: GET
+url: '{{baseUrl}}/payout/admin/all'
+order: 1000

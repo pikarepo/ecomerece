@@ -1,0 +1,3 @@
+$kind: collection
+name: PAYMENTS
+description: Payment intents, capture/cancel/refund and provider webhooks (adapter-based; manual by default).

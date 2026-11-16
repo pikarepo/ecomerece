@@ -10,7 +10,13 @@ import { createOrderItemsRoutes } from '../modules/order-items/presentation/orde
 import { createOrderRequestRoutes } from '../modules/order-request/presentation/order-request.routes';
 import { createProductRoutes } from '../modules/product/presentation/product.routes';
 import { createProductVariantRoutes } from '../modules/product-variant/presentation/product-varaint.routes';
+import { createNotificationsRoutes } from '../modules/notifications/presentation/notifications.routes';
+import { createPromotionsRoutes } from '../modules/promotions/presentation/promotions.routes';
+import { createReturnsRoutes } from '../modules/returns/presentation/returns.routes';
+import { createPaymentsRoutes } from '../modules/payments/presentation/payments.routes';
+import { createPayoutsRoutes } from '../modules/payouts/presentation/payouts.routes';
 import { createReviewRoutes } from '../modules/reviews/presentation/review.routes';
+import { createShippingRoutes } from '../modules/shipping/presentation/shipping.routes';
 import { createStatsRoutes } from '../modules/stats/presentation/StatsRoutes';
 import { createUserRoutes } from '../modules/user/presentation/user.routes';
 import { createVendorRoutes } from '../modules/vendor/presentation/vendor.routes';
@@ -23,6 +29,8 @@ export function createRoutes({ modules }: Application) {
   routes.route('/review', createReviewRoutes(modules.reviews.controller));
   routes.route('/product-inventory', createInventoryRoutes(modules.inventory.inventoryController));
   routes.route('/order', createOrderRoutes(modules.order.orderController));
+  routes.route('/payment', createPaymentsRoutes(modules.payments.controller));
+  routes.route('/payout', createPayoutsRoutes(modules.payouts.controller));
   routes.route('/cart', createCartRoutes(modules.cart.cartController));
   routes.route('/order-items', createOrderItemsRoutes(modules.orderItems.orderItemsController));
   routes.route('/order-request', createOrderRequestRoutes(modules.orderRequest.controller));
@@ -31,6 +39,10 @@ export function createRoutes({ modules }: Application) {
   routes.route('/users', createUserRoutes(modules.user.userController));
   routes.route('/vendor', createVendorRoutes(modules.vendor.vendorController));
   routes.route('/home', createHomeRoutes(modules.home.homeController));
+  routes.route('/shipping', createShippingRoutes(modules.shipping.controller));
+  routes.route('/return', createReturnsRoutes(modules.returns.controller));
+  routes.route('/promotion', createPromotionsRoutes(modules.promotions.controller));
+  routes.route('/notification', createNotificationsRoutes(modules.notifications.controller));
   routes.route('/stats', createStatsRoutes(modules.stats.statsController));
 
   return routes;

@@ -114,6 +114,9 @@ bun run build         # build API, then next build
 | `IMAGE_STORAGE_PROVIDER` | selects the Cloudinary adapter |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | image uploads |
 | `CLOUDINARY_SECURE`, `CLOUDINARY_FOLDER` | optional upload behaviour |
+| `NOTIFICATION_CHANNELS` | extra delivery channels (e.g. `email`); the inbox is always written |
+| `NOTIFICATION_EMAIL_TRANSPORT`, `NOTIFICATION_EMAIL_FROM` | email adapter: `console` (default) or `http`, plus sender |
+| `NOTIFICATION_EMAIL_WEBHOOK_URL`, `NOTIFICATION_EMAIL_WEBHOOK_TOKEN` | HTTP email provider endpoint and optional bearer token |
 | `NODE_ENV` | `production` hides error messages and stacks |
 | `JWT_SECRET` | legacy from the pre-Supabase auth; not used for request verification |
 
@@ -245,7 +248,7 @@ apps/api/modules/<name>/
 
 ## API at a glance
 
-208 routes across 14 prefixes, plus `/health`.
+268 routes across 18 prefixes, plus `/health`.
 
 | Prefix | Routes | Audience split |
 |---|---|---|
@@ -257,6 +260,10 @@ apps/api/modules/<name>/
 | `/cart` | 5 | `/my`, `/admin` |
 | `/order-items` | 18 | `/my`, `/vendor`, `/admin` |
 | `/order-request` | 13 | `/my`, `/vendor`, `/admin` |
+| `/shipping` | 27 | public tracking, `/my`, `/vendor`, `/admin` |
+| `/return` | 19 | `/my`, `/vendor`, `/admin` |
+| `/promotion` | 9 | `/validate` (auth), `/admin` |
+| `/notification` | 5 | `/my` only — the inbox is personal |
 | `/category` | 8 | public reads, `/admin` |
 | `/address` | 8 | `/my`, `/admin` |
 | `/users` | 14 | `/my`, `/admin`, plus `POST /users/init` |
@@ -272,6 +279,22 @@ The full per-route catalog, guard by guard, is §14 of `PROJECT_DOCUMENTATION.md
 - **Place an order** — `POST /order/my` validates the address and cart, asks inventory to reserve
   stock, creates order items, and commits; the stats module records the event. Vendor and admin
   command routes (`confirm`, `complete`, `return`, `refund`, `cancel`) act on the same aggregate.
+- **Ship a parcel** — `POST /shipping/vendor` copies the buyer, delivery address and vendor split
+  from the order through the order contract query, `PATCH /shipping/vendor/:id` attaches the label,
+  and `dispatch → in-transit → out-for-delivery → deliver` records a scan per step. Buyers read only
+  their own parcels; `GET /shipping/track/:trackingNumber` is public and withholds the address.
+  Cancelling an order emits `order.cancelled`, and the shipping module reacts by cancelling its
+  pending or dispatched parcels — delivered and returned parcels are left as they are.
+- **Return an item** — `POST /return/my` checks the line through the order-items contract and the
+  quantity against live requests, then the vendor approves, the buyer ships back and the vendor
+  receives. Money movement is deliberately out of scope until payments exists.
+- **Discount codes** — admins create percentage or fixed coupons with windows, caps and limits;
+  `POST /promotion/validate` is a side-effect-free preview used by the cart. Redemption is exposed as
+  `ICouponWriter` for checkout to call once its pricing accepts a discount.
+- **Notifications** — the module subscribes to `order.created`, `order.cancelled`, three shipment
+  events and three return events, resolves the recipient through the owner module's contract query,
+  and writes an in-app inbox row; buyers list, count, read and dismiss their own. Email delivery is
+  an opt-in channel adapter (`NOTIFICATION_CHANNELS=email`) — the inbox stays the source of truth.
 - **Soft delete and recover** — most `DELETE` endpoints set `deleted` state; the paired `recover`
   route restores it. Moderation state (`blocked`, `banned`) is enforced by the auth middleware.
 - **Stats pipeline** — public beacons (`/stats/public/...`) feed an in-process buffer that flushes
@@ -359,7 +382,7 @@ current feature work — see §22 of the documentation.
 
 ## API contract in Postman
 
-`postman/` holds one collection per module (15 collections, 210 requests) plus an environment, and is
+`postman/` holds one collection per module (19 collections, 270 requests) plus an environment, and is
 pushed to the bound Postman workspace:
 
 ```bash

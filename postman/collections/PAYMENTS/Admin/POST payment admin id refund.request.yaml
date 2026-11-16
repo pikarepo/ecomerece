@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payment admin id refund
+method: POST
+url: '{{baseUrl}}/payment/admin/{{paymentId}}/refund'
+order: 2000

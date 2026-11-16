@@ -200,7 +200,7 @@ registration-order semantics). It returns `{ success: true, message: 'OK' }`. Us
 probes; use `GET /stats/_health` for stats pipeline depth.
 
 **Route mounting.** `apps/api/index.ts` calls `createApplication()` from
-`apps/api/composition-root.ts` once, then `createRoutes(application)` mounts fourteen prefixes and
+`apps/api/composition-root.ts` once, then `createRoutes(application)` mounts eighteen prefixes and
 hands each route factory the controller the composition root already built:
 
 ```ts
@@ -759,9 +759,17 @@ Behaviour worth knowing:
 | `vendor` | `vendor-query.adapter.ts` | `IVendorQueries` |
 | `order` | `order-query.adapter.ts` | `IOrderQueries` |
 | `order-items` | `order-items-query.adapter.ts` | `IOrderItemsQueries` |
+| `shipping` | `shipment-query.adapter.ts` | `IShipmentQueries` |
+| `returns` | `return-query.adapter.ts` | `IReturnQueries` |
+| `promotions` | `coupon-adapters.ts` | `ICouponQueries`, `ICouponWriter` |
 
 Event registrations live in the consumer factories: `user` registers the vendor lifecycle handlers,
-and `stats` registers `order-item.created` plus the product/vendor denormalization handlers.
+`stats` registers `order-item.created` plus the product/vendor denormalization handlers,
+`shipping` registers `order.cancelled` to stop every parcel of that order that has not moved yet, and
+`notifications` registers `order.created`, `order.cancelled`, `shipment.dispatched`,
+`shipment.delivered`, `shipment.failed`, `return.approved`, `return.rejected` and `return.received`
+to write inbox rows, then hands each row to its outbound channel adapters (§14, *Notification delivery
+channels*).
 
 #### Cross-module ports
 
@@ -1171,6 +1179,110 @@ All paths are the effective paths after mounting; `:param` denotes a path parame
 | POST | `/cart/my/items` | Auth | add item |
 | POST | `/cart/my/checkout` | Auth | checkout items |
 | DELETE | `/cart/admin/:id` | Admin (`auth`, `admin`) | delete cart |
+
+### /shipping (27)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/shipping/track/:trackingNumber` | Public | public tracking view, address and parties withheld |
+| GET | `/shipping/my/all` | Auth | get my paginated shipments |
+| GET | `/shipping/my/:id` | Auth | get my shipment by id (403 when it belongs to another buyer) |
+| GET | `/shipping/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated shipments |
+| POST | `/shipping/vendor` | Vendor (`auth`, `vendor`) | create a shipment for one of the vendor's orders |
+| GET | `/shipping/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor shipment by id |
+| PATCH | `/shipping/vendor/:id` | Vendor (`auth`, `vendor`) | assign or correct the label |
+| POST | `/shipping/vendor/:id/dispatch` | Vendor (`auth`, `vendor`) | dispatch (requires a tracking number) |
+| POST | `/shipping/vendor/:id/in-transit` | Vendor (`auth`, `vendor`) | mark in transit |
+| POST | `/shipping/vendor/:id/out-for-delivery` | Vendor (`auth`, `vendor`) | mark out for delivery |
+| POST | `/shipping/vendor/:id/deliver` | Vendor (`auth`, `vendor`) | mark delivered |
+| POST | `/shipping/vendor/:id/fail` | Vendor (`auth`, `vendor`) | mark failed (reason) |
+| POST | `/shipping/vendor/:id/return` | Vendor (`auth`, `vendor`) | mark returned (reason) |
+| POST | `/shipping/vendor/:id/cancel` | Vendor (`auth`, `vendor`) | cancel (reason; pending or dispatched only) |
+| GET | `/shipping/admin/all` | Admin (`auth`, `admin`) | get admin paginated shipments (includes deleted) |
+| POST | `/shipping/admin` | Admin (`auth`, `admin`) | create a shipment on behalf of a vendor |
+| GET | `/shipping/admin/:id` | Admin (`auth`, `admin`) | get shipment by id, deleted included |
+| PATCH | `/shipping/admin/:id` | Admin (`auth`, `admin`) | correct the label |
+| POST | `/shipping/admin/:id/dispatch` | Admin (`auth`, `admin`) | dispatch |
+| POST | `/shipping/admin/:id/in-transit` | Admin (`auth`, `admin`) | mark in transit |
+| POST | `/shipping/admin/:id/out-for-delivery` | Admin (`auth`, `admin`) | mark out for delivery |
+| POST | `/shipping/admin/:id/deliver` | Admin (`auth`, `admin`) | mark delivered |
+| POST | `/shipping/admin/:id/fail` | Admin (`auth`, `admin`) | mark failed (reason) |
+| POST | `/shipping/admin/:id/return` | Admin (`auth`, `admin`) | mark returned (reason) |
+| POST | `/shipping/admin/:id/cancel` | Admin (`auth`, `admin`) | cancel (reason) |
+| DELETE | `/shipping/admin/:id` | Admin (`auth`, `admin`) | soft delete a closed shipment (reason) |
+| PATCH | `/shipping/admin/:id/recover` | Admin (`auth`, `admin`) | recover a soft-deleted shipment |
+
+### /return (19)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/return/my` | Auth | request a return for one of the buyer's order lines |
+| GET | `/return/my/all` | Auth | get my paginated return requests |
+| GET | `/return/my/:id` | Auth | get my return request by id (403 when foreign) |
+| POST | `/return/my/:id/cancel` | Auth | withdraw a requested or approved return |
+| GET | `/return/vendor/all` | Vendor (`auth`, `vendor`) | get vendor paginated return requests |
+| GET | `/return/vendor/:id` | Vendor (`auth`, `vendor`) | get vendor return request by id |
+| POST | `/return/vendor/:id/approve` | Vendor (`auth`, `vendor`) | approve a requested return |
+| POST | `/return/vendor/:id/reject` | Vendor (`auth`, `vendor`) | reject with a reason (final) |
+| POST | `/return/vendor/:id/shipped-back` | Vendor (`auth`, `vendor`) | record that the goods are on their way back |
+| POST | `/return/vendor/:id/received` | Vendor (`auth`, `vendor`) | close the return once the goods arrived |
+| GET | `/return/admin/all` | Admin (`auth`, `admin`) | get admin paginated returns (includes deleted) |
+| GET | `/return/admin/:id` | Admin (`auth`, `admin`) | get return by id, deleted included |
+| POST | `/return/admin/:id/approve` | Admin (`auth`, `admin`) | approve on behalf of the vendor |
+| POST | `/return/admin/:id/reject` | Admin (`auth`, `admin`) | reject with a reason |
+| POST | `/return/admin/:id/shipped-back` | Admin (`auth`, `admin`) | mark shipped back |
+| POST | `/return/admin/:id/received` | Admin (`auth`, `admin`) | mark received |
+| POST | `/return/admin/:id/cancel` | Admin (`auth`, `admin`) | cancel with a reason |
+| DELETE | `/return/admin/:id` | Admin (`auth`, `admin`) | soft delete a closed return (reason) |
+| PATCH | `/return/admin/:id/recover` | Admin (`auth`, `admin`) | recover a soft-deleted return |
+
+### /promotion (9)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| POST | `/promotion/validate` | Auth | preview a coupon against a subtotal (no redemption) |
+| GET | `/promotion/admin/all` | Admin (`auth`, `admin`) | get admin paginated coupons |
+| POST | `/promotion/admin` | Admin (`auth`, `admin`) | create a coupon |
+| GET | `/promotion/admin/:id` | Admin (`auth`, `admin`) | get coupon by id, deleted included |
+| PATCH | `/promotion/admin/:id` | Admin (`auth`, `admin`) | update a campaign definition |
+| POST | `/promotion/admin/:id/activate` | Admin (`auth`, `admin`) | activate the code |
+| POST | `/promotion/admin/:id/deactivate` | Admin (`auth`, `admin`) | stop the code validating |
+| DELETE | `/promotion/admin/:id` | Admin (`auth`, `admin`) | soft delete a coupon (reason) |
+| PATCH | `/promotion/admin/:id/recover` | Admin (`auth`, `admin`) | recover a soft-deleted coupon |
+
+### /notification (5)
+
+| Method | Path | Access | Purpose |
+|---|---|---|---|
+| GET | `/notification/my/all` | Auth | get my paginated inbox |
+| GET | `/notification/my/unread-count` | Auth | unread badge counter |
+| PATCH | `/notification/my/read-all` | Auth | mark every unread row as read |
+| PATCH | `/notification/my/:id/read` | Auth | mark one row as read (idempotent) |
+| DELETE | `/notification/my/:id` | Auth | dismiss a notification |
+
+#### Notification delivery channels
+
+The inbox row is the module's source of truth and is always written. Extra surfaces (email today,
+SMS/push later) are adapters behind one port, so switching providers never touches the aggregate,
+the event handlers or the routes:
+
+| Layer | File | Role |
+|---|---|---|
+| port | `packages/domain/modules/notifications/ports/i-notification-channel.ts` | `INotificationChannel#send(NotificationDelivery)` — one out-of-app surface |
+| fan-out | `apps/api/modules/notifications/application/notification.dispatcher.ts` | resolves the recipient through `IUserQueries`, sends to every enabled channel, logs and isolates failures |
+| adapter | `infrastructure/channels/email.notification-channel.ts` | maps a notification onto an email message |
+| transport port | `infrastructure/channels/email-transport.ts` | `IEmailTransport#send(EmailMessage)` |
+| transports | `console.email-transport.ts`, `http.email-transport.ts` | dev logging, or a JSON POST to any provider endpoint |
+| selection | `notifications.config.ts`, `notification-channels.factory.ts` | reads `NOTIFICATION_CHANNELS` and builds the adapters |
+
+`NOTIFICATION_CHANNELS` is empty by default, which is the original in-app-only behaviour. Setting
+`NOTIFICATION_CHANNELS=email` enables the email channel; `NOTIFICATION_EMAIL_TRANSPORT` chooses
+`console` (default when no webhook URL is set) or `http`, which POSTs `{ from, to, subject, text }` to
+`NOTIFICATION_EMAIL_WEBHOOK_URL` with an optional bearer `NOTIFICATION_EMAIL_WEBHOOK_TOKEN`. An
+unknown channel name fails at boot rather than silently dropping mail. Delivery runs after the inbox
+row is committed, and a failing provider is logged with the notification id instead of failing the
+business flow that raised the event. Adding SMS or push means implementing `INotificationChannel` and
+listing its name in `notifications.config.ts`.
 
 ### /order-items (18)
 
@@ -1642,6 +1754,10 @@ fake deps; importing routes is no longer needed to register handlers.
 | `IMAGE_STORAGE_PROVIDER` | image-storage module | selects Cloudinary adapter |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Cloudinary adapter | required for uploads |
 | `CLOUDINARY_SECURE`, `CLOUDINARY_FOLDER` | Cloudinary adapter | optional behaviour/folder |
+| `NOTIFICATION_CHANNELS` | notifications module | comma list of extra channels (`email`); empty means inbox only |
+| `NOTIFICATION_EMAIL_TRANSPORT` | email channel | `console` or `http`; defaults to `http` when a webhook URL is set |
+| `NOTIFICATION_EMAIL_FROM` | email channel | sender address, default `no-reply@ecomerece.local` |
+| `NOTIFICATION_EMAIL_WEBHOOK_URL`, `NOTIFICATION_EMAIL_WEBHOOK_TOKEN` | HTTP email transport | provider endpoint and optional bearer token |
 | `NODE_ENV` | error handler | `production` hides messages/stacks |
 
 There is no `.env.example` in the repo; document new variables here and in the deploy config.

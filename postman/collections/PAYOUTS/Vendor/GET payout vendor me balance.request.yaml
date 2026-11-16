@@ -1,0 +1,5 @@
+$kind: http-request
+name: GET payout vendor me balance
+method: GET
+url: '{{baseUrl}}/payout/vendor/me/balance'
+order: 1000

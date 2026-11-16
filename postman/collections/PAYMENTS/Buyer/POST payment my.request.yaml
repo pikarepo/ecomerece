@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payment my
+method: POST
+url: '{{baseUrl}}/payment/my'
+order: 1000

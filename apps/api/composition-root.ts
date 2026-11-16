@@ -16,9 +16,15 @@ import {
   createOrderItemsCore,
 } from './modules/order-items/order-items.module';
 import { createOrderRequestModule } from './modules/order-request/order-request.module';
+import { createPaymentsModule } from './modules/payments/payments.module';
+import { createPayoutsModule } from './modules/payouts/payouts.module';
 import { createProductModule } from './modules/product/product.module';
 import { createProductVaraintModule } from './modules/product-variant/product-variant.module';
+import { createNotificationsModule } from './modules/notifications/notifications.module';
+import { createPromotionsModule } from './modules/promotions/promotions.module';
+import { createReturnsModule } from './modules/returns/returns.module';
 import { createReviewModule } from './modules/reviews/review.module';
+import { createShippingModule } from './modules/shipping/shipping.module';
 import { CreateStatsModule } from './modules/stats/stats.module';
 import { UserAuthLookupAdapter } from './modules/user/infrastructure/user-auth-lookup.adapter';
 import { createUserModule } from './modules/user/user.module';
@@ -94,6 +100,32 @@ export function createApplication() {
     unitOfWork,
   });
 
+  // Payments read orders through the order contract; adapters are swappable via env.
+  const payments = createPaymentsModule({ eventBus, orderQueries: order.queries });
+  const payouts = createPayoutsModule({
+    eventBus,
+    vendorQueries: vendor.queries,
+    orderItemsQueries: orderItemsCore.queries,
+  });
+
+  // Shipping reads orders through the order contract, so it is built after order.
+  const shipping = createShippingModule({ eventBus, orderQueries: order.queries });
+  const promotions = createPromotionsModule({ eventBus });
+  const returns = createReturnsModule({
+    eventBus,
+    orderQueries: order.queries,
+    orderItemsQueries: orderItemsCore.queries,
+  });
+
+  // Notifications only react to events, so they are built last of the reactive modules.
+  const notifications = createNotificationsModule({
+    eventBus,
+    orderQueries: order.queries,
+    shipmentQueries: shipping.queries,
+    returnQueries: returns.queries,
+    userQueries: user.queries,
+  });
+
   const reviews = createReviewModule({
     eventBus,
     orderQueries: order.queries,
@@ -126,10 +158,16 @@ export function createApplication() {
       inventory,
       order,
       orderItems,
+      notifications,
       orderRequest,
+      payments,
+      payouts,
       product,
       productVariant,
+      promotions,
+      returns,
       reviews,
+      shipping,
       stats,
       user,
       vendor,

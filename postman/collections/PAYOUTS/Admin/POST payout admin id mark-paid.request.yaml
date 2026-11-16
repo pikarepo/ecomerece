@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payout admin id mark-paid
+method: POST
+url: '{{baseUrl}}/payout/admin/{{payoutId}}/mark-paid'
+order: 2000

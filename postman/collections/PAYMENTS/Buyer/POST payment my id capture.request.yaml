@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payment my id capture
+method: POST
+url: '{{baseUrl}}/payment/my/{{paymentId}}/capture'
+order: 3000

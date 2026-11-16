@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payment webhook provider
+method: POST
+url: '{{baseUrl}}/payment/webhook/{{provider}}'
+order: 3000

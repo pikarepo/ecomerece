@@ -1,0 +1,5 @@
+$kind: http-request
+name: POST payout vendor me
+method: POST
+url: '{{baseUrl}}/payout/vendor/me'
+order: 2000

@@ -1,0 +1,3 @@
+$kind: collection
+name: PAYOUTS
+description: Vendor balances/ledger and payout requests with admin settlement (commission integrated via payments events).
