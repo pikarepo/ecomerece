@@ -1,7 +1,7 @@
 # Ecomerece — System Documentation
 
-This document describes the codebase as it actually behaves, written by reading the source
-(2026-11-08). Every path, route, event name and environment variable below was verified in the
+This document describes the codebase as it actually behaves, last verified against the tree
+(2026-11-21). Every path, route, event name and environment variable below was verified in the
 repository. Where the code and older docs disagree, the code wins; the differences are listed in
 [§22 Known gaps and inconsistencies](#22-known-gaps-and-inconsistencies).
 
@@ -77,6 +77,7 @@ Bun workspaces monorepo:
 .
 ├── apps
 │   ├── api                 Hono v4 API on Bun (port 8000)
+│   ├── e2e                 Playwright specs, fixtures, Supabase auth helpers, ignored auth artifacts
 │   ├── mobile              placeholder — contains no source files
 │   └── web                 Next.js 16 App Router storefront + admin (MUI)
 ├── packages
@@ -88,8 +89,10 @@ Bun workspaces monorepo:
 ├── PROJECT_DOCUMENTATION.md this file
 ├── README.md               entry-point overview; this document is the reference
 ├── biome.json              formatter config (2 spaces, 100 cols, single quotes)
+├── bunfig.toml             bun:test discovery config; excludes apps/e2e
 ├── ecosystem.config.js     pm2 config for production (fork mode, bun, port 8000)
 ├── package.json            workspace scripts, overrides (react 19.3.0, lucide-react 0.468.0)
+├── playwright.config.ts    root Playwright config; tests live in apps/e2e/specs
 └── tsconfig.json           project references + path aliases
 ```
 
@@ -119,7 +122,7 @@ Path aliases (root `tsconfig.json`):
 | Images | Cloudinary (server upload, `IMAGE_STORAGE_PROVIDER`) |
 | Formatting | Biome |
 | Linting | Next.js ESLint config, `apps/web` only |
-| Tests | `bun:test` (78 tests across 13 files) |
+| Tests | `bun:test` (540 tests across 43 files at last verified run); Playwright API smoke specs (3) |
 
 ---
 
@@ -128,16 +131,21 @@ Path aliases (root `tsconfig.json`):
 ```bash
 bun install              # install workspace deps
 bun run dev              # API on :8000 and web on :3000 concurrently
-bun run typecheck        # tsc --noEmit in api + web
+bun run typecheck        # tsc --noEmit across api, web, and e2e workspaces
 bun run lint             # Next.js ESLint (apps/web only)
-bun run format           # biome format apps/web packages (write)
-bun test                 # bun:test suite
+bun run format           # biome format apps/web apps/e2e packages (write)
+bun test                 # bun:test suite; bunfig.toml excludes Playwright specs
 bun run test:watch       # watch mode
 bun run build            # build api (bun build) then next build
+bun run playwright:install # install Chromium for Playwright
+bun run test:e2e         # Playwright API smoke specs (local target)
+bun run test:e2e:ui      # Playwright UI mode
+bun run test:e2e:staging # Playwright against E2E_TARGET=staging
 ```
 
-Validator order used by this repo: `bun run lint` → `bun run typecheck` → `bun test` →
-`next build`.
+Validator order used by this repo: `bun run lint` → `bun run arch` → `bun run typecheck` →
+`bun test` → `next build`. `bun run arch` currently reports the known violations in §22; typecheck
+passes across all three TypeScript workspaces.
 
 **Ports and proxying.** The API always listens on `8000` (`apps/api/index.ts`, `port: 8000`,
 hardcoded). Next dev runs on `3000`. The browser never calls the API directly in development:
@@ -145,6 +153,12 @@ hardcoded). Next dev runs on `3000`. The browser never calls the API directly in
 `API_PROXY_TARGET || NEXT_PUBLIC_API_URL || http://localhost:8000` with `:path*` preserved. The SDK
 HTTP client defaults its base URL to `NEXT_PUBLIC_API_URL || '/api'`, so same-origin `/api/...`
 requests are proxied by Next.
+
+**Playwright targets.** With `E2E_TARGET=local` (default), `playwright.config.ts` starts
+`bun run dev:api` until `http://localhost:8000/health` responds and the web dev server until
+`http://localhost:3000` responds; existing local servers are reused outside CI. With
+`E2E_TARGET=staging`, no servers are started and `E2E_BASE_URL` / `E2E_API_URL` must point at
+already-running services.
 
 **Production.** `pm2 start ecosystem.config.js` runs `bun apps/api/index.ts` in fork mode
 (port 8000). The web app is a normal `next build` / `next start` deployment. CORS is configured
@@ -1716,24 +1730,72 @@ against a database you care about, and never point them at production.
 
 ## 20. Testing
 
-`bun test` runs 19 test files (115 tests at the last verified run on 2026-11-14, all passing) using
+### 20.1 Unit tests
+
+`bun test` runs 540 tests across 43 files (last verified run on 2026-11-21, all passing) using
 `bun:test`. They concentrate on pure domain behaviour (value objects, aggregates,
 `FanOut`/`TimeWindows` stat expansion, image-storage errors, stats denormalization handlers) plus the
 order post-commit event ordering, order ↔ inventory transitions, item retries, reservation reason
 mapping, and order-item update/restore matching
 (`apps/api/modules/{order,order-items,inventory}/application/__tests__/`). There is no HTTP
 integration harness or test database (the order transaction smoke needs a MongoDB replica set).
+`bunfig.toml` sets `pathIgnorePatterns = ["apps/e2e/**"]`, so Playwright specs are never picked up by
+Bun's test runner.
 
 ```bash
-bun test                         # all
+bun test                         # all bun:test files
 bun test packages/domain         # one area
 bun test apps/api/modules/stats  # one module path
-bun test --watch
+bun run test:watch               # watch mode
 ```
 
 Because buses are created by `createApplication()` in `apps/api/composition-root.ts`, an integration
 test can instantiate the whole graph (passing stub env vars) or call a single module factory with
 fake deps; importing routes is no longer needed to register handlers.
+
+### 20.2 Playwright API smoke suite
+
+Playwright specs live in `apps/e2e/specs/api/` and are discovered from the root
+`playwright.config.ts`. The current starter set is API-only:
+
+| Spec | Coverage | Requirement |
+|---|---|---|
+| `health.spec.ts` | `GET /health` returns `{ success: true, message: 'OK' }` | none |
+| `buyer.spec.ts` | `GET /users/my` returns a `UserResponseReadModel` | buyer access token |
+| `admin.spec.ts` | `GET /users/admin/all?limit=10` returns a cursor page | admin access token |
+
+The authenticated specs call `test.skip` when no token is configured, so a bare local run executes
+only `health.spec.ts`. At the last verified run, all 3 specs were listed and `health.spec.ts`
+passed; buyer/admin execution still requires Supabase refresh tokens.
+
+```bash
+bun run playwright:install
+bun run test:e2e
+bunx playwright test --list
+bunx playwright test api/health.spec.ts
+```
+
+To run the authenticated specs, export the E2E variables from §21.4 and run `bun run test:e2e` again.
+With `E2E_AUTH=refresh`, `apps/e2e/global-setup.ts` calls
+`POST /auth/v1/token?grant_type=refresh_token` on Supabase and writes ignored artifacts under
+`apps/e2e/.auth/<role>/` (`user.json`, `token.txt`, `refresh-token.txt`). Env refresh tokens take
+precedence over stored files; a refreshed token saved to disk is only used on later runs when the
+matching env var is unset.
+
+Specs import `test` / `expect` from `apps/e2e/fixtures/index.ts`, not directly from Playwright:
+
+| Fixture | Purpose |
+|---|---|
+| `api` | `APIRequestContext` for the buyer token (or `E2E_API_TOKEN` override) |
+| `apiAs(role)` | API-only context for `buyer`, `vendor`, or `admin`; disposed after the test |
+| `canAuthenticateAs(role)` | lets specs skip when a role token is unavailable |
+| `loginAs(role)` | browser context, page, and API context for a role; disposed after the test |
+| `apiRoutes`, `webRoutes` | URL constants copied from the real routes |
+
+Envelope helpers live in `apps/e2e/api/envelope.ts`: `expectOk`, `expectError`, and `expectPaginated`.
+`expectPaginated` asserts the cursor meta actually returned by the API
+(`nextCursor`, `prevCursor`, `hasMore`); it does not use the offset-only `PaginationMeta` in
+`packages/shared`.
 
 ---
 
@@ -1774,9 +1836,33 @@ pitfalls that make a healthy run look broken.
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase client | required |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase client | required |
 
-### 21.3 Ports
+### 21.3 E2E environment
 
-API `8000` (hardcoded in `index.ts`), web dev `3000`, pm2 fork mode for production.
+Read in `apps/e2e/config/env.ts`; env values are trimmed and empty values are treated as unset.
+
+| Variable | Used by | Default / notes |
+|---|---|---|
+| `E2E_AUTH` | Playwright config + global setup | `none` or `refresh`; default `none` |
+| `E2E_TARGET` | Playwright config | `local` or `staging`; default `local` |
+| `E2E_BASE_URL` | browser `baseURL`, cookie domain, local webServer | default `http://localhost:3000` |
+| `E2E_API_URL` | API request contexts, local webServer | default `http://localhost:8000` |
+| `E2E_SUPABASE_URL` | refresh exchange, auth cookie name | falls back to `NEXT_PUBLIC_SUPABASE_URL` |
+| `E2E_SUPABASE_ANON_KEY` | refresh exchange headers | falls back to `NEXT_PUBLIC_SUPABASE_ANON_KEY` |
+| `E2E_SUPABASE_REFRESH_TOKEN_BUYER` | buyer session | `E2E_SUPABASE_REFRESH_TOKEN` is accepted as an alias |
+| `E2E_SUPABASE_REFRESH_TOKEN_VENDOR` | vendor session | optional; stored token file is used when unset |
+| `E2E_SUPABASE_REFRESH_TOKEN_ADMIN` | admin session | optional; stored token file is used when unset |
+| `E2E_API_TOKEN` | all API request contexts | overrides stored access tokens for every role |
+| `E2E_AUTH_DIR` | auth artifact directory | default `apps/e2e/.auth`, resolved from the repo root |
+| `CI` | reporter, retries, workers, server reuse | `true` enables GitHub reporter, 2 retries, 1 worker |
+
+`E2E_AUTH=refresh` requires the buyer refresh token and Supabase URL/anon key; vendor/admin
+sessions are only generated when their token or a previously stored refresh token exists. Auth
+artifacts are gitignored. Never commit refresh or access tokens.
+
+### 21.4 Ports
+
+API `8000` (hardcoded in `index.ts`), web dev `3000`, pm2 fork mode for production. In local
+Playwright runs the config waits on `GET /health` and the web root before starting tests.
 
 ---
 
@@ -1817,6 +1903,15 @@ These are real issues observed in the code, not TODOs invented for this document
 12. The inventory reservation loop pairs requested quantities with a *filtered* inventory array by
     index (`inventoryItems[i]` over `buyableInventories`); a missing/deleted line can apply the wrong
     quantity to the wrong variant.
+
+**Testing**
+
+- Playwright API specs are smoke-level: they assert envelopes and authenticated/admin access, not
+  business flows or database state. There is still no seeded test database.
+- `buyer.spec.ts` and `admin.spec.ts` skip without role tokens; a passing local run does not prove
+  Supabase auth or admin access.
+- `bun test` and Playwright are separate suites. `bunfig.toml` excludes `apps/e2e/**` from Bun, and
+  Playwright only discovers `apps/e2e/specs/**/*.spec.ts`.
 
 **Incomplete features**
 
@@ -1896,8 +1991,8 @@ Repo-wide pass (`apps/api` and `packages/domain`; `packages/frontend`, `packages
   `"undefined"`).
 - Removed the `stack.pop()!` assertion in `requestguard.middleware.ts`, used `Number.isNaN`, and
   split the `??=` assignment in `BaseService.groupBy`.
-- `bunx biome check apps/api` and `packages/domain` are clean; 115 tests pass; typecheck reports
-  only the pre-existing `apps/api/index.ts:16` error.
+- At that audit, `bunx biome check apps/api` and `packages/domain` were clean; 115 tests passed and
+  typecheck reported the now-resolved `apps/api/index.ts:16` error. Current status is in §20 and §22.
 
 Not applied — needs a decision:
 
@@ -1930,12 +2025,15 @@ Not applied — needs a decision:
 
 **Tooling**
 
-- The `arch` script in `package.json` points at `scripts/arch-check.ts`, but that file is not in the
-  tree, so `bun run arch` currently fails with "Module not found". Restore the checker or remove the
-  command from `AGENTS.md` and `README.md`; until then, treat architecture boundaries as
-  review-enforced.
-- `bun run typecheck` fails on the pre-existing `apps/api/index.ts:16` (`CORS_ORIGIN` possibly
-  `undefined`), unrelated to the order/inventory modules.
+- `bun run arch` runs `scripts/arch-check.ts` and currently reports 7 boundary violations:
+  presentation files importing infrastructure mappers in `returns`, `shipping`, `promotions`,
+  `cart`, `notifications`, and `payments`, plus `order.app.service.ts` importing
+  `order-items/infrastructure/order-item.mapper`. They predate the E2E work and are still open.
+- `bun run typecheck` passes across `api`, `web`, and `e2e` as of 2026-11-21; the older
+  `apps/api/index.ts:16` `CORS_ORIGIN` failure is no longer present.
+- `packages/shared` still models paginated `meta` with offset fields while the mounted list
+  endpoints return cursor meta. `apps/e2e/api/envelope.ts` uses a local cursor type rather than
+  `ApiPaginatedEnvelope` so the smoke assertions match the wire format.
 
 ---
 
@@ -1955,6 +2053,8 @@ Not applied — needs a decision:
 | Tune rate limiting / body limits | `apps/api/index.ts` (`requestGuards`, `rateLimiter`), `middleware/rateLimiter.ts` |
 | Add a dashboard screen | `apps/web/app/dashboard/<name>/page.tsx` + nav entry in `components/dashboard-nav.tsx` |
 | Change the home page | `apps/api/modules/home/**` (write) + `apps/web/app/page.tsx` (read) |
+| Add an API smoke test | `apps/e2e/specs/api/<area>.spec.ts`; import fixtures and envelope helpers from `apps/e2e/` |
+| Change E2E auth or targets | `apps/e2e/config/env.ts`, `apps/e2e/auth/**`, `apps/e2e/global-setup.ts`, `playwright.config.ts`, §21.4 |
 
 ---
 
@@ -1979,7 +2079,8 @@ Not applied — needs a decision:
   disagrees with the collection is worse than no catalog, because both look authoritative.
 - Keep credentials out of `postman/environments/*`: use Postman secrets or an ignored environment.
   A committed secret cannot be reviewed or rotated safely.
-- Verified against the tree on 2026-11-15: 15 module folders (14 of them mount HTTP routes), 13
+- Verified against the tree on 2026-11-21: 15 module folders (14 of them mount HTTP routes), 13
   Mongoose models, 208 mounted routes + `/health`, 13 aggregates, 129 event classes, 19 contract
-  ports, 197 SDK hooks, 27 web pages, 573 tests across 48 files.
+  ports, 197 SDK hooks, 27 web pages, 540 `bun:test` tests across 43 files, and 3 Playwright API
+  smoke specs.
 

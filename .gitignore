@@ -139,3 +139,7 @@ apps/api/scripts/seed-assets/
 *.tmp
 *.temp
 
+playwright-report/
+test-results/
+apps/e2e/.auth/
+

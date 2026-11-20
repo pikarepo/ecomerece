@@ -1,0 +1,1805 @@
+.
+├── AGENTS.md
+├── apps
+│   ├── api
+│   │   ├── app.ts
+│   │   ├── composition-root.ts
+│   │   ├── core
+│   │   │   ├── controller
+│   │   │   │   └── base.controller.ts
+│   │   │   ├── database
+│   │   │   │   ├── transaction-context.ts
+│   │   │   │   └── unit-of-work.ts
+│   │   │   ├── infrastructure
+│   │   │   │   └── buses
+│   │   │   │       ├── buses.ts
+│   │   │   │       └── in-memory-event-bus.ts
+│   │   │   ├── repository
+│   │   │   │   ├── base.repository.ts
+│   │   │   │   └── mongo.repository.ts
+│   │   │   └── services
+│   │   │       └── base.services.ts
+│   │   ├── dist
+│   │   │   ├── index-5fqm3mjm.js
+│   │   │   ├── index-bmr9y87f.js
+│   │   │   ├── index.js
+│   │   │   ├── redis-dhn5fczf.js
+│   │   │   └── StatsSyncSettingsService-t9ysp12d.js
+│   │   ├── errors
+│   │   │   ├── app-error.ts
+│   │   │   ├── error-handler.ts
+│   │   │   ├── handleMongooseError.ts
+│   │   │   └── handleSupabaseError.ts
+│   │   ├── index.ts
+│   │   ├── lib
+│   │   │   ├── getBearerToken.ts
+│   │   │   ├── isTransientTransactionError.ts
+│   │   │   ├── jwt.ts
+│   │   │   ├── mongo.ts
+│   │   │   ├── redis.ts
+│   │   │   ├── sanitizeObj.ts
+│   │   │   ├── supabase.ts
+│   │   │   ├── __tests__
+│   │   │   │   └── getBearerToken.test.ts
+│   │   │   ├── toSlug.ts
+│   │   │   └── validateArrayQuery.ts
+│   │   ├── middleware
+│   │   │   ├── admin.ts
+│   │   │   ├── auth.ts
+│   │   │   ├── db.middleware.ts
+│   │   │   ├── init-auth.ts
+│   │   │   ├── rateLimiter.ts
+│   │   │   ├── requestguard.middleware.ts
+│   │   │   ├── seller.middleware.ts
+│   │   │   ├── statsAccessGuard.middleware.ts
+│   │   │   ├── statsAccessGuard.ts
+│   │   │   ├── statsViewGuard.middleware.ts
+│   │   │   ├── statsViewGuard.ts
+│   │   │   ├── __tests__
+│   │   │   │   ├── rate-limiter.test.ts
+│   │   │   │   ├── stats-access-guard.middleware.test.ts
+│   │   │   │   ├── stats-view-guard.middleware.test.ts
+│   │   │   │   ├── stats-view-guard.test.ts
+│   │   │   │   └── vendor.middleware.test.ts
+│   │   │   └── vendor.ts
+│   │   ├── modules
+│   │   │   ├── address
+│   │   │   │   ├── address.module.ts
+│   │   │   │   ├── application
+│   │   │   │   │   ├── address.app.internal.service.ts
+│   │   │   │   │   └── address.app.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── address.mapper.ts
+│   │   │   │   │   ├── address.models.ts
+│   │   │   │   │   ├── address-query.adapter.ts
+│   │   │   │   │   └── address.repository.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── address.controller.ts
+│   │   │   │       ├── address.messages.ts
+│   │   │   │       └── address.route.ts
+│   │   │   ├── cart
+│   │   │   │   ├── application
+│   │   │   │   │   ├── cart.app.service.ts
+│   │   │   │   │   └── event-handlers
+│   │   │   │   │       └── cart-provisioning.handler.ts
+│   │   │   │   ├── cart.module.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── cart.mapper.ts
+│   │   │   │   │   ├── cart.model.ts
+│   │   │   │   │   └── cart.repository.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── cart.controller.ts
+│   │   │   │       ├── cart.messages.ts
+│   │   │   │       └── cart.routes.ts
+│   │   │   ├── category
+│   │   │   │   ├── application
+│   │   │   │   │   ├── category.app.service.ts
+│   │   │   │   │   └── category.internal.service.ts
+│   │   │   │   ├── category.module.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── category.mapper.ts
+│   │   │   │   │   ├── category.models.ts
+│   │   │   │   │   ├── category-query.adapter.ts
+│   │   │   │   │   ├── category.repository.ts
+│   │   │   │   │   └── category-stats-access.adapter.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── category.controller.ts
+│   │   │   │       ├── category.messages.ts
+│   │   │   │       └── category.routes.ts
+│   │   │   ├── home
+│   │   │   │   ├── application
+│   │   │   │   │   └── home.app.service.ts
+│   │   │   │   ├── home.module.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── home.mapper.ts
+│   │   │   │   │   ├── home.models.ts
+│   │   │   │   │   └── home.repository.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── home.controller.ts
+│   │   │   │       ├── home.messages.ts
+│   │   │   │       └── home.routes.ts
+│   │   │   ├── image-storage
+│   │   │   │   ├── image-storage.module.ts
+│   │   │   │   └── infrastructure
+│   │   │   │       ├── cloudinary.adapter.ts
+│   │   │   │       └── cloudinary.config.ts
+│   │   │   ├── inventory
+│   │   │   │   ├── application
+│   │   │   │   │   ├── inventory.app.service.ts
+│   │   │   │   │   └── inventory.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── inventory.mapper.ts
+│   │   │   │   │   ├── inventory.model.ts
+│   │   │   │   │   ├── inventory.repository.ts
+│   │   │   │   │   └── inventory-reservation.adapter.ts
+│   │   │   │   ├── inventory.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── inventory.controller.ts
+│   │   │   │       ├── inventory.messages.ts
+│   │   │   │       └── inventory.routes.ts
+│   │   │   ├── notifications
+│   │   │   │   ├── application
+│   │   │   │   │   ├── event-handlers
+│   │   │   │   │   │   ├── order-notification.handler.ts
+│   │   │   │   │   │   ├── return-notification.handler.ts
+│   │   │   │   │   │   └── shipment-notification.handler.ts
+│   │   │   │   │   ├── notification.dispatcher.ts
+│   │   │   │   │   ├── notifications.app.service.ts
+│   │   │   │   │   └── notifications.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── channels
+│   │   │   │   │   │   ├── console.email-transport.ts
+│   │   │   │   │   │   ├── email.notification-channel.ts
+│   │   │   │   │   │   ├── email-transport.ts
+│   │   │   │   │   │   ├── http.email-transport.ts
+│   │   │   │   │   │   └── __tests__
+│   │   │   │   │   │       └── email.notification-channel.test.ts
+│   │   │   │   │   ├── notification-channels.factory.ts
+│   │   │   │   │   ├── notification.mapper.ts
+│   │   │   │   │   ├── notification.model.ts
+│   │   │   │   │   └── notification.repository.ts
+│   │   │   │   ├── notifications.config.ts
+│   │   │   │   ├── notifications.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── notifications.controller.ts
+│   │   │   │       ├── notifications.messages.ts
+│   │   │   │       └── notifications.routes.ts
+│   │   │   ├── order
+│   │   │   │   ├── application
+│   │   │   │   │   ├── order.app.service.ts
+│   │   │   │   │   └── order.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── order.mapper.ts
+│   │   │   │   │   ├── order.model.ts
+│   │   │   │   │   ├── order-query.adapter.ts
+│   │   │   │   │   ├── order.repository.ts
+│   │   │   │   │   └── order-writer.adapter.ts
+│   │   │   │   ├── order.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── order.controller.ts
+│   │   │   │       ├── order.messages.ts
+│   │   │   │       └── order.routes.ts
+│   │   │   ├── order-items
+│   │   │   │   ├── application
+│   │   │   │   │   ├── order-item.app.service.ts
+│   │   │   │   │   ├── order-item.internal.service.ts
+│   │   │   │   │   └── order-item.internal.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── order-item.mapper.ts
+│   │   │   │   │   ├── order-item.model.ts
+│   │   │   │   │   ├── order-item.repository.ts
+│   │   │   │   │   ├── order-items-query.adapter.ts
+│   │   │   │   │   └── order-items-writer.adapter.ts
+│   │   │   │   ├── order-items.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── order-items.controller.ts
+│   │   │   │       ├── order-items.messages.ts
+│   │   │   │       └── order-items.routes.ts
+│   │   │   ├── order-request
+│   │   │   │   ├── application
+│   │   │   │   │   └── order-request.app.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── order-request.mapper.ts
+│   │   │   │   │   ├── order-request.model.ts
+│   │   │   │   │   └── order-request.repository.ts
+│   │   │   │   ├── order-request.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── order-request.controller.ts
+│   │   │   │       ├── order-request.messages.ts
+│   │   │   │       └── order-request.routes.ts
+│   │   │   ├── payments
+│   │   │   │   ├── application
+│   │   │   │   │   ├── payment-query.adapter.ts
+│   │   │   │   │   ├── payments.app.service.ts
+│   │   │   │   │   └── payments.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── infrastructure-adapters
+│   │   │   │   │   │   ├── manual.payment-gateway.ts
+│   │   │   │   │   │   └── __tests__
+│   │   │   │   │   │       └── manual.payment-gateway.test.ts
+│   │   │   │   │   ├── payment-gateway.factory.ts
+│   │   │   │   │   ├── payment.mapper.ts
+│   │   │   │   │   ├── payment.model.ts
+│   │   │   │   │   └── payment.repository.ts
+│   │   │   │   ├── payments.config.ts
+│   │   │   │   ├── payments.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── payments.controller.ts
+│   │   │   │       ├── payments.messages.ts
+│   │   │   │       └── payments.routes.ts
+│   │   │   ├── payouts
+│   │   │   │   ├── application
+│   │   │   │   │   └── payouts.app.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── payout.mapper.ts
+│   │   │   │   │   ├── payout.model.ts
+│   │   │   │   │   └── payout.repository.ts
+│   │   │   │   ├── payouts.module.ts
+│   │   │   │   └── presentation
+│   │   │   │       ├── payouts.controller.ts
+│   │   │   │       └── payouts.routes.ts
+│   │   │   ├── product
+│   │   │   │   ├── application
+│   │   │   │   │   ├── product.app.service.ts
+│   │   │   │   │   └── product.internel.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── product.mapper.ts
+│   │   │   │   │   ├── product.model.ts
+│   │   │   │   │   ├── product-pricing.adapter.ts
+│   │   │   │   │   ├── product-query.adapter.ts
+│   │   │   │   │   ├── product.repository.ts
+│   │   │   │   │   ├── product-stats-access.adapter.ts
+│   │   │   │   │   ├── product-stats-projector.adapter.ts
+│   │   │   │   │   └── product-stock.adapter.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── product.controller.ts
+│   │   │   │   │   ├── product.messages.ts
+│   │   │   │   │   └── product.routes.ts
+│   │   │   │   └── product.module.ts
+│   │   │   ├── product-variant
+│   │   │   │   ├── application
+│   │   │   │   │   ├── product-varaint.internal.service.ts
+│   │   │   │   │   └── product-variant.app.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── product-variant.mapper.ts
+│   │   │   │   │   ├── product-variant.model.ts
+│   │   │   │   │   ├── product-variant-query.adapter.ts
+│   │   │   │   │   └── product-variant.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── product-varaint.routes.ts
+│   │   │   │   │   ├── product-variant.controller.ts
+│   │   │   │   │   └── product-variant.messages.ts
+│   │   │   │   └── product-variant.module.ts
+│   │   │   ├── promotions
+│   │   │   │   ├── application
+│   │   │   │   │   ├── coupon-adapters.ts
+│   │   │   │   │   ├── promotions.app.service.ts
+│   │   │   │   │   └── promotions.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── coupon.mapper.ts
+│   │   │   │   │   ├── coupon.model.ts
+│   │   │   │   │   └── coupon.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── promotions.controller.ts
+│   │   │   │   │   ├── promotions.messages.ts
+│   │   │   │   │   └── promotions.routes.ts
+│   │   │   │   └── promotions.module.ts
+│   │   │   ├── returns
+│   │   │   │   ├── application
+│   │   │   │   │   ├── returns.app.service.ts
+│   │   │   │   │   └── returns.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── return.mapper.ts
+│   │   │   │   │   ├── return.model.ts
+│   │   │   │   │   ├── return-query.adapter.ts
+│   │   │   │   │   └── return.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── returns.controller.ts
+│   │   │   │   │   ├── returns.messages.ts
+│   │   │   │   │   └── returns.routes.ts
+│   │   │   │   └── returns.module.ts
+│   │   │   ├── reviews
+│   │   │   │   ├── application
+│   │   │   │   │   └── review.app.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── review.mapper.ts
+│   │   │   │   │   ├── review.model.ts
+│   │   │   │   │   └── review.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── review.controller.ts
+│   │   │   │   │   ├── review.messages.ts
+│   │   │   │   │   └── review.routes.ts
+│   │   │   │   └── review.module.ts
+│   │   │   ├── shipping
+│   │   │   │   ├── application
+│   │   │   │   │   ├── event-handlers
+│   │   │   │   │   │   └── order-cancelled.handler.ts
+│   │   │   │   │   ├── shipping.app.service.ts
+│   │   │   │   │   └── shipping.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── shipment.mapper.ts
+│   │   │   │   │   ├── shipment.model.ts
+│   │   │   │   │   ├── shipment-query.adapter.ts
+│   │   │   │   │   └── shipment.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── shipping.controller.ts
+│   │   │   │   │   ├── shipping.messages.ts
+│   │   │   │   │   └── shipping.routes.ts
+│   │   │   │   └── shipping.module.ts
+│   │   │   ├── stats
+│   │   │   │   ├── application
+│   │   │   │   │   ├── event-handlers
+│   │   │   │   │   │   ├── category-stats-denormalization.handler.ts
+│   │   │   │   │   │   ├── order-item-created.stats-handler.ts
+│   │   │   │   │   │   ├── product-stats-denormalization.handler.ts
+│   │   │   │   │   │   ├── __tests__
+│   │   │   │   │   │   │   ├── category-stats-denormalization.handler.test.ts
+│   │   │   │   │   │   │   ├── vendor-stats-denormalization.handler.test.ts
+│   │   │   │   │   │   │   └── vendor-stats-force-refresh.handler.test.ts
+│   │   │   │   │   │   ├── vendor-stats-denormalization.handler.ts
+│   │   │   │   │   │   └── vendor-stats-force-refresh.handler.ts
+│   │   │   │   │   ├── ProductStatsSyncScheduler.ts
+│   │   │   │   │   ├── StatsBufferService.ts
+│   │   │   │   │   ├── StatsQueryService.ts
+│   │   │   │   │   ├── stats-sync-interval.ts
+│   │   │   │   │   ├── StatsSyncSettingsService.ts
+│   │   │   │   │   ├── VendorForceRefreshQuotaService.ts
+│   │   │   │   │   └── vendor-stats-refresh.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── StatsModel.ts
+│   │   │   │   │   └── StatsRepository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── StatsController.ts
+│   │   │   │   │   └── StatsRoutes.ts
+│   │   │   │   └── stats.module.ts
+│   │   │   ├── user
+│   │   │   │   ├── application
+│   │   │   │   │   ├── event-handlers
+│   │   │   │   │   │   ├── user-signed-in.handler.ts
+│   │   │   │   │   │   ├── vendor-deleted.handler.ts
+│   │   │   │   │   │   ├── vendor-rejected.handler.ts
+│   │   │   │   │   │   └── vendor-verified.handler.ts
+│   │   │   │   │   ├── user.app.service.ts
+│   │   │   │   │   └── user.internal.service.ts
+│   │   │   │   ├── infrastructure
+│   │   │   │   │   ├── user-auth-lookup.adapter.ts
+│   │   │   │   │   ├── user.mapper.ts
+│   │   │   │   │   ├── user.models.ts
+│   │   │   │   │   ├── user-query.adapter.ts
+│   │   │   │   │   └── user.repository.ts
+│   │   │   │   ├── presentation
+│   │   │   │   │   ├── user.controller.ts
+│   │   │   │   │   ├── user.messages.ts
+│   │   │   │   │   └── user.routes.ts
+│   │   │   │   └── user.module.ts
+│   │   │   └── vendor
+│   │   │       ├── application
+│   │   │       │   ├── vendor.app.service.ts
+│   │   │       │   └── vendor.internal.service.ts
+│   │   │       ├── infrastructure
+│   │   │       │   ├── vendor.mapper.ts
+│   │   │       │   ├── vendor.models.ts
+│   │   │       │   ├── vendor-query.adapter.ts
+│   │   │       │   ├── vendor.repository.ts
+│   │   │       │   ├── vendor-stats-access.adapter.ts
+│   │   │       │   └── vendor-stats-projector.adapter.ts
+│   │   │       ├── presentation
+│   │   │       │   ├── vendor.controller.ts
+│   │   │       │   ├── vendor.messages.ts
+│   │   │       │   └── vendor.routes.ts
+│   │   │       └── vendor.module.ts
+│   │   ├── package.json
+│   │   ├── routes
+│   │   │   └── index.ts
+│   │   ├── shared
+│   │   │   └── validation
+│   │   │       ├── clerkSchema.ts
+│   │   │       ├── MongoIdSchema.ts
+│   │   │       └── SupaBaseSchema.ts
+│   │   ├── tsconfig.json
+│   │   └── utils
+│   │       └── retry.ts
+│   ├── mobile
+│   └── web
+│       ├── AGENTS.md
+│       ├── app
+│       │   ├── account
+│       │   │   ├── components
+│       │   │   │   ├── address-card.tsx
+│       │   │   │   ├── address-form.tsx
+│       │   │   │   ├── delete-account-panel.tsx
+│       │   │   │   ├── profile-panel.tsx
+│       │   │   │   └── recover-address-panel.tsx
+│       │   │   ├── orders
+│       │   │   │   ├── components
+│       │   │   │   │   └── order-card.tsx
+│       │   │   │   ├── new
+│       │   │   │   │   └── page.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── page.tsx
+│       │   │   ├── products
+│       │   │   │   ├── components
+│       │   │   │   │   ├── my-product-table.tsx
+│       │   │   │   │   ├── product-action-dialog.tsx
+│       │   │   │   │   └── product-create-dialog.tsx
+│       │   │   │   └── page.tsx
+│       │   │   └── vendor
+│       │   │       ├── components
+│       │   │       │   ├── create-vendor-dialog.tsx
+│       │   │       │   ├── delete-vendor-dialog.tsx
+│       │   │       │   ├── vendor-contact-dialog.tsx
+│       │   │       │   ├── vendor-image-dialog.tsx
+│       │   │       │   ├── vendor-meta-dialog.tsx
+│       │   │       │   └── vendor-stats-panel.tsx
+│       │   │       └── page.tsx
+│       │   ├── auth
+│       │   │   ├── callback
+│       │   │   │   └── page.tsx
+│       │   │   ├── components
+│       │   │   │   └── sign-in-card.tsx
+│       │   │   └── page.tsx
+│       │   ├── categories
+│       │   │   ├── components
+│       │   │   │   ├── category-card.tsx
+│       │   │   │   └── category-search.tsx
+│       │   │   ├── [id]
+│       │   │   │   └── page.tsx
+│       │   │   └── page.tsx
+│       │   ├── dashboard
+│       │   │   ├── addresses
+│       │   │   │   └── page.tsx
+│       │   │   ├── categories
+│       │   │   │   ├── components
+│       │   │   │   │   ├── category-delete-dialog.tsx
+│       │   │   │   │   └── category-form-dialog.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── components
+│       │   │   │   ├── categories-tab.tsx
+│       │   │   │   ├── detail-row.tsx
+│       │   │   │   ├── features-tab.tsx
+│       │   │   │   ├── home-item-dialog.tsx
+│       │   │   │   ├── home-row-actions.tsx
+│       │   │   │   ├── overview-tab.tsx
+│       │   │   │   ├── panel.tsx
+│       │   │   │   ├── promos-tab.tsx
+│       │   │   │   ├── raw-json-tab.tsx
+│       │   │   │   ├── shelves-tab.tsx
+│       │   │   │   ├── slides-tab.tsx
+│       │   │   │   └── stat-card.tsx
+│       │   │   ├── inventory
+│       │   │   │   ├── components
+│       │   │   │   │   ├── inventory-action-dialog.tsx
+│       │   │   │   │   ├── inventory-create-dialog.tsx
+│       │   │   │   │   ├── inventory-filters.tsx
+│       │   │   │   │   └── inventory-table.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── orders
+│       │   │   │   ├── components
+│       │   │   │   │   └── admin-order-table.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── page.tsx
+│       │   │   ├── products
+│       │   │   │   ├── components
+│       │   │   │   │   └── product-block-dialog.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── reviews
+│       │   │   │   └── page.tsx
+│       │   │   ├── stats
+│       │   │   │   ├── components
+│       │   │   │   │   ├── metric-grid.tsx
+│       │   │   │   │   ├── series-table.tsx
+│       │   │   │   │   ├── stats-explorer.tsx
+│       │   │   │   │   ├── stats-paginated-table.tsx
+│       │   │   │   │   └── sync-settings-panel.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── users
+│       │   │   │   ├── components
+│       │   │   │   │   ├── user-action-dialog.tsx
+│       │   │   │   │   ├── user-filters.tsx
+│       │   │   │   │   ├── user-lookup.tsx
+│       │   │   │   │   └── user-table.tsx
+│       │   │   │   └── page.tsx
+│       │   │   ├── variants
+│       │   │   │   ├── components
+│       │   │   │   │   ├── variant-action-dialog.tsx
+│       │   │   │   │   ├── variant-create-dialog.tsx
+│       │   │   │   │   ├── variant-filters.tsx
+│       │   │   │   │   └── variant-table.tsx
+│       │   │   │   └── page.tsx
+│       │   │   └── vendors
+│       │   │       ├── components
+│       │   │       │   └── vendor-action-dialog.tsx
+│       │   │       └── page.tsx
+│       │   ├── favicon.ico
+│       │   ├── globals.css
+│       │   ├── (home)
+│       │   │   ├── components
+│       │   │   │   ├── category-grid.tsx
+│       │   │   │   ├── feature-strip.tsx
+│       │   │   │   ├── hero.tsx
+│       │   │   │   ├── home-footer.tsx
+│       │   │   │   ├── product-card.tsx
+│       │   │   │   ├── product-shelf.tsx
+│       │   │   │   ├── promo-grid.tsx
+│       │   │   │   └── section-heading.tsx
+│       │   │   └── page.tsx
+│       │   ├── layout.tsx
+│       │   ├── products
+│       │   │   ├── components
+│       │   │   │   ├── product-card.tsx
+│       │   │   │   └── product-filters.tsx
+│       │   │   ├── [id]
+│       │   │   │   ├── components
+│       │   │   │   │   ├── product-gallery.tsx
+│       │   │   │   │   ├── product-summary.tsx
+│       │   │   │   │   ├── review-form.tsx
+│       │   │   │   │   ├── review-list.tsx
+│       │   │   │   │   ├── section-panel.tsx
+│       │   │   │   │   ├── variant-list.tsx
+│       │   │   │   │   └── variant-row.tsx
+│       │   │   │   └── page.tsx
+│       │   │   └── page.tsx
+│       │   ├── reviews
+│       │   │   ├── components
+│       │   │   │   ├── review-card.tsx
+│       │   │   │   └── review-filters.tsx
+│       │   │   ├── [id]
+│       │   │   │   └── page.tsx
+│       │   │   └── page.tsx
+│       │   └── vendors
+│       │       ├── components
+│       │       │   ├── vendor-card.tsx
+│       │       │   └── vendor-search.tsx
+│       │       ├── [id]
+│       │       │   └── page.tsx
+│       │       └── page.tsx
+│       ├── components
+│       │   ├── auth-provider.tsx
+│       │   ├── cursor-pager.tsx
+│       │   ├── dashboard-nav.tsx
+│       │   ├── format.ts
+│       │   ├── form-dialog.tsx
+│       │   ├── icon-by-name.tsx
+│       │   ├── page-shell.tsx
+│       │   ├── providers.tsx
+│       │   ├── query-state.tsx
+│       │   ├── require-auth.tsx
+│       │   ├── site-header.tsx
+│       │   └── use-cursor-pagination.ts
+│       ├── eslint.config.mjs
+│       ├── next.config.ts
+│       ├── next-env.d.ts
+│       ├── package.json
+│       ├── public
+│       │   ├── file.svg
+│       │   ├── globe.svg
+│       │   ├── next.svg
+│       │   ├── vercel.svg
+│       │   └── window.svg
+│       ├── README.md
+│       ├── theme.ts
+│       ├── tsconfig.json
+│       └── tsconfig.tsbuildinfo
+├── biome.json
+├── bun.lock
+├── docs
+│   ├── architecture-guide.html
+│   ├── glossary-card.html
+│   └── review-card.html
+├── ecosystem.config.js
+├── LICENSE
+├── package.json
+├── packages
+│   ├── contracts
+│   │   ├── index.ts
+│   │   ├── modules
+│   │   │   ├── address
+│   │   │   │   └── index.ts
+│   │   │   ├── category
+│   │   │   │   └── index.ts
+│   │   │   ├── inventory
+│   │   │   │   └── index.ts
+│   │   │   ├── order
+│   │   │   │   └── index.ts
+│   │   │   ├── order-items
+│   │   │   │   └── index.ts
+│   │   │   ├── order-request
+│   │   │   │   └── index.ts
+│   │   │   ├── payments
+│   │   │   │   └── index.ts
+│   │   │   ├── payouts
+│   │   │   │   └── index.ts
+│   │   │   ├── product
+│   │   │   │   └── index.ts
+│   │   │   ├── product-variant
+│   │   │   │   └── index.ts
+│   │   │   ├── promotions
+│   │   │   │   └── index.ts
+│   │   │   ├── returns
+│   │   │   │   └── index.ts
+│   │   │   ├── shipping
+│   │   │   │   └── index.ts
+│   │   │   ├── stats
+│   │   │   │   └── index.ts
+│   │   │   ├── user
+│   │   │   │   └── index.ts
+│   │   │   └── vendor
+│   │   │       └── index.ts
+│   │   ├── package.json
+│   │   └── __tests__
+│   │       └── contracts.test.ts
+│   ├── domain
+│   │   ├── aggregate-root.ts
+│   │   ├── errors
+│   │   │   ├── app-error.ts
+│   │   │   └── image-invalid-key.error.ts
+│   │   ├── events
+│   │   │   └── event-bus.interface.ts
+│   │   ├── index.ts
+│   │   ├── modules
+│   │   │   ├── address
+│   │   │   │   ├── address.aggregate.ts
+│   │   │   │   ├── events
+│   │   │   │   │   ├── address-created.event.ts
+│   │   │   │   │   ├── address-deleted.event.ts
+│   │   │   │   │   ├── address-recovered.event.ts
+│   │   │   │   │   ├── address-set-as-default.event.ts
+│   │   │   │   │   ├── address-updated.event.ts
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-address-repository.ts
+│   │   │   │   └── read-models
+│   │   │   │       └── address.read-models.ts
+│   │   │   ├── cart
+│   │   │   │   ├── cart.aggregate.ts
+│   │   │   │   ├── events
+│   │   │   │   │   ├── cart-checked-out.event.ts
+│   │   │   │   │   ├── cart-created.event.ts
+│   │   │   │   │   ├── cart-deleted.event.ts
+│   │   │   │   │   ├── cart-item-added.event.ts
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-cart.repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── cart.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       └── cart-item.vo.ts
+│   │   │   ├── category
+│   │   │   │   ├── category.aggregate.ts
+│   │   │   │   ├── events
+│   │   │   │   │   ├── category-blocked.event.ts
+│   │   │   │   │   ├── category-created.event.ts
+│   │   │   │   │   ├── category-deleted.event.ts
+│   │   │   │   │   ├── category-image-updated.event.ts
+│   │   │   │   │   ├── category-meta-updated.event.ts
+│   │   │   │   │   ├── category-recovered.event.ts
+│   │   │   │   │   ├── category-unblocked.event.ts
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-category.ports.ts
+│   │   │   │   └── read-models
+│   │   │   │       └── category.read-modle.ts
+│   │   │   ├── home
+│   │   │   │   ├── events
+│   │   │   │   │   ├── home-categories-reordered.event.ts
+│   │   │   │   │   ├── home-category-added.event.ts
+│   │   │   │   │   ├── home-category-removed.event.ts
+│   │   │   │   │   ├── home-category-updated.event.ts
+│   │   │   │   │   ├── home-container-added.event.ts
+│   │   │   │   │   ├── home-container-removed.event.ts
+│   │   │   │   │   ├── home-containers-reordered.event.ts
+│   │   │   │   │   ├── home-container-updated.event.ts
+│   │   │   │   │   ├── home-feature-added.event.ts
+│   │   │   │   │   ├── home-feature-removed.event.ts
+│   │   │   │   │   ├── home-features-set.event.ts
+│   │   │   │   │   ├── home-feature-updated.event.ts
+│   │   │   │   │   ├── home-promo-added.event.ts
+│   │   │   │   │   ├── home-promo-removed.event.ts
+│   │   │   │   │   ├── home-promo-updated.event.ts
+│   │   │   │   │   ├── home-slide-added.event.ts
+│   │   │   │   │   ├── home-slide-removed.event.ts
+│   │   │   │   │   ├── home-slides-reordered.event.ts
+│   │   │   │   │   ├── home-slide-updated.event.ts
+│   │   │   │   │   └── index.ts
+│   │   │   │   ├── home.aggregate.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-home-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── home.read-model.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── category.vo.ts
+│   │   │   │       ├── feature.vo.ts
+│   │   │   │       ├── product-container.vo.ts
+│   │   │   │       ├── promo.vo.ts
+│   │   │   │       └── slide.vo.ts
+│   │   │   ├── image-storage
+│   │   │   │   ├── errors
+│   │   │   │   │   └── image-storage-errors.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-image-storage.port.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   ├── batch-result.read-model.ts
+│   │   │   │   │   └── stored-image.read-model.ts
+│   │   │   │   ├── __tests__
+│   │   │   │   │   └── image-storage.test.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── image-metadata.vo.ts
+│   │   │   │       ├── image-source.vo.ts
+│   │   │   │       └── image-transform.vo.ts
+│   │   │   ├── index.ts
+│   │   │   ├── inventory
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── inventory-bought.event.ts
+│   │   │   │   │   ├── inventory-completed.event.ts
+│   │   │   │   │   ├── inventory-created.event.ts
+│   │   │   │   │   ├── inventory-deleted.event.ts
+│   │   │   │   │   ├── inventory-low-stock-threshold-updated.event.ts
+│   │   │   │   │   ├── inventory-released.event.ts
+│   │   │   │   │   ├── inventory-reserved.event.ts
+│   │   │   │   │   ├── inventory-restocked.event.ts
+│   │   │   │   │   ├── inventory-sold-out.event.ts
+│   │   │   │   │   └── inventory-stock-removed.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── inventory.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-inventory-repository.ts
+│   │   │   │   └── read-models
+│   │   │   │       └── inventory.read-model.ts
+│   │   │   ├── notifications
+│   │   │   │   ├── events
+│   │   │   │   │   ├── notification-created.event.ts
+│   │   │   │   │   ├── notification-dismissed.event.ts
+│   │   │   │   │   └── notification-read.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── notifications.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   ├── i-notification-channel.ts
+│   │   │   │   │   └── i-notification-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── notification.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       └── notification-type.vo.ts
+│   │   │   ├── order
+│   │   │   │   ├── events
+│   │   │   │   │   ├── order-cancelled.event.ts
+│   │   │   │   │   ├── order-completed.event.ts
+│   │   │   │   │   ├── order-confirm.event.ts
+│   │   │   │   │   ├── order-created.event.ts
+│   │   │   │   │   ├── order-deleted.event.ts
+│   │   │   │   │   ├── order-recovered.event.ts
+│   │   │   │   │   ├── order-refunded.event.ts
+│   │   │   │   │   ├── order-returned.event.ts
+│   │   │   │   │   └── order-updated.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-order-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── order.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── order-item.vo.ts
+│   │   │   │       ├── order-status.vo.ts
+│   │   │   │       └── order-type.vo.ts
+│   │   │   ├── order-items
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── order-item-cancelled.event.ts
+│   │   │   │   │   ├── order-item-completed.event.ts
+│   │   │   │   │   ├── order-item-confirmed.event.ts
+│   │   │   │   │   ├── order-item-created.event.ts
+│   │   │   │   │   ├── order-item-deleted.event.ts
+│   │   │   │   │   ├── order-item-event-payload.ts
+│   │   │   │   │   ├── order-item-recovered.event.ts
+│   │   │   │   │   ├── order-item-refunded.event.ts
+│   │   │   │   │   ├── order-item-returned.event.ts
+│   │   │   │   │   └── order-item-updated.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order-items.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-order-items.repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── order-items.read-model.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── failure-reason.ts
+│   │   │   │       └── status.vo.ts
+│   │   │   ├── order-request
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── order-request-accepted.event.ts
+│   │   │   │   │   ├── order-request-cancelled.event.ts
+│   │   │   │   │   ├── order-request-created.event.ts
+│   │   │   │   │   └── order-request-rejected.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order-request.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── i-order-request.repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   └── order-request.read-model.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── index.ts
+│   │   │   │       ├── order-request-image.vo.ts
+│   │   │   │       ├── order-request-status.vo.ts
+│   │   │   │       └── order-request-type.vo.ts
+│   │   │   ├── payments
+│   │   │   │   ├── events
+│   │   │   │   │   ├── payment-authorized.event.ts
+│   │   │   │   │   ├── payment-cancelled.event.ts
+│   │   │   │   │   ├── payment-captured.event.ts
+│   │   │   │   │   ├── payment-failed.event.ts
+│   │   │   │   │   ├── payment-intent-created.event.ts
+│   │   │   │   │   ├── payment-refunded.event.ts
+│   │   │   │   │   └── payment-webhook-received.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── payments.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   ├── i-payment-gateway.ts
+│   │   │   │   │   └── i-payment-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── payment.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── payment-provider.vo.ts
+│   │   │   │       ├── payment-status.vo.ts
+│   │   │   │       └── transaction-type.vo.ts
+│   │   │   ├── payouts
+│   │   │   │   ├── events
+│   │   │   │   │   ├── ledger-entry-recorded.event.ts
+│   │   │   │   │   ├── payout-approved.event.ts
+│   │   │   │   │   ├── payout-cancelled.event.ts
+│   │   │   │   │   ├── payout-failed.event.ts
+│   │   │   │   │   ├── payout-paid.event.ts
+│   │   │   │   │   └── payout-requested.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ledger-entry.aggregate.ts
+│   │   │   │   ├── payout.aggregate.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-payout-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── payout.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── ledger-entry-type.vo.ts
+│   │   │   │       └── payout-status.vo.ts
+│   │   │   ├── product
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── product-blocked.event.ts
+│   │   │   │   │   ├── product-created.event.ts
+│   │   │   │   │   ├── product-default-image-set.event.ts
+│   │   │   │   │   ├── product-deleted.event.ts
+│   │   │   │   │   ├── product-disclaimer-disabled.event.ts
+│   │   │   │   │   ├── product-disclaimer-enabled.event.ts
+│   │   │   │   │   ├── product-disclaimers-added.event.ts
+│   │   │   │   │   ├── product-disclaimers-removed.event.ts
+│   │   │   │   │   ├── product-disclaimer-updated.event.ts
+│   │   │   │   │   ├── product-images-added.event.ts
+│   │   │   │   │   ├── product-images-removed.event.ts
+│   │   │   │   │   ├── product-ingredients-added.event.ts
+│   │   │   │   │   ├── product-ingredients-cleared.event.ts
+│   │   │   │   │   ├── product-ingredients-disabled.event.ts
+│   │   │   │   │   ├── product-ingredients-enabled.event.ts
+│   │   │   │   │   ├── product-ingredients-removed.event.ts
+│   │   │   │   │   ├── product-in-stock-updated.event.ts
+│   │   │   │   │   ├── product-made-private.event.ts
+│   │   │   │   │   ├── product-made-public.event.ts
+│   │   │   │   │   ├── product-meta-updated.event.ts
+│   │   │   │   │   ├── product-pricing-summary-updated.event.ts
+│   │   │   │   │   ├── product-rating-summary-updated.event.ts
+│   │   │   │   │   ├── product-recovered.event.ts
+│   │   │   │   │   └── product-unblocked.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-product-repository.ts
+│   │   │   │   ├── product.aggregate.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── product.read-model.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── disclaimer.vo.ts
+│   │   │   │       ├── ingredients.vo.ts
+│   │   │   │       └── product-images.vo.ts
+│   │   │   ├── product-variant
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── product-variant-activated.event.ts
+│   │   │   │   │   ├── product-variant-created.event.ts
+│   │   │   │   │   ├── product-variant-deactivated.event.ts
+│   │   │   │   │   ├── product-variant-deleted.event.ts
+│   │   │   │   │   ├── product-variant-meta-updated.event.ts
+│   │   │   │   │   ├── product-variant-price-updated.event.ts
+│   │   │   │   │   └── product-variant-recovered.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-product-variant-repository.ts
+│   │   │   │   ├── product-variant.aggregate.ts
+│   │   │   │   └── read-models
+│   │   │   │       └── product-variant.read-model.ts
+│   │   │   ├── promotions
+│   │   │   │   ├── events
+│   │   │   │   │   ├── coupon-activated.event.ts
+│   │   │   │   │   ├── coupon-created.event.ts
+│   │   │   │   │   ├── coupon-deactivated.event.ts
+│   │   │   │   │   ├── coupon-deleted.event.ts
+│   │   │   │   │   ├── coupon-recovered.event.ts
+│   │   │   │   │   ├── coupon-redeemed.event.ts
+│   │   │   │   │   └── coupon-updated.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-coupon-repository.ts
+│   │   │   │   ├── promotions.aggregate.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── coupon.read-models.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── coupon-code.vo.ts
+│   │   │   │       └── discount-type.vo.ts
+│   │   │   ├── returns
+│   │   │   │   ├── events
+│   │   │   │   │   ├── return-approved.event.ts
+│   │   │   │   │   ├── return-cancelled.event.ts
+│   │   │   │   │   ├── return-received.event.ts
+│   │   │   │   │   ├── return-rejected.event.ts
+│   │   │   │   │   ├── return-requested.event.ts
+│   │   │   │   │   └── return-shipped-back.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-return-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── return.read-models.ts
+│   │   │   │   ├── returns.aggregate.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── return-status.vo.ts
+│   │   │   │       └── return-type.vo.ts
+│   │   │   ├── reviews
+│   │   │   │   ├── events
+│   │   │   │   │   ├── index.ts
+│   │   │   │   │   ├── review-blocked.event.ts
+│   │   │   │   │   ├── review-created.event.ts
+│   │   │   │   │   ├── review-deleted.event.ts
+│   │   │   │   │   ├── review-disliked.event.ts
+│   │   │   │   │   ├── review-liked.event.ts
+│   │   │   │   │   ├── review-reported.event.ts
+│   │   │   │   │   ├── review-unblocked.event.ts
+│   │   │   │   │   ├── review-updated.event.ts
+│   │   │   │   │   └── review-vendor-reply-added.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-reviews-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── reviews.read-model.ts
+│   │   │   │   └── reviews.aggregate.ts
+│   │   │   ├── shipping
+│   │   │   │   ├── events
+│   │   │   │   │   ├── shipment-cancelled.event.ts
+│   │   │   │   │   ├── shipment-created.event.ts
+│   │   │   │   │   ├── shipment-deleted.event.ts
+│   │   │   │   │   ├── shipment-delivered.event.ts
+│   │   │   │   │   ├── shipment-dispatched.event.ts
+│   │   │   │   │   ├── shipment-failed.event.ts
+│   │   │   │   │   ├── shipment-recovered.event.ts
+│   │   │   │   │   ├── shipment-returned.event.ts
+│   │   │   │   │   ├── shipment-status-changed.event.ts
+│   │   │   │   │   └── shipment-tracking-assigned.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-shipment-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── shipment.read-models.ts
+│   │   │   │   ├── shipping.aggregate.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── carrier.vo.ts
+│   │   │   │       ├── shipment-status.vo.ts
+│   │   │   │       ├── shipping-method.vo.ts
+│   │   │   │       ├── tracking-event.vo.ts
+│   │   │   │       └── tracking-number.vo.ts
+│   │   │   ├── stats
+│   │   │   │   ├── events
+│   │   │   │   │   ├── product-stats-denormalization-requested.event.ts
+│   │   │   │   │   └── vendor-stats-force-refresh-requested.event.ts
+│   │   │   │   ├── FanOut.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── metrics.ts
+│   │   │   │   ├── StatKey.ts
+│   │   │   │   └── TimeWindows.ts
+│   │   │   ├── __tests__
+│   │   │   │   ├── aggregate-security.test.ts
+│   │   │   │   ├── cart-aggregate.test.ts
+│   │   │   │   ├── category-address-aggregate.test.ts
+│   │   │   │   ├── coupon-aggregate.test.ts
+│   │   │   │   ├── events-contract.test.ts
+│   │   │   │   ├── home-aggregate.test.ts
+│   │   │   │   ├── inventory-aggregate.test.ts
+│   │   │   │   ├── notification-aggregate.test.ts
+│   │   │   │   ├── order-aggregate.test.ts
+│   │   │   │   ├── order-items-aggregate.test.ts
+│   │   │   │   ├── order-request-aggregate.test.ts
+│   │   │   │   ├── payment-aggregate.test.ts
+│   │   │   │   ├── payout-aggregate.test.ts
+│   │   │   │   ├── product-aggregate.test.ts
+│   │   │   │   ├── product-variant-aggregate.test.ts
+│   │   │   │   ├── returns-aggregate.test.ts
+│   │   │   │   ├── reviews-aggregate.test.ts
+│   │   │   │   ├── shipping-aggregate.test.ts
+│   │   │   │   ├── stats-utils.test.ts
+│   │   │   │   ├── user-aggregate.test.ts
+│   │   │   │   └── vendor-aggregate.test.ts
+│   │   │   ├── user
+│   │   │   │   ├── events
+│   │   │   │   │   ├── user-ban-extended.event.ts
+│   │   │   │   │   ├── user-ban-lifted.event.ts
+│   │   │   │   │   ├── user-banned.event.ts
+│   │   │   │   │   ├── user-ban-shortened.event.ts
+│   │   │   │   │   ├── user-blocked.event.ts
+│   │   │   │   │   ├── user-block-lifted.event.ts
+│   │   │   │   │   ├── user-deleted.event.ts
+│   │   │   │   │   ├── user-delete-lifted.event.ts
+│   │   │   │   │   ├── user-logged-in.event.ts
+│   │   │   │   │   ├── user-role-assigned.event.ts
+│   │   │   │   │   └── user-signed-in.event.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── ports
+│   │   │   │   │   └── i-user-repository.ts
+│   │   │   │   ├── read-models
+│   │   │   │   │   └── user.read-model.ts
+│   │   │   │   ├── user.aggregate.ts
+│   │   │   │   └── value-objects
+│   │   │   │       ├── name-info.vo.ts
+│   │   │   │       └── role-info.vo.ts
+│   │   │   └── vendor
+│   │   │       ├── events
+│   │   │       │   ├── create-vendor.event.ts
+│   │   │       │   ├── delete-vendor.event.ts
+│   │   │       │   ├── recover-vendor.event.ts
+│   │   │       │   ├── reject-vendor.event.ts
+│   │   │       │   ├── vendor-contact-updated.event.ts
+│   │   │       │   ├── vendor-image-updated.event.ts
+│   │   │       │   ├── vendor-meta-updated.event.ts
+│   │   │       │   ├── vendor-stats-refresh-toggled.event.ts
+│   │   │       │   └── verify-vendor.event.ts
+│   │   │       ├── index.ts
+│   │   │       ├── ports
+│   │   │       │   └── i-vendor-repository.ts
+│   │   │       ├── read-models
+│   │   │       │   └── vendor-read-model.ts
+│   │   │       ├── value-objects
+│   │   │       │   ├── contact-info.vo.ts
+│   │   │       │   ├── image-info.vo.ts
+│   │   │       │   ├── stats-info.vo.ts
+│   │   │       │   └── verification-info.vo.ts
+│   │   │       └── vendor.aggregate.ts
+│   │   ├── package.json
+│   │   ├── shared
+│   │   │   └── metrics.ts
+│   │   └── value-objects
+│   │       ├── alt.vo.ts
+│   │       ├── appearance.vo.ts
+│   │       ├── ban-info.vo.ts
+│   │       ├── block-info.vo.ts
+│   │       ├── color.vo.ts
+│   │       ├── date.vo.ts
+│   │       ├── delete-info.vo.ts
+│   │       ├── description.vo.ts
+│   │       ├── effective-date.vo.ts
+│   │       ├── email.vo.ts
+│   │       ├── enum-collection.vo.ts
+│   │       ├── enum.vo.ts
+│   │       ├── expiration-date.vo.ts
+│   │       ├── icon.vo.ts
+│   │       ├── identifier-vo.ts
+│   │       ├── id.vo.ts
+│   │       ├── image-key.vo.ts
+│   │       ├── image.vo.ts
+│   │       ├── index.ts
+│   │       ├── money.vo.ts
+│   │       ├── name.vo.ts
+│   │       ├── number.vo.ts
+│   │       ├── percentage.vo.ts
+│   │       ├── phone-no.vo.ts
+│   │       ├── quantity.vo.ts
+│   │       ├── query.vo.ts
+│   │       ├── reason.vo.ts
+│   │       ├── slug.vo.ts
+│   │       ├── street-address.vo.ts
+│   │       ├── string-vo.ts
+│   │       ├── __tests__
+│   │       │   ├── supporting-value-objects.test.ts
+│   │       │   └── value-objects.test.ts
+│   │       ├── title.vo.ts
+│   │       └── url.vo.ts
+│   ├── frontend
+│   │   ├── adapters
+│   │   │   ├── auth
+│   │   │   │   ├── auth-adapter.interface.ts
+│   │   │   │   ├── auth-adapter.native.ts
+│   │   │   │   ├── auth-adapter.web.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── index.ts
+│   │   │   ├── navigation
+│   │   │   │   ├── command palette.store.ts
+│   │   │   │   ├── history stack.store.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── navigation.types.ts
+│   │   │   │   ├── page meta.store.ts
+│   │   │   │   ├── shell.store.ts
+│   │   │   │   ├── tabs.store.ts
+│   │   │   │   ├── __tests__
+│   │   │   │   │   └── navigation-stores.test.ts
+│   │   │   │   └── wizard.store.ts
+│   │   │   └── storage
+│   │   │       ├── index.ts
+│   │   │       ├── storage-adapter.interface.ts
+│   │   │       ├── storage-adapter.native.ts
+│   │   │       ├── storage-adapter.web.ts
+│   │   │       └── __tests__
+│   │   │           └── storage-adapter.test.ts
+│   │   ├── index.ts
+│   │   ├── lib
+│   │   │   ├── http-client.ts
+│   │   │   ├── http-error.ts
+│   │   │   ├── index.ts
+│   │   │   ├── query-client.ts
+│   │   │   ├── server-http.ts
+│   │   │   └── __tests__
+│   │   │       └── http-error.test.ts
+│   │   ├── modules
+│   │   │   ├── address
+│   │   │   │   ├── address.hook.ts
+│   │   │   │   ├── address.service.ts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── useAddressManager.ts
+│   │   │   ├── cart
+│   │   │   │   ├── cart.hook.ts
+│   │   │   │   ├── cart.service.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── category
+│   │   │   │   ├── category.hook.ts
+│   │   │   │   ├── category.service.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── home
+│   │   │   │   ├── home.hook.ts
+│   │   │   │   ├── home.service.ts
+│   │   │   │   └── index.ts
+│   │   │   ├── index.ts
+│   │   │   ├── inventory
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── inventory.hook.ts
+│   │   │   │   └── inventory.service.ts
+│   │   │   ├── notifications
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── notifications.hook.ts
+│   │   │   │   └── notifications.service.ts
+│   │   │   ├── order
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order.hook.ts
+│   │   │   │   └── order.service.ts
+│   │   │   ├── order-items
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order-items.hook.ts
+│   │   │   │   └── order-items.service.ts
+│   │   │   ├── order-request
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── order-request.hook.ts
+│   │   │   │   └── order-request.service.ts
+│   │   │   ├── payments
+│   │   │   │   ├── index.ts
+│   │   │   │   └── payments.service.ts
+│   │   │   ├── payouts
+│   │   │   │   ├── index.ts
+│   │   │   │   └── payouts.service.ts
+│   │   │   ├── product
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── product.hook.ts
+│   │   │   │   └── product.service.ts
+│   │   │   ├── product-variant
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── product-variant.hook.ts
+│   │   │   │   └── product-variant.service.ts
+│   │   │   ├── promotions
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── promotions.hook.ts
+│   │   │   │   └── promotions.service.ts
+│   │   │   ├── returns
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── returns.hook.ts
+│   │   │   │   └── returns.service.ts
+│   │   │   ├── review
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── review.hook.ts
+│   │   │   │   └── review.service.ts
+│   │   │   ├── shipping
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── shipping.hook.ts
+│   │   │   │   └── shipping.service.ts
+│   │   │   ├── stats
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── stats.hook.ts
+│   │   │   │   └── stats.service.ts
+│   │   │   ├── user
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── useProfileManager.ts
+│   │   │   │   ├── user.service.ts
+│   │   │   │   └── use-user.ts
+│   │   │   └── vendor
+│   │   │       ├── index.ts
+│   │   │       ├── vendor.hook.ts
+│   │   │       └── vendor.service.ts
+│   │   ├── package.json
+│   │   ├── services
+│   │   │   ├── app-settings.service.ts
+│   │   │   ├── index.ts
+│   │   │   ├── parseModalError.service.ts
+│   │   │   ├── supabaseClient.ts
+│   │   │   ├── __tests__
+│   │   │   │   └── parse-modal-error.test.ts
+│   │   │   └── theme.service.ts
+│   │   └── tsconfig.json
+│   └── shared
+│       ├── dtos
+│       │   ├── alt-schema.ts
+│       │   ├── boolean-schema.ts
+│       │   ├── clerk-id-schema.ts
+│       │   ├── color-schema.ts
+│       │   ├── date-schema.ts
+│       │   ├── description-schema.ts
+│       │   ├── email-schema.ts
+│       │   ├── icon-schema.ts
+│       │   ├── id-schema.ts
+│       │   ├── image-input-schema.ts
+│       │   ├── image-schema.ts
+│       │   ├── index.ts
+│       │   ├── money-schema.ts
+│       │   ├── name-schema.ts
+│       │   ├── phone-schema.ts
+│       │   ├── positive-number-schema.ts
+│       │   ├── rating-schema.ts
+│       │   ├── reason-schema.ts
+│       │   ├── __tests__
+│       │   │   └── base-dtos.test.ts
+│       │   ├── title-schema.ts
+│       │   └── url-schema.ts
+│       ├── index.ts
+│       ├── node_modules
+│       │   └── zod -> ../../../node_modules/.bun/zod@4.6.7/node_modules/zod
+│       ├── package.json
+│       ├── request-dtos
+│       │   ├── address
+│       │   │   ├── address-query.dto.ts
+│       │   │   ├── create-address.dto.ts
+│       │   │   ├── index.ts
+│       │   │   └── update-address.dto.ts
+│       │   ├── cart
+│       │   │   ├── add-cart-item.dto.ts
+│       │   │   ├── checkout-cart.dto.ts
+│       │   │   ├── delete-cart.dto.ts
+│       │   │   └── index.ts
+│       │   ├── category
+│       │   │   ├── block-category.dto.ts
+│       │   │   ├── create-category.dto.ts
+│       │   │   ├── delete-category.dto.ts
+│       │   │   ├── get-paginated.dto.ts
+│       │   │   ├── index.ts
+│       │   │   └── update-category.dto.ts
+│       │   ├── home
+│       │   │   ├── category.dto.ts
+│       │   │   ├── feature.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── product-container.dto.ts
+│       │   │   ├── promo.dto.ts
+│       │   │   └── slide.dto.ts
+│       │   ├── index.ts
+│       │   ├── inventory
+│       │   │   ├── buy-inventory.dto.ts
+│       │   │   ├── create-inventory.dto.ts
+│       │   │   ├── delete-inventory.dto.ts
+│       │   │   ├── drop-inventory.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── inventory-query.dto.ts
+│       │   │   └── lowStockThreshold-inventory.dto.ts
+│       │   ├── notifications
+│       │   │   ├── index.ts
+│       │   │   └── notification-query.dto.ts
+│       │   ├── order
+│       │   │   ├── buy-now-order.dto.ts
+│       │   │   ├── create-order.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── order-query.dto.ts
+│       │   │   ├── order-reason.dto.ts
+│       │   │   └── update-order.dto.ts
+│       │   ├── order-items
+│       │   │   ├── cancel-order-items.dto.ts
+│       │   │   ├── delete-order-item.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── order-items-query.dto.ts
+│       │   │   └── update-order-item.dto.ts
+│       │   ├── order-request
+│       │   │   ├── create-order-request.dto.ts
+│       │   │   ├── index.ts
+│       │   │   └── order-request-query.dto.ts
+│       │   ├── payments
+│       │   │   ├── create-payment.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── payment-action.dto.ts
+│       │   │   └── payment-query.dto.ts
+│       │   ├── payouts
+│       │   │   ├── index.ts
+│       │   │   └── payout.dto.ts
+│       │   ├── product
+│       │   │   ├── block-product.dto.ts
+│       │   │   ├── clear-ingredients.dto.ts
+│       │   │   ├── create-product.dto.ts
+│       │   │   ├── delete-product.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── product-appereance.dto.ts
+│       │   │   ├── product-discalimer.dto.ts
+│       │   │   ├── product-image.dto.ts
+│       │   │   ├── product-ingredients.dto.ts
+│       │   │   ├── product-meta.dto.ts
+│       │   │   ├── product-query.dto.ts
+│       │   │   ├── product-stock.dto.ts
+│       │   │   └── update-disclaimer.dto.ts
+│       │   ├── product-variant
+│       │   │   ├── create-product-variant.ts
+│       │   │   ├── delete-varient.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── variant-appearance.dto.ts
+│       │   │   ├── variant-meta.dto.ts
+│       │   │   ├── variant-price.dto.ts
+│       │   │   └── variant-query.dto.ts
+│       │   ├── promotions
+│       │   │   ├── coupon-query.dto.ts
+│       │   │   ├── coupon-reason.dto.ts
+│       │   │   ├── create-coupon.dto.ts
+│       │   │   ├── index.ts
+│       │   │   └── validate-coupon.dto.ts
+│       │   ├── returns
+│       │   │   ├── create-return.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── return-decision.dto.ts
+│       │   │   └── return-query.dto.ts
+│       │   ├── review
+│       │   │   ├── block-review.dto.ts
+│       │   │   ├── create-my-review.dto.ts
+│       │   │   ├── delete-review.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── report-review.dto.ts
+│       │   │   ├── review-query.dto.ts
+│       │   │   ├── update-review.dto.ts
+│       │   │   └── vendor-reply.dto.ts
+│       │   ├── shipping
+│       │   │   ├── assign-tracking.dto.ts
+│       │   │   ├── create-shipment.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── shipment-query.dto.ts
+│       │   │   └── shipment-reason.dto.ts
+│       │   ├── stats
+│       │   │   ├── index.ts
+│       │   │   └── stats-query.dto.ts
+│       │   ├── user
+│       │   │   ├── assign-role.dto.ts
+│       │   │   ├── ban-user.dto.ts
+│       │   │   ├── block-user.dto.ts
+│       │   │   ├── delete-user.dto.ts
+│       │   │   ├── extend-ban.dto.ts
+│       │   │   ├── index.ts
+│       │   │   ├── recover-user.dto.ts
+│       │   │   ├── sign-in.dto.ts
+│       │   │   ├── user-id.dto.ts
+│       │   │   └── user-query.dto.ts
+│       │   └── vendor
+│       │       ├── create-vendorDto.ts
+│       │       ├── delete-vendor.dto.ts
+│       │       ├── index.ts
+│       │       ├── recover-vendor.dto.ts
+│       │       ├── reject-vendor.dto.ts
+│       │       ├── update-stats-refresh.dto.ts
+│       │       ├── update-vendor.dto.ts
+│       │       ├── vendor-pagination.dto.ts
+│       │       ├── vendor-param.Dto.ts
+│       │       └── verify-vendor.dto.ts
+│       ├── __tests__
+│       │   ├── primitives.test.ts
+│       │   └── request-dtos.test.ts
+│       └── types
+│           ├── api-response.types.ts
+│           ├── cloudnary-image.type.ts
+│           ├── disclaimer-type.ts
+│           ├── index.ts
+│           ├── responses-read-models
+│           │   ├── address.response-read-models.ts
+│           │   ├── cart.response-read-model.ts
+│           │   ├── category.response-read-models.ts
+│           │   ├── coupon.response-read-model.ts
+│           │   ├── home.response-read-model.ts
+│           │   ├── index.ts
+│           │   ├── inventory.response-read-model.ts
+│           │   ├── notification.response-read-model.ts
+│           │   ├── order-items.response-read-model.ts
+│           │   ├── order-request.response-read-model.ts
+│           │   ├── order.response-read-model.ts
+│           │   ├── payment.response-read-model.ts
+│           │   ├── payout.response-read-model.ts
+│           │   ├── product.response-read-model.ts
+│           │   ├── product-variant.response-read-model.ts
+│           │   ├── return.response-read-model.ts
+│           │   ├── review.response-read-model.ts
+│           │   ├── shipping.response-read-model.ts
+│           │   ├── user-response-read-models.ts
+│           │   └── vendor-response-read-model.ts
+│           └── StatTypes.ts
+├── postman
+│   ├── collections
+│   │   ├── ADDRESS
+│   │   │   ├── Admin
+│   │   │   │   └── GET address admin all.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET address my id.request.yaml
+│   │   │   │   └── PATCH address my id.request.yaml
+│   │   │   ├── CREATE MY ADDRESS.request.yaml
+│   │   │   ├── DELETE MY ADDRESS.request.yaml
+│   │   │   ├── GET MY ADDRESS.request.yaml
+│   │   │   ├── RECOVER ADDRESS.request.yaml
+│   │   │   └── SET AS DEFAULT.request.yaml
+│   │   ├── CART
+│   │   │   ├── Admin
+│   │   │   │   └── DELETE cart admin id.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET cart my.request.yaml
+│   │   │   │   ├── POST cart my checkout.request.yaml
+│   │   │   │   └── POST cart my items.request.yaml
+│   │   │   └── INIT CART.request.yaml
+│   │   ├── CATEGORY
+│   │   │   ├── Admin
+│   │   │   │   ├── DELETE category admin.request.yaml
+│   │   │   │   ├── GET category admin all.request.yaml
+│   │   │   │   ├── PATCH category admin id block.request.yaml
+│   │   │   │   ├── PATCH category admin id unblock.request.yaml
+│   │   │   │   └── PATCH category admin.request.yaml
+│   │   │   ├── CRETAE CATEGORY.request.yaml
+│   │   │   ├── GET BY ID.request.yaml
+│   │   │   └── Public
+│   │   │       └── GET category.request.yaml
+│   │   ├── HEALTH
+│   │   │   └── GET health.request.yaml
+│   │   ├── HOME
+│   │   │   ├── ADD CAT.request.yaml
+│   │   │   ├── ADD PROMOS.request.yaml
+│   │   │   ├── Admin
+│   │   │   │   ├── DELETE home admin categories.request.yaml
+│   │   │   │   ├── DELETE home admin containers.request.yaml
+│   │   │   │   ├── DELETE home admin features.request.yaml
+│   │   │   │   ├── DELETE home admin promos.request.yaml
+│   │   │   │   ├── DELETE home admin slides.request.yaml
+│   │   │   │   ├── PATCH home admin categories reorder.request.yaml
+│   │   │   │   ├── PATCH home admin categories.request.yaml
+│   │   │   │   ├── PATCH home admin containers reorder.request.yaml
+│   │   │   │   ├── PATCH home admin containers.request.yaml
+│   │   │   │   ├── PATCH home admin features.request.yaml
+│   │   │   │   ├── PATCH home admin promos.request.yaml
+│   │   │   │   ├── PATCH home admin slides reorder.request.yaml
+│   │   │   │   ├── PATCH home admin slides.request.yaml
+│   │   │   │   ├── POST home admin containers.request.yaml
+│   │   │   │   ├── POST home admin features.request.yaml
+│   │   │   │   ├── POST home admin slides.request.yaml
+│   │   │   │   └── PUT home admin features.request.yaml
+│   │   │   └── GET HOME.request.yaml
+│   │   ├── INVENTORY
+│   │   │   ├── Admin
+│   │   │   │   ├── DELETE product-inventory admin id.request.yaml
+│   │   │   │   ├── GET product-inventory admin all.request.yaml
+│   │   │   │   ├── PATCH product-inventory admin id remove.request.yaml
+│   │   │   │   ├── PATCH product-inventory admin id restock.request.yaml
+│   │   │   │   ├── PATCH product-inventory admin id threshold.request.yaml
+│   │   │   │   └── POST product-inventory admin.request.yaml
+│   │   │   ├── GET INVENTORY.request.yaml
+│   │   │   ├── Public
+│   │   │   │   └── GET product-inventory variant id.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── DELETE product-inventory vendor id.request.yaml
+│   │   │       ├── GET product-inventory vendor all.request.yaml
+│   │   │       ├── GET product-inventory vendor id.request.yaml
+│   │   │       ├── PATCH product-inventory vendor id purchase.request.yaml
+│   │   │       ├── PATCH product-inventory vendor id remove.request.yaml
+│   │   │       ├── PATCH product-inventory vendor id threshold.request.yaml
+│   │   │       └── POST product-inventory vendor.request.yaml
+│   │   ├── ORDER ITEMS
+│   │   │   ├── Admin
+│   │   │   │   ├── DELETE order-items admin id.request.yaml
+│   │   │   │   ├── GET order-items admin all.request.yaml
+│   │   │   │   ├── GET order-items admin id.request.yaml
+│   │   │   │   ├── PATCH order-items admin id.request.yaml
+│   │   │   │   ├── POST order-items admin id complete.request.yaml
+│   │   │   │   ├── POST order-items admin id confirm.request.yaml
+│   │   │   │   ├── POST order-items admin id recover.request.yaml
+│   │   │   │   ├── POST order-items admin id refund.request.yaml
+│   │   │   │   └── POST order-items admin id return.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET order-items my order orderId.request.yaml
+│   │   │   │   └── POST order-items my cancel.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET order-items vendor all.request.yaml
+│   │   │       ├── GET order-items vendor id.request.yaml
+│   │   │       ├── PATCH order-items vendor id.request.yaml
+│   │   │       ├── POST order-items vendor id complete.request.yaml
+│   │   │       ├── POST order-items vendor id confirm.request.yaml
+│   │   │       ├── POST order-items vendor id refund.request.yaml
+│   │   │       └── POST order-items vendor id return.request.yaml
+│   │   ├── ORDER REQUEST
+│   │   │   ├── Admin
+│   │   │   │   ├── GET order-request admin all.request.yaml
+│   │   │   │   ├── GET order-request admin id.request.yaml
+│   │   │   │   ├── POST order-request admin id accept.request.yaml
+│   │   │   │   ├── POST order-request admin id cancel.request.yaml
+│   │   │   │   └── POST order-request admin id reject.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET order-request my id.request.yaml
+│   │   │   │   └── PATCH order-request my id cancel.request.yaml
+│   │   │   ├── CREATE ORDER REQUEST.request.yaml
+│   │   │   ├── GET ALL ORDER REQUEST.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET order-request vendor all.request.yaml
+│   │   │       ├── GET order-request vendor id.request.yaml
+│   │   │       ├── POST order-request vendor id accept.request.yaml
+│   │   │       └── POST order-request vendor id reject.request.yaml
+│   │   ├── ORDERS
+│   │   │   ├── Admin
+│   │   │   │   ├── DELETE order admin id.request.yaml
+│   │   │   │   ├── GET order admin all.request.yaml
+│   │   │   │   ├── GET order admin id.request.yaml
+│   │   │   │   ├── PATCH order admin id recover.request.yaml
+│   │   │   │   ├── PATCH order admin id.request.yaml
+│   │   │   │   ├── POST order admin id complete.request.yaml
+│   │   │   │   ├── POST order admin id confirm.request.yaml
+│   │   │   │   ├── POST order admin id refund.request.yaml
+│   │   │   │   └── POST order admin id return.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET order my id.request.yaml
+│   │   │   │   ├── GET order my.request.yaml
+│   │   │   │   ├── POST order my buy-now.request.yaml
+│   │   │   │   ├── POST order my id cancel.request.yaml
+│   │   │   │   ├── POST order my id retry-item.request.yaml
+│   │   │   │   ├── POST order my id retry-items.request.yaml
+│   │   │   │   └── POST order my.request.yaml
+│   │   │   ├── CANCEL REQUEST.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET order vendor all.request.yaml
+│   │   │       ├── GET order vendor id.request.yaml
+│   │   │       ├── POST order vendor id complete.request.yaml
+│   │   │       ├── POST order vendor id confirm.request.yaml
+│   │   │       ├── POST order vendor id refund.request.yaml
+│   │   │       └── POST order vendor id return.request.yaml
+│   │   ├── PAYMENTS
+│   │   │   ├── Admin
+│   │   │   │   ├── GET payment admin all.request.yaml
+│   │   │   │   └── POST payment admin id refund.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET payment my all.request.yaml
+│   │   │   │   ├── POST payment my id capture.request.yaml
+│   │   │   │   └── POST payment my.request.yaml
+│   │   │   └── POST payment webhook provider.request.yaml
+│   │   ├── PAYOUTS
+│   │   │   ├── Admin
+│   │   │   │   ├── GET payout admin all.request.yaml
+│   │   │   │   └── POST payout admin id mark-paid.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET payout vendor me balance.request.yaml
+│   │   │       └── POST payout vendor me.request.yaml
+│   │   ├── PRODUCTS
+│   │   │   ├── ADD MY DISCLAIMER.request.yaml
+│   │   │   ├── ADD MY IMAGES.request.yaml
+│   │   │   ├── ADD MY INGREDIANTS.request.yaml
+│   │   │   ├── Admin
+│   │   │   │   └── GET product admin all.request.yaml
+│   │   │   ├── BLOCK PRODUCT.request.yaml
+│   │   │   ├── CREATE MY PRODUCT.request.yaml
+│   │   │   ├── DEFAULT IMAGE.request.yaml
+│   │   │   ├── GET PRODUCT.request.yaml
+│   │   │   ├── GET RELATED.request.yaml
+│   │   │   ├── PRODUCT MY APPEREANCE.request.yaml
+│   │   │   ├── QUERY PRODUCT.request.yaml
+│   │   │   ├── RECOVER MY PRODUCT.request.yaml
+│   │   │   ├── REMOVE MY DISCLAIMER.request.yaml
+│   │   │   ├── REMOVE MY IMAGES.request.yaml
+│   │   │   ├── REMOVE  MY INGREDIANTS.request.yaml
+│   │   │   ├── S-DELETE MY PRODUCT.request.yaml
+│   │   │   ├── TOGGLE MY DISCLAIMER.request.yaml
+│   │   │   ├── TOGGLE MY INGREDIENTS.request.yaml
+│   │   │   ├── UN BLOCK PRODUCT.request.yaml
+│   │   │   ├── UPDATE MY META.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET product vendor all.request.yaml
+│   │   │       ├── PATCH product vendor disclaimer update.request.yaml
+│   │   │       ├── PATCH product vendor ingredients clear.request.yaml
+│   │   │       ├── PATCH product vendor state private.request.yaml
+│   │   │       └── PATCH product vendor stock.request.yaml
+│   │   ├── PRODUCT-VARIENTS
+│   │   │   ├── ADD VARIENTS.request.yaml
+│   │   │   ├── Admin
+│   │   │   │   └── GET product-variant admin all.request.yaml
+│   │   │   ├── GET VARIANTS BY PRODUCT.request.yaml
+│   │   │   ├── GET VARIENTS.request.yaml
+│   │   │   ├── RECOVER VARIANT.request.yaml
+│   │   │   ├── SOFT DELETE VARIENTS.request.yaml
+│   │   │   ├── TOGGLE VARIANT APPEREANCE.request.yaml
+│   │   │   ├── UPDATE VARIANTS META.request.yaml
+│   │   │   ├── UPDATE VARIANTS PRICE.request.yaml
+│   │   │   └── Vendor
+│   │   │       └── GET product-variant vendor all.request.yaml
+│   │   ├── REVIEW
+│   │   │   ├── Admin
+│   │   │   │   ├── GET review admin all.request.yaml
+│   │   │   │   ├── PATCH review admin id block.request.yaml
+│   │   │   │   └── PATCH review admin id unblock.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── DELETE review my id.request.yaml
+│   │   │   │   ├── GET review my.request.yaml
+│   │   │   │   ├── PATCH review my id.request.yaml
+│   │   │   │   ├── POST review my id dislike.request.yaml
+│   │   │   │   ├── POST review my id like.request.yaml
+│   │   │   │   ├── POST review my id report.request.yaml
+│   │   │   │   └── POST review my.request.yaml
+│   │   │   ├── Public
+│   │   │   │   ├── GET review id.request.yaml
+│   │   │   │   ├── GET review product id.request.yaml
+│   │   │   │   └── GET review.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET review vendor all.request.yaml
+│   │   │       └── POST review vendor id reply.request.yaml
+│   │   ├── STATS
+│   │   │   ├── Admin
+│   │   │   │   ├── GET stats admin aggregate entityType.request.yaml
+│   │   │   │   ├── GET stats admin aggregate entityType timeseries.request.yaml
+│   │   │   │   ├── GET stats admin category entityId overview.request.yaml
+│   │   │   │   ├── GET stats admin entityType paginated.request.yaml
+│   │   │   │   ├── GET stats admin entityType top.request.yaml
+│   │   │   │   ├── GET stats admin product entityId overview.request.yaml
+│   │   │   │   ├── GET stats admin settings.request.yaml
+│   │   │   │   ├── GET stats admin vendor entityId overview.request.yaml
+│   │   │   │   ├── PATCH stats admin settings.request.yaml
+│   │   │   │   └── POST stats admin denormalize.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   ├── GET stats entity entityType entityId lifetime.request.yaml
+│   │   │   │   └── GET stats entity entityType entityId timeseries.request.yaml
+│   │   │   ├── Public
+│   │   │   │   ├── GET stats _health.request.yaml
+│   │   │   │   ├── POST stats public categories categoryId view.request.yaml
+│   │   │   │   ├── POST stats public pages pageKey view.request.yaml
+│   │   │   │   ├── POST stats public products productId click.request.yaml
+│   │   │   │   └── POST stats public products productId view.request.yaml
+│   │   │   └── Vendor
+│   │   │       ├── GET stats vendor me force-update usage.request.yaml
+│   │   │       ├── GET stats vendor me overview.request.yaml
+│   │   │       └── POST stats vendor me force-update.request.yaml
+│   │   ├── USERS
+│   │   │   ├── ASSIGN ROLE.request.yaml
+│   │   │   ├── BAN USER.request.yaml
+│   │   │   ├── BLOCK USER.request.yaml
+│   │   │   ├── Buyer
+│   │   │   │   └── DELETE users my.request.yaml
+│   │   │   ├── EXTEND BAN.request.yaml
+│   │   │   ├── GET ME.request.yaml
+│   │   │   ├── GET USER.request.yaml
+│   │   │   ├── QUERY USERS.request.yaml
+│   │   │   ├── RECOVER USER.request.yaml
+│   │   │   ├── SHORTEN BAN.request.yaml
+│   │   │   ├── SIGNUP USER.request.yaml
+│   │   │   ├── SOFT DELETE.request.yaml
+│   │   │   ├── UNBAN USER.request.yaml
+│   │   │   └── UNBLOCK USER.request.yaml
+│   │   └── VENDOR
+│   │       ├── Admin
+│   │       │   ├── GET vendor admin all.request.yaml
+│   │       │   └── GET vendor admin id.request.yaml
+│   │       ├── Buyer
+│   │       │   ├── PATCH vendor me contact.request.yaml
+│   │       │   ├── PATCH vendor me image.request.yaml
+│   │       │   ├── PATCH vendor me meta.request.yaml
+│   │       │   └── PATCH vendor me stats-refresh.request.yaml
+│   │       ├── CREATE MY VENDOR.request.yaml
+│   │       ├── GET MY VENDOR.request.yaml
+│   │       ├── GET VENDOR.request.yaml
+│   │       ├── QUERY VENDOR.request.yaml
+│   │       ├── RECOVER VENDOR.request.yaml
+│   │       ├── SOFT DELETE MY VENDOR.request.yaml
+│   │       ├── SOFT DELETE.request.yaml
+│   │       ├── UN VERIFY VENDOR.request.yaml
+│   │       └── VERIFY VENDOR.request.yaml
+│   ├── environments
+│   │   └── New Environment.environment.yaml
+│   ├── globals
+│   │   └── workspace.globals.yaml
+│   └── skills
+│       ├── ai-readiness
+│       │   └── SKILL.md
+│       ├── api-discovery
+│       │   ├── reference
+│       │   │   └── orbit.md
+│       │   └── SKILL.md
+│       ├── api-documentation
+│       │   ├── reference
+│       │   │   └── rest-api-best-practices.md
+│       │   └── SKILL.md
+│       ├── api-engineer
+│       │   └── SKILL.md
+│       ├── api-mocking
+│       │   └── SKILL.md
+│       ├── api-monitoring
+│       │   └── SKILL.md
+│       ├── api-simulation
+│       │   ├── reference
+│       │   │   ├── context_file.md
+│       │   │   └── sim_yaml_schema.md
+│       │   └── SKILL.md
+│       ├── api-testing
+│       │   └── SKILL.md
+│       ├── application-testing
+│       │   └── SKILL.md
+│       ├── ci-integration
+│       │   └── SKILL.md
+│       ├── cli-install
+│       │   └── SKILL.md
+│       ├── collection-schema-v3
+│       │   ├── reference
+│       │   │   ├── environment.md
+│       │   │   ├── globals.md
+│       │   │   ├── http.md
+│       │   │   └── other_protocols.md
+│       │   └── SKILL.md
+│       ├── datasets
+│       │   ├── reference
+│       │   │   ├── schema.md
+│       │   │   └── spreadsheets.md
+│       │   └── SKILL.md
+│       ├── flows
+│       │   ├── reference
+│       │   │   └── flow_cli_flags.md
+│       │   └── SKILL.md
+│       ├── performance-testing
+│       │   ├── references
+│       │   │   ├── gatling-import
+│       │   │   │   ├── feeders.md
+│       │   │   │   ├── injection.md
+│       │   │   │   ├── mapping.md
+│       │   │   │   ├── README.md
+│       │   │   │   └── unsupported.md
+│       │   │   └── jmeter-import
+│       │   │       ├── import-report.md
+│       │   │       ├── mapping-table.md
+│       │   │       ├── postman-perf-capabilities.md
+│       │   │       ├── README.md
+│       │   │       └── script-translation.md
+│       │   └── SKILL.md
+│       ├── postman-mcp-server
+│       │   ├── references
+│       │   │   ├── docs.md
+│       │   │   ├── learn.md
+│       │   │   ├── mcp-limitations.md
+│       │   │   ├── mock.md
+│       │   │   ├── search.md
+│       │   │   ├── security.md
+│       │   │   ├── setup.md
+│       │   │   ├── sync.md
+│       │   │   └── test.md
+│       │   └── SKILL.md
+│       ├── variables
+│       │   └── SKILL.md
+│       ├── webhook-testing
+│       │   ├── reference
+│       │   │   ├── forwarding.md
+│       │   │   ├── outbound_webhooks.md
+│       │   │   └── webhook_scripts.md
+│       │   └── SKILL.md
+│       └── workspaces
+│           └── SKILL.md
+├── PROJECT_DOCUMENTATION.md
+├── README.md
+├── scripts
+│   └── arch-check.ts
+├── TODO.md
+├── tree.txt
+└── tsconfig.json
+
+443 directories, 1360 files
