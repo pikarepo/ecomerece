@@ -39,7 +39,7 @@ export class CartRepository extends MongoRepository<CartPersistence> implements 
   }
 
   async Save(cart: CartAggregate): Promise<void> {
-    const data = CartMapper.aggregateToPersistence(cart);
+    const { version: _version, ...data } = CartMapper.aggregateToPersistence(cart);
 
     const result = await super.updateOne(
       {

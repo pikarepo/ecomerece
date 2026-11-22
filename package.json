@@ -12,6 +12,8 @@
     "typecheck": "bun run --filter '*' typecheck",
     "test": "bun test --path-ignore-patterns '**/apps/e2e/**/*.spec.ts'",
     "test:watch": "bun test --watch --path-ignore-patterns '**/apps/e2e/**/*.spec.ts'",
+    "test:integration": "INTEGRATION_TESTS=1 bun test --cwd apps/api --isolate --test-name-pattern \"API database integration\" modules",
+    "count": "bun run scripts/count.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:staging": "E2E_TARGET=staging playwright test",

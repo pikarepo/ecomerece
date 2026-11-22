@@ -50,7 +50,7 @@ export class ShipmentRepository
   }
 
   async Save(shipment: ShipmentAggregate): Promise<void> {
-    const data = ShipmentMapper.aggregateToPersistence(shipment);
+    const { version: _version, ...data } = ShipmentMapper.aggregateToPersistence(shipment);
 
     const result = await super.updateOne(
       {

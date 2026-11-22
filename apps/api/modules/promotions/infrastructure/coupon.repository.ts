@@ -46,7 +46,7 @@ export class CouponRepository
   }
 
   async Save(coupon: CouponAggregate): Promise<void> {
-    const data = CouponMapper.aggregateToPersistence(coupon);
+    const { version: _version, ...data } = CouponMapper.aggregateToPersistence(coupon);
 
     const result = await super.updateOne(
       { _id: coupon.id.value, version: coupon.version.value },

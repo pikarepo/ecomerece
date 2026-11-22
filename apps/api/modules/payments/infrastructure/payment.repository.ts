@@ -46,7 +46,7 @@ export class PaymentRepository
   }
 
   async Save(payment: PaymentAggregate): Promise<void> {
-    const data = PaymentMapper.aggregateToPersistence(payment);
+    const { version: _version, ...data } = PaymentMapper.aggregateToPersistence(payment);
     const result = await super.updateOne(
       { _id: payment.id.value, version: payment.version.value },
       { $set: data, $inc: { version: 1 } },

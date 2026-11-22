@@ -46,7 +46,7 @@ export class ReturnRepository
   }
 
   async Save(request: ReturnRequestAggregate): Promise<void> {
-    const data = ReturnMapper.aggregateToPersistence(request);
+    const { version: _version, ...data } = ReturnMapper.aggregateToPersistence(request);
 
     const result = await super.updateOne(
       { _id: request.id.value, version: request.version.value },

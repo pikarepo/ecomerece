@@ -57,7 +57,7 @@ export class PayoutRepository
     await super.create(new PayoutModel(PayoutMapper.payoutToPersistence(payout)));
   }
   async Save(payout: PayoutAggregate) {
-    const data = PayoutMapper.payoutToPersistence(payout);
+    const { version: _version, ...data } = PayoutMapper.payoutToPersistence(payout);
     const res = await super.updateOne(
       { _id: payout.id.value, version: payout.version.value },
       { $set: data, $inc: { version: 1 } },

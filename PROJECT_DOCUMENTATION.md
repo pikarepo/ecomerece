@@ -136,6 +136,7 @@ bun run lint             # Next.js ESLint (apps/web only)
 bun run format           # biome format apps/web apps/e2e packages (write)
 bun test                 # bun:test suite; bunfig.toml excludes Playwright specs
 bun run test:watch       # watch mode
+bun run test:integration # gated DB integration suite; requires API MONGO_URI
 bun run build            # build api (bun build) then next build
 bun run playwright:install # install Chromium for Playwright
 bun run test:e2e         # Playwright API smoke specs (local target)
@@ -1732,15 +1733,12 @@ against a database you care about, and never point them at production.
 
 ### 20.1 Unit tests
 
-`bun test` runs 540 tests across 43 files (last verified run on 2026-11-21, all passing) using
-`bun:test`. They concentrate on pure domain behaviour (value objects, aggregates,
-`FanOut`/`TimeWindows` stat expansion, image-storage errors, stats denormalization handlers) plus the
-order post-commit event ordering, order ↔ inventory transitions, item retries, reservation reason
-mapping, and order-item update/restore matching
-(`apps/api/modules/{order,order-items,inventory}/application/__tests__/`). There is no HTTP
-integration harness or test database (the order transaction smoke needs a MongoDB replica set).
-`bunfig.toml` sets `pathIgnorePatterns = ["apps/e2e/**"]`, so Playwright specs are never picked up by
-Bun's test runner.
+`bun test` runs 626 tests across 63 files (last verified run on 2026-11-22: 540 pass, 86 skip, 0 fail)
+using `bun:test`. They concentrate on pure domain behaviour (value objects, aggregates,
+`FanOut`/`TimeWindows` stat expansion, image-storage errors, stats denormalization handlers) plus
+DTO validation and middleware/service tests with fake ports. The 46 skipped cases are the gated API
+database integration suite in §20.2. `bunfig.toml` sets `pathIgnorePatterns = ["apps/e2e/**"]`, so
+Playwright specs are never picked up by Bun's test runner.
 
 ```bash
 bun test                         # all bun:test files
@@ -1750,10 +1748,54 @@ bun run test:watch               # watch mode
 ```
 
 Because buses are created by `createApplication()` in `apps/api/composition-root.ts`, an integration
-test can instantiate the whole graph (passing stub env vars) or call a single module factory with
-fake deps; importing routes is no longer needed to register handlers.
+test can instantiate the whole graph or call a single module factory with fake deps; importing routes
+is no longer needed to register handlers.
 
-### 20.2 Playwright API smoke suite
+### 20.2 API database integration suite
+
+`apps/api/testing/api-integration-harness.ts` builds the real Hono route table with `app.request()`,
+connects to the API's configured MongoDB, mocks only Redis and Supabase, initializes buyer/vendor/admin
+users through `/users/init`, and seeds catalog/order rows through existing API routes. Tests assert
+persisted documents through Mongoose models, published events through the in-memory event bus, and
+clean up only IDs they created. The `image-storage` module is infrastructure-only with no API or DB
+surface, so it has no integration file.
+
+The suite is gated by `INTEGRATION_TESTS=1` and is skipped by plain `bun test`. Event handlers are
+suppressed by default; notifications, payouts, and stats opt into dispatch where handler side effects
+are the behaviour under test. It uses the existing `MONGO_URI` from `apps/api/.env`, requires a replica
+set, and never drops the database or clears collections.
+
+| Module | Integration file | Coverage |
+|---|---|---|
+| address | `address-db.integration.test.ts` | create, set default |
+| cart | `cart-db.integration.test.ts` | provision, add, checkout, rollback |
+| category | `category-db.integration.test.ts` | create, update, block/unblock |
+| home | `home-db.integration.test.ts` | add category, add slide |
+| inventory | `inventory-db.integration.test.ts` | stock lifecycle, duplicate variant, public lookup |
+| notifications | `notifications-db.integration.test.ts` | event-created notification, mark read |
+| order | `order-create-db.integration.test.ts` | success, duplicate key, insufficient-stock rollback |
+| order-items | `order-items-db.integration.test.ts` | confirm/complete/return/refund/cancel transitions |
+| order-request | `order-request-db.integration.test.ts` | accept/reject/cancel cascades |
+| payouts | `payouts-db.integration.test.ts` | ledger capture, request, mark paid, cancel reversal |
+| payments | `payments-db.integration.test.ts` | create, authorize, capture |
+| product | `product-db.integration.test.ts` | create, metadata/stock update |
+| product-variant | `product-variant-db.integration.test.ts` | pricing, soft delete |
+| promotions | `promotions-db.integration.test.ts` | coupon create, deactivate/reactivate |
+| returns | `returns-db.integration.test.ts` | request, approve, shipped-back, received |
+| reviews | `reviews-db.integration.test.ts` | verified review, like, vendor reply |
+| shipping | `shipping-db.integration.test.ts` | create, tracking, dispatch, deliver |
+| stats | `stats-db.integration.test.ts` | view/click beacons, order-item event stats |
+| user | `user-db.integration.test.ts` | self read, admin block/lift |
+| vendor | `vendor-db.integration.test.ts` | metadata, stats refresh toggle |
+
+`bun run test:integration` ran 46 tests across 20 suites on 2026-11-22: 46 pass, 0 fail,
+966 `expect()` calls.
+
+```bash
+bun run test:integration
+```
+
+### 20.3 Playwright API smoke suite
 
 Playwright specs live in `apps/e2e/specs/api/` and are discovered from the root
 `playwright.config.ts`. The current starter set is API-only:

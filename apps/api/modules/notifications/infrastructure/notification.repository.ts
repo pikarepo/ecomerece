@@ -33,7 +33,7 @@ export class NotificationRepository
   }
 
   async Save(notification: NotificationAggregate): Promise<void> {
-    const data = NotificationMapper.aggregateToPersistence(notification);
+    const { version: _version, ...data } = NotificationMapper.aggregateToPersistence(notification);
 
     const result = await super.updateOne(
       { _id: notification.id.value, version: notification.version.value },
