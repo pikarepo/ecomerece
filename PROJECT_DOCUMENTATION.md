@@ -122,7 +122,7 @@ Path aliases (root `tsconfig.json`):
 | Images | Cloudinary (server upload, `IMAGE_STORAGE_PROVIDER`) |
 | Formatting | Biome |
 | Linting | Next.js ESLint config, `apps/web` only |
-| Tests | `bun:test` (540 tests across 43 files at last verified run); Playwright API smoke specs (3) |
+| Tests | `bun:test` (626 tests across 63 files at last verified run); Playwright API read/write specs (133 tests across 15 files, including a route-coverage rule) |
 
 ---
 
@@ -1795,20 +1795,42 @@ set, and never drops the database or clears collections.
 bun run test:integration
 ```
 
-### 20.3 Playwright API smoke suite
+### 20.3 Playwright API read/write suite
 
 Playwright specs live in `apps/e2e/specs/api/` and are discovered from the root
-`playwright.config.ts`. The current starter set is API-only:
+`playwright.config.ts`. The suite is API-only. Read specs check list endpoints directly and detail
+endpoints with IDs taken from those lists. Write specs create disposable catalog/order/payment/
+shipment/payout fixtures, exercise command routes, and unwind tracked IDs in reverse order.
 
 | Spec | Coverage | Requirement |
 |---|---|---|
 | `health.spec.ts` | `GET /health` returns `{ success: true, message: 'OK' }` | none |
+| `catalog.spec.ts` | public product, variant, inventory, review, category, vendor, home, and stats-health reads | none |
 | `buyer.spec.ts` | `GET /users/my` returns a `UserResponseReadModel` | buyer access token |
+| `buyer-modules.spec.ts` | buyer-owned review, order, item, payment, cart, request, address, shipment, return, and notification reads | buyer access token |
+| `vendor-modules.spec.ts` | vendor-scoped product, variant, review, inventory, order, item, request, shipment, return, payout, vendor, and stats reads | vendor access token |
 | `admin.spec.ts` | `GET /users/admin/all?limit=10` returns a cursor page | admin access token |
+| `admin-modules.spec.ts` | admin-scoped product, variant, review, inventory, order, payment, payout, item, request, category, address, user, vendor, shipment, return, and promotion reads | admin access token |
+| `stats.spec.ts` | raw admin stats and masked authenticated entity stats | admin/buyer access token |
+| `catalog-write.spec.ts` | vendor product/variant detail and lifecycle writes, admin category/home writes, promotion writes, vendor profile restoration | admin/vendor/buyer access tokens |
+| `buyer-commerce-write.spec.ts` | user init, address, cart, order, payment, order-request, review, return, and admin order/user writes | admin/vendor/buyer access tokens |
+| `ops-write.spec.ts` | inventory, shipment, notification, payout, and stats writes | admin/vendor/buyer access tokens |
+| `catalog-gaps.spec.ts` | product recovery, ingredient removal, and inventory vendor/admin writes | admin/vendor access tokens |
+| `order-gaps.spec.ts` | direct purchase, retries, order/item status transitions, and order-request decisions | admin/vendor/buyer access tokens |
+| `account-gaps.spec.ts` | address default, user delete, vendor lifecycle, notification read-all, stats settings, and review delete | admin/vendor/buyer access tokens |
+| `ops-gaps.spec.ts` | payment webhook/refund, payout decisions, cart delete, shipment/return transitions | admin/vendor/buyer access tokens |
+| `route-coverage.spec.ts` | fails when a registered API route has no E2E call in the suite | none |
 
-The authenticated specs call `test.skip` when no token is configured, so a bare local run executes
-only `health.spec.ts`. At the last verified run, all 3 specs were listed and `health.spec.ts`
-passed; buyer/admin execution still requires Supabase refresh tokens.
+`route-coverage.spec.ts` is the endpoint-coverage rule: it reads the mounted route registry, extracts
+every registered method/path pair, and fails if no E2E source calls that endpoint. Dynamic table
+cases declare their endpoint key explicitly so generated calls still count. A quoted key such as
+`'POST /order/admin/:id/confirm'` is also accepted by the rule.
+
+Every role-gated spec calls `test.skip` when no token is configured, so a bare local run executes
+the public health, catalog, and route-coverage specs. At the last verified run, 133 tests were
+listed across 15 files: 16 passed and 117 skipped. Authenticated execution requires the Supabase
+refresh tokens described below. Irreversible write specs additionally require
+`E2E_ALLOW_IRREVERSIBLE_WRITES=true`.
 
 ```bash
 bun run playwright:install
@@ -1831,13 +1853,14 @@ Specs import `test` / `expect` from `apps/e2e/fixtures/index.ts`, not directly f
 | `api` | `APIRequestContext` for the buyer token (or `E2E_API_TOKEN` override) |
 | `apiAs(role)` | API-only context for `buyer`, `vendor`, or `admin`; disposed after the test |
 | `canAuthenticateAs(role)` | lets specs skip when a role token is unavailable |
+| `cleanup` | `CleanupRegistry` that unwinds tracked write fixtures after the test |
 | `loginAs(role)` | browser context, page, and API context for a role; disposed after the test |
 | `apiRoutes`, `webRoutes` | URL constants copied from the real routes |
 
-Envelope helpers live in `apps/e2e/api/envelope.ts`: `expectOk`, `expectError`, and `expectPaginated`.
-`expectPaginated` asserts the cursor meta actually returned by the API
-(`nextCursor`, `prevCursor`, `hasMore`); it does not use the offset-only `PaginationMeta` in
-`packages/shared`.
+Response helpers live in `apps/e2e/api/envelope.ts`: `expectOk`, `expectRawOk`, `expectError`, and
+`expectPaginated`. `expectPaginated` unwraps the API's nested `{ success, data: { data, meta } }`
+response and asserts the cursor meta actually returned by the API (`nextCursor`, `prevCursor`,
+`hasMore`); it does not use the offset-only `PaginationMeta` in `packages/shared`.
 
 ---
 
@@ -1894,6 +1917,7 @@ Read in `apps/e2e/config/env.ts`; env values are trimmed and empty values are tr
 | `E2E_SUPABASE_REFRESH_TOKEN_VENDOR` | vendor session | optional; stored token file is used when unset |
 | `E2E_SUPABASE_REFRESH_TOKEN_ADMIN` | admin session | optional; stored token file is used when unset |
 | `E2E_API_TOKEN` | all API request contexts | overrides stored access tokens for every role |
+| `E2E_ALLOW_IRREVERSIBLE_WRITES` | write specs | `true` enables payment capture, payout balance, stats quota, review/return, and user-account mutation specs |
 | `E2E_AUTH_DIR` | auth artifact directory | default `apps/e2e/.auth`, resolved from the repo root |
 | `CI` | reporter, retries, workers, server reuse | `true` enables GitHub reporter, 2 retries, 1 worker |
 
@@ -1948,10 +1972,11 @@ These are real issues observed in the code, not TODOs invented for this document
 
 **Testing**
 
-- Playwright API specs are smoke-level: they assert envelopes and authenticated/admin access, not
-  business flows or database state. There is still no seeded test database.
-- `buyer.spec.ts` and `admin.spec.ts` skip without role tokens; a passing local run does not prove
-  Supabase auth or admin access.
+- Playwright API specs now cover every registered read endpoint, but remain smoke-level: they assert
+  response shapes and access, not business flows or database state. There is still no seeded test
+  database, and write endpoints are not exercised.
+- Role-gated specs skip without tokens; a passing local run does not prove Supabase auth, vendor
+  access, admin access, or stats masking.
 - `bun test` and Playwright are separate suites. `bunfig.toml` excludes `apps/e2e/**` from Bun, and
   Playwright only discovers `apps/e2e/specs/**/*.spec.ts`.
 
@@ -2121,8 +2146,8 @@ Not applied — needs a decision:
   disagrees with the collection is worse than no catalog, because both look authoritative.
 - Keep credentials out of `postman/environments/*`: use Postman secrets or an ignored environment.
   A committed secret cannot be reviewed or rotated safely.
-- Verified against the tree on 2026-11-21: 15 module folders (14 of them mount HTTP routes), 13
+- Verified against the tree on 2026-11-22: 21 module folders (20 of them mount HTTP routes), 13
   Mongoose models, 208 mounted routes + `/health`, 13 aggregates, 129 event classes, 19 contract
-  ports, 197 SDK hooks, 27 web pages, 540 `bun:test` tests across 43 files, and 3 Playwright API
-  smoke specs.
+  ports, 197 SDK hooks, 27 web pages, 626 `bun:test` tests across 63 files, and 59 Playwright API
+  smoke tests across 8 files.
 

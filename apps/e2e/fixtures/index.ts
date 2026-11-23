@@ -1,4 +1,5 @@
 import { expect, test as base, type APIRequestContext } from '@playwright/test';
+import { CleanupRegistry } from '../api/cleanup';
 import { hasRoleAccessToken } from '../auth/artifacts';
 import type { E2ERole } from '../auth/roles';
 import { env } from '../config/env';
@@ -14,8 +15,14 @@ import {
 
 type E2EFixtures = {
   api: APIRequestContext;
+  admin: APIRequestContext;
+  buyer: APIRequestContext;
+  vendor: APIRequestContext;
+  /** No Authorization header at all: the attacker's starting point. */
+  anonymous: APIRequestContext;
   apiAs: (role: E2ERole) => Promise<APIRequestContext>;
   canAuthenticateAs: (role: E2ERole) => Promise<boolean>;
+  cleanup: CleanupRegistry;
   webRoutes: typeof webRoutes;
   apiRoutes: typeof apiRoutes;
   loginAs: (role: E2ERole) => Promise<RoleSession>;
@@ -25,6 +32,29 @@ export const test = base.extend<E2EFixtures>({
   api: async ({ playwright }, use) => {
     const createContext: ApiContextFactory = (options) => playwright.request.newContext(options);
     const context = await createDefaultApiContext(createContext);
+    await use(context);
+    await context.dispose();
+  },
+  admin: async ({ playwright }, use) => {
+    const createContext: ApiContextFactory = (options) => playwright.request.newContext(options);
+    const context = await createRoleApiContext(createContext, 'admin');
+    await use(context);
+    await context.dispose();
+  },
+  buyer: async ({ playwright }, use) => {
+    const createContext: ApiContextFactory = (options) => playwright.request.newContext(options);
+    const context = await createRoleApiContext(createContext, 'buyer');
+    await use(context);
+    await context.dispose();
+  },
+  vendor: async ({ playwright }, use) => {
+    const createContext: ApiContextFactory = (options) => playwright.request.newContext(options);
+    const context = await createRoleApiContext(createContext, 'vendor');
+    await use(context);
+    await context.dispose();
+  },
+  anonymous: async ({ playwright }, use) => {
+    const context = await playwright.request.newContext({ baseURL: env.apiURL });
     await use(context);
     await context.dispose();
   },
@@ -40,8 +70,19 @@ export const test = base.extend<E2EFixtures>({
   },
   canAuthenticateAs: async ({}, use) => {
     await use(
-      async (role: E2ERole) => env.apiToken !== undefined || (await hasRoleAccessToken(role)),
+      async (role: E2ERole) =>
+        env.apiTokens[role] !== undefined || (await hasRoleAccessToken(role)),
     );
+  },
+  cleanup: async ({ api, admin, buyer, vendor, apiAs }, use) => {
+    void api;
+    void admin;
+    void buyer;
+    void vendor;
+    void apiAs;
+    const registry = new CleanupRegistry();
+    await use(registry);
+    await registry.dispose();
   },
   webRoutes: async ({}, use) => {
     await use(webRoutes);

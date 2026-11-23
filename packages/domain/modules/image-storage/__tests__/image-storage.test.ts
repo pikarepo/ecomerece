@@ -127,3 +127,131 @@ describe('ImageStorageError hierarchy', () => {
     expect(new ImageStorageError('boom').status).toBe(502);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile image transforms', () => {
+  it('DOM-H3-CONTROL keeps finite transform inputs valid', () => {
+    const transform = ImageTransform.create({
+      width: 400,
+      height: 300,
+      quality: 80,
+      blur: 2,
+      sharpen: 3,
+    });
+
+    expect(transform.width).toBe(400);
+    expect(transform.height).toBe(300);
+    expect(transform.quality).toBe(80);
+  });
+
+  it.failing('DOM-H3 create accepts NaN width, quality, blur and sharpen', () => {
+    expect(ImageTransform.create({ width: 400, quality: 80 }).width).toBe(400);
+    const exploit = ImageTransform.create({
+      width: Number.NaN,
+      quality: Number.NaN,
+      blur: Number.NaN,
+      sharpen: Number.NaN,
+    }).toObject();
+
+    domainEvidence('H3', {
+      width: String(exploit.width),
+      quality: String(exploit.quality),
+      blur: String(exploit.blur),
+      sharpen: String(exploit.sharpen),
+    });
+    expect(() =>
+      ImageTransform.create({
+        width: Number.NaN,
+        quality: Number.NaN,
+        blur: Number.NaN,
+        sharpen: Number.NaN,
+      }),
+    ).toThrow(ImageInvalidKeyError);
+  });
+
+  it.failing('DOM-H3 create accepts an infinite width', () => {
+    expect(ImageTransform.create({ height: 300 }).height).toBe(300);
+    const exploit = ImageTransform.create({ width: Number.POSITIVE_INFINITY }).toObject();
+
+    domainEvidence('H3-INF', { width: String(exploit.width) });
+    expect(() => ImageTransform.create({ width: Number.POSITIVE_INFINITY })).toThrow(
+      ImageInvalidKeyError,
+    );
+  });
+
+  it('DOM-H3-CONTROL create already rejects an infinite quality', () => {
+    const exploit = (() => {
+      try {
+        ImageTransform.create({ quality: Number.POSITIVE_INFINITY });
+        return 'accepted';
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    })();
+
+    domainEvidence('H3-INF-QUALITY', { exploit });
+    expect(() => ImageTransform.create({ quality: Number.POSITIVE_INFINITY })).toThrow(
+      ImageInvalidKeyError,
+    );
+  });
+
+  it.failing('DOM-H3 create accepts NaN crop dimensions', () => {
+    expect(ImageTransform.create({ crop: { x: 0, y: 0, width: 10, height: 10 } }).crop?.width).toBe(
+      10,
+    );
+    const exploit = ImageTransform.create({
+      crop: { x: 0, y: 0, width: Number.NaN, height: 10 },
+    }).toObject();
+
+    domainEvidence('H3-CROP', { width: String(exploit.crop?.width), height: exploit.crop?.height });
+    expect(() =>
+      ImageTransform.create({ crop: { x: 0, y: 0, width: Number.NaN, height: 10 } }),
+    ).toThrow(ImageInvalidKeyError);
+  });
+});
+
+describe('hostile image metadata', () => {
+  const validProps = {
+    key: ImageKey.create('images', 'a.jpg'),
+    sizeBytes: 2048,
+    contentType: 'image/jpeg',
+    width: 800,
+    height: 600,
+  };
+
+  it('DOM-H4-CONTROL keeps positive metadata valid', () => {
+    expect(ImageMetadata.create(validProps).sizeBytes).toBe(2048);
+  });
+
+  it.failing('DOM-H4 create accepts negative size and dimensions', () => {
+    expect(ImageMetadata.create(validProps).width).toBe(800);
+    const exploit = ImageMetadata.create({
+      ...validProps,
+      sizeBytes: -1,
+      width: -800,
+      height: -600,
+    });
+
+    domainEvidence('H4-CREATE', {
+      sizeBytes: exploit.sizeBytes,
+      width: exploit.width,
+      height: exploit.height,
+    });
+    expect(() =>
+      ImageMetadata.create({ ...validProps, sizeBytes: -1, width: -800, height: -600 }),
+    ).toThrow(ImageInvalidKeyError);
+  });
+
+  it.failing('DOM-H4 rehydrate accepts negative size and dimensions', () => {
+    expect(ImageMetadata.rehydrate(validProps).sizeBytes).toBe(2048);
+    const exploit = ImageMetadata.rehydrate({ ...validProps, sizeBytes: -1, width: -800 });
+
+    domainEvidence('H4-REHYDRATE', { sizeBytes: exploit.sizeBytes, width: exploit.width });
+    expect(() => ImageMetadata.rehydrate({ ...validProps, sizeBytes: -1, width: -800 })).toThrow(
+      ImageInvalidKeyError,
+    );
+  });
+});

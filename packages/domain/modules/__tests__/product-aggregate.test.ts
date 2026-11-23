@@ -361,3 +361,70 @@ describe('ProductAggregate stock flag', () => {
     expect(aggregate.pullEvents().at(-1)?.payload).toMatchObject({ inStock: true, actorId: id(4) });
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile product lifecycle mutations', () => {
+  it('DOM-T10-CONTROL blocks neighboring mutators while a live product stays mutable', () => {
+    expect(product().delete.isDeleted).toBe(false);
+    expect(() =>
+      deletedProduct().updateMeta(
+        Title.create('New title'),
+        Description.create('New description.'),
+        id(4),
+      ),
+    ).toThrow(BadRequestError);
+    expect(() => deletedProduct().addImages(image('later'), id(4))).toThrow(BadRequestError);
+    expect(() => product().setInStock(true, id(4))).not.toThrow();
+  });
+
+  it.failing('DOM-T10 reprices a deleted product', () => {
+    const live = product();
+    expect(live.delete.isDeleted).toBe(false);
+    const aggregate = deletedProduct();
+    expect(aggregate.delete.isDeleted).toBe(true);
+    aggregate.clearEvents();
+
+    aggregate.updatePricingSummary(
+      Money.create(12),
+      Money.create(24),
+      Money.create(10),
+      Money.create(20),
+      id(4),
+    );
+
+    domainEvidence('T10-PRICING', {
+      deleted: aggregate.delete.isDeleted,
+      minPrice: aggregate.minPrice.value,
+      maxPrice: aggregate.maxPrice.value,
+      events: aggregate.pullEvents().map((event) => event.type),
+    });
+    expect(() =>
+      aggregate.updatePricingSummary(
+        Money.create(12),
+        Money.create(24),
+        Money.create(10),
+        Money.create(20),
+        id(4),
+      ),
+    ).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T10 sets a deleted product back in stock', () => {
+    expect(product().inStock).toBe(false);
+    const aggregate = deletedProduct();
+    expect(aggregate.inStock).toBe(false);
+    aggregate.clearEvents();
+
+    aggregate.setInStock(true, id(4));
+
+    domainEvidence('T10-STOCK', {
+      deleted: aggregate.delete.isDeleted,
+      inStock: aggregate.inStock,
+      events: aggregate.pullEvents().map((event) => event.type),
+    });
+    expect(() => aggregate.setInStock(true, id(4))).toThrow(BadRequestError);
+  });
+});

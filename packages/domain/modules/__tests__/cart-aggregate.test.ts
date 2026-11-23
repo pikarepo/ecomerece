@@ -180,3 +180,30 @@ describe('CartAggregate deletion', () => {
     expect(() => aggregate.deleteCart(reason(), id(9))).toThrow('Cart is already deleted.');
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile cart selection', () => {
+  it('DOM-T13-CONTROL selecting a line once returns one line', () => {
+    const { aggregate, item } = cartWithItem(2);
+
+    expect(aggregate.selectItems([item.id])).toHaveLength(1);
+  });
+
+  it.failing('DOM-T13 selectItems maps duplicate ids to duplicate lines', () => {
+    const { aggregate, item } = cartWithItem(2);
+    expect(aggregate.items).toHaveLength(1);
+    const duplicateIds = [item.id, Id.create(item.id.value), item.id];
+    const exploit = aggregate.selectItems(duplicateIds);
+
+    domainEvidence('T13', {
+      requestedIds: duplicateIds.length,
+      uniqueIds: new Set(duplicateIds.map((selectedId) => selectedId.value)).size,
+      returnedLines: exploit.length,
+      returnedIds: exploit.map((line) => line.id.value),
+    });
+    expect(exploit).toHaveLength(1);
+  });
+});

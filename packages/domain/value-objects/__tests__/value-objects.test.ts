@@ -210,3 +210,58 @@ describe('ImageVO', () => {
     expect(() => images.setDefault(Quantity.create(1))).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile quantity arithmetic', () => {
+  it('DOM-H5-CONTROL increases by a positive amount', () => {
+    expect(Quantity.create(5).increase(2).value).toBe(7);
+  });
+
+  it.failing('DOM-H5 increase accepts a negative delta', () => {
+    expect(Quantity.create(5).increase(2).value).toBe(7);
+    const exploit = Quantity.create(5).increase(-2);
+
+    domainEvidence('H5', { before: 5, delta: -2, after: exploit.value });
+    expect(() => Quantity.create(5).increase(-2)).toThrow(BadRequestError);
+  });
+
+  it('DOM-H5-CONTROL increase still rejects a delta below zero', () => {
+    expect(() => Quantity.create(5).increase(-10)).toThrow(BadRequestError);
+  });
+});
+
+describe('hostile number value object arithmetic', () => {
+  it('DOM-H6-CONTROL validated arithmetic stays finite', () => {
+    expect(Money.create(10).addMoney(Money.create(5)).value).toBe(15);
+    expect(Money.create(10).times(3).value).toBe(30);
+  });
+
+  it.failing('DOM-H6 inherited helpers return raw non-finite numbers', () => {
+    expect(Money.create(10).add(2)).toBe(12);
+    const exploit = {
+      add: Money.create(10).add(Number.POSITIVE_INFINITY),
+      subtract: Money.create(10).subtract(Number.NaN),
+      multiply: Money.create(10).multiply(Number.POSITIVE_INFINITY),
+      divide: Money.create(10).divide(0),
+    };
+
+    domainEvidence('H6', {
+      add: String(exploit.add),
+      subtract: String(exploit.subtract),
+      multiply: String(exploit.multiply),
+      divide: String(exploit.divide),
+    });
+    expect(() => Money.create(10).add(Number.POSITIVE_INFINITY)).toThrow(BadRequestError);
+    expect(() => Money.create(10).subtract(Number.NaN)).toThrow(BadRequestError);
+    expect(() => Money.create(10).multiply(Number.POSITIVE_INFINITY)).toThrow(BadRequestError);
+    expect(() => Money.create(10).divide(0)).toThrow(BadRequestError);
+  });
+
+  it('DOM-H6-CONTROL validated Money helpers reject non-finite inputs', () => {
+    expect(() => Money.create(10).times(Number.POSITIVE_INFINITY)).toThrow(BadRequestError);
+    expect(() => Money.create(10).addMoney(Money.create(Number.NaN))).toThrow(BadRequestError);
+  });
+});

@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 // 1. Configuration
 // ------------------------------------------------------------------
 mongoose.set('strict', 'throw');
-
+const isDev = process.env.NODE_ENV !== 'production';
 // Ensure MONGO_URI is defined and treat it as a string
 const MONGO_URI: string = process.env.MONGO_URI as string;
 if (!MONGO_URI) {
@@ -45,25 +45,26 @@ async function connectWithRetry(retries = 5, initialDelay = 1000): Promise<typeo
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`[DB] Connecting to MongoDB (attempt ${attempt}/${retries})...`);
+      if (isDev) console.log(`[DB] Connecting to MongoDB (attempt ${attempt}/${retries})...`);
+
       const connection = await mongoose.connect(MONGO_URI, CONNECTION_OPTIONS);
-      console.log('[DB] Successfully connected to MongoDB');
+      if (isDev) console.log('[DB] Successfully connected to MongoDB');
       return connection;
     } catch (err) {
       lastError = err;
-      console.error(`[DB] Connection attempt ${attempt} failed:`, err);
+      if (isDev) console.error(`[DB] Connection attempt ${attempt} failed:`, err);
 
       if (attempt === retries) break;
 
       // Exponential backoff: 1s, 2s, 4s, 8s, ...
       const delay = initialDelay * 2 ** (attempt - 1);
-      console.log(`[DB] Waiting ${delay}ms before retrying...`);
+      if (isDev) console.log(`[DB] Waiting ${delay}ms before retrying...`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
   // All retries exhausted
-  console.error('[DB] All connection retries failed');
+  if (isDev) console.error('[DB] All connection retries failed');
   throw lastError;
 }
 
@@ -134,24 +135,24 @@ export async function checkDBHealth(): Promise<boolean> {
 // 6. Event listeners – optional, for logging / recovery
 // ------------------------------------------------------------------
 mongoose.connection.on('connected', () => {
-  console.log('[DB] Mongoose connected');
+  if (isDev) console.log('[DB] Mongoose connected');
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.warn('[DB] Mongoose disconnected – will reconnect on next request');
+  if (isDev) console.warn('[DB] Mongoose disconnected – will reconnect on next request');
   // Clear the cache so the next request triggers a fresh connection
   cache.conn = null;
   cache.promise = null;
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('[DB] Mongoose connection error:', err);
+  if (isDev) console.error('[DB] Mongoose connection error:', err);
   // Do not clear cache here – the error might be transient, we let the driver handle it.
   // If the connection is lost, 'disconnected' will fire and clear the cache.
 });
 
 mongoose.connection.on('reconnected', () => {
-  console.info('[DB] Mongoose reconnected');
+  if (isDev) console.info('[DB] Mongoose reconnected');
 });
 
 // ------------------------------------------------------------------
@@ -160,7 +161,7 @@ mongoose.connection.on('reconnected', () => {
 export async function disconnectDB(): Promise<void> {
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
-    console.log('[DB] Disconnected from MongoDB');
+    if (isDev) console.log('[DB] Disconnected from MongoDB');
   }
   cache.conn = null;
   cache.promise = null;

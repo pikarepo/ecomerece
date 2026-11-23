@@ -1,4 +1,5 @@
 import type { Context, Next } from 'hono';
+import { BadRequestError, NotFoundError } from '../errors/app-error';
 import { getStatsAccessGuard, type IStatsAccessGuard } from './statsAccessGuard';
 
 export interface StatsAccessGuardOptions {
@@ -9,8 +10,9 @@ export interface StatsAccessGuardOptions {
   /**
    * `throw` — pass the guard's NotFound/Forbidden through to the global
    * handler (hard reject, used by the product overview route).
-   * `mask` — never reject; expose whether full financial stats may be shown
-   * via `c.set('statsFullAccess', boolean)` (used by lifetime/timeseries).
+   * `mask` — mask forbidden entities but reject unsupported or unknown ones;
+   * expose whether full financial stats may be shown via
+   * `c.set('statsFullAccess', boolean)` (used by lifetime/timeseries).
    */
   mode: 'throw' | 'mask';
   /** Always treat the entity as a product regardless of `entityTypeParam`. */
@@ -38,18 +40,17 @@ export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOption
       return next();
     }
 
-    if (role === 'admin') {
-      c.set('statsFullAccess', true);
-      return next();
-    }
-
     const entityType = productOnly
       ? 'product'
       : vendorOnly
         ? 'vendor'
         : (c.req.param(entityTypeParam ?? '') ?? '');
     if (entityType !== 'product' && entityType !== 'vendor') {
-      c.set('statsFullAccess', false);
+      throw new BadRequestError(`Unsupported stats entity type "${entityType}".`);
+    }
+
+    if (role === 'admin') {
+      c.set('statsFullAccess', true);
       return next();
     }
 
@@ -61,7 +62,8 @@ export function createStatsAccessGuardMiddleware(options: StatsAccessGuardOption
         userId,
       );
       c.set('statsFullAccess', true);
-    } catch {
+    } catch (error) {
+      if (error instanceof NotFoundError) throw error;
       c.set('statsFullAccess', false);
     }
 

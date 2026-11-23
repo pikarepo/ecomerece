@@ -1,4 +1,5 @@
 import type { IPaymentGateway } from '@ecomerece/domain';
+import { BadRequestError } from '../../../errors/app-error';
 import type { PaymentsConfig } from '../payments.config';
 import { ManualPaymentGateway } from './infrastructure-adapters/manual.payment-gateway';
 
@@ -23,7 +24,7 @@ export function resolveGateway(registry: PaymentGatewayRegistry, name?: string):
   const key = (name ?? registry.defaultProvider).trim().toLowerCase();
   const gw = registry.providers.get(key);
   if (!gw) {
-    throw new Error(
+    throw new BadRequestError(
       `Payment provider "${key}" is not configured. Configured: ${[...registry.providers.keys()].join(', ') || 'none'}.`,
     );
   }

@@ -1,5 +1,6 @@
 //backend
 import type { Context } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import mongoose from 'mongoose';
 import { ZodError } from 'zod';
 import { AppError } from './app-error';
@@ -17,7 +18,6 @@ export function registerErrorHandler(app: any) {
     let status = 500;
     let code = 'INTERNAL_ERROR';
     let message = 'An internal server error occurred. Please try again later.';
-    let stack: string | undefined;
     let issues: any;
 
     // Zod Validation Errors
@@ -71,14 +71,24 @@ export function registerErrorHandler(app: any) {
       message = 'The provided identifier is not in a valid format.';
     }
 
+    // JSON parsing failures are client input errors, not server faults.
+    else if (err instanceof SyntaxError) {
+      status = 400;
+      code = 'VALIDATION_ERROR';
+      message = 'The request body must contain valid JSON.';
+    }
+
+    // Hono guard errors already carry the intended client-error response.
+    else if (err instanceof HTTPException) {
+      if (err.res) return err.res;
+      status = sanitizeStatus(err.status);
+      code = status === 413 ? 'PAYLOAD_TOO_LARGE' : status === 414 ? 'URI_TOO_LONG' : 'HTTP_ERROR';
+      message = err.message;
+    }
+
     // Generic Errors
     else if (err instanceof Error) {
-      if (isDev) {
-        message = err.message;
-        stack = err.stack;
-      } else {
-        message = 'An unexpected error occurred. Please try again later.';
-      }
+      message = isDev ? err.message : 'An unexpected error occurred. Please try again later.';
     }
 
     return c.json(
@@ -88,7 +98,6 @@ export function registerErrorHandler(app: any) {
           code,
           message,
           ...(issues ? { issues } : {}),
-          ...(isDev && stack ? { stack } : {}),
         },
       },
       status as any,

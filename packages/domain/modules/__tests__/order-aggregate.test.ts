@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { BadRequestError } from '../../errors/app-error';
 import { EffectiveDate, FullAddressVO, Id, Money, Reason } from '../../value-objects';
-import { OrderAggregate } from '../order/order.aggregate';
 import { OrderReturnedEvent } from '../order/events/order-returned.event';
+import { OrderAggregate } from '../order/order.aggregate';
 import { OrderStatusVO } from '../order/value-objects/order-status.vo';
 import { OrderTypeVO } from '../order/value-objects/order-type.vo';
 
@@ -357,5 +357,96 @@ describe('OrderStatusVO transition matrix', () => {
 
   it('rejects an unknown status string', () => {
     expect(() => OrderStatusVO.fromString('lost')).toThrow(BadRequestError);
+  });
+});
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile order repricing', () => {
+  const returned = () => {
+    const aggregate = confirmed();
+    aggregate.returnOrder(reason(), id(7));
+    aggregate.clearEvents();
+    return aggregate;
+  };
+
+  const refunded = () => {
+    const aggregate = confirmed();
+    aggregate.refundOrder(reason(), id(9));
+    aggregate.clearEvents();
+    return aggregate;
+  };
+
+  it('DOM-T4-CONTROL repricing a pending order is allowed', () => {
+    const aggregate = order();
+    aggregate.updateOrder(Money.create(60), address(), id(9));
+
+    expect(aggregate.totalPrice.value).toBe(60);
+  });
+
+  it('DOM-T4-CONTROL orders have no failed status', () => {
+    expect(() => OrderStatusVO.fromString('failed')).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T4 updateOrder reprices completed, cancelled, returned and refunded orders', () => {
+    const pending = order();
+    pending.updateOrder(Money.create(60), address(), id(9));
+    expect(pending.totalPrice.value).toBe(60);
+
+    const fixtures: [string, () => OrderAggregate][] = [
+      ['completed', completed],
+      ['cancelled', cancelled],
+      ['returned', returned],
+      ['refunded', refunded],
+    ];
+    const exploit = fixtures.map(([status, fixture]) => {
+      const aggregate = fixture();
+      aggregate.updateOrder(Money.create(1), address(), id(9));
+
+      return {
+        status,
+        totalPrice: aggregate.totalPrice.value,
+        events: aggregate.pullEvents().map((event) => event.type),
+      };
+    });
+
+    domainEvidence('T4', { pendingTotal: pending.totalPrice.value, exploit });
+    for (const [, fixture] of fixtures) {
+      expect(() => fixture().updateOrder(Money.create(1), address(), id(9))).toThrow(
+        BadRequestError,
+      );
+    }
+  });
+});
+
+describe('hostile order vendor identity', () => {
+  const cartOrderWithVendors = (vendorIds: Id[]) =>
+    OrderAggregate.create({
+      id: id(1),
+      idempotentKey: id(2),
+      buyerId: id(7),
+      vendorIds,
+      orderType: OrderTypeVO.cart(),
+      totalPrice: Money.create(50),
+      address: address(),
+    });
+
+  it('DOM-H10-CONTROL a cart order with distinct vendors is valid', () => {
+    expect(() => cartOrderWithVendors([id(4), id(5)])).not.toThrow();
+  });
+
+  it.failing('DOM-H10 a cart order accepts the same vendor twice', () => {
+    expect(() => cartOrderWithVendors([id(4), id(5)])).not.toThrow();
+    const vendorIds = [id(4), Id.create(id(4).value)];
+    const exploit = cartOrderWithVendors(vendorIds);
+
+    domainEvidence('H10', {
+      orderType: exploit.orderType.orderType,
+      vendorIds: exploit.vendorIds.map((vendorId) => vendorId.value),
+      distinctVendors: new Set(exploit.vendorIds.map((vendorId) => vendorId.value)).size,
+    });
+    expect(() => cartOrderWithVendors(vendorIds)).toThrow(BadRequestError);
   });
 });

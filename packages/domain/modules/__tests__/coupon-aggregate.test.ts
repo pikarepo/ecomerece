@@ -97,11 +97,15 @@ describe('CouponAggregate eligibility', () => {
 
   it('enforces the redemption cap and the per-buyer limit', () => {
     const capped = coupon({ maxRedemptions: 1 });
-    capped.redeem({ buyerId: buyer, orderId, subtotal: 2500, buyerRedemptionCount: 0, actorId: buyer });
+    capped.redeem({
+      buyerId: buyer,
+      orderId,
+      subtotal: 2500,
+      buyerRedemptionCount: 0,
+      actorId: buyer,
+    });
 
-    expect(capped.refusalReason(2500, 0)).toBe(
-      'This coupon has reached its redemption limit.',
-    );
+    expect(capped.refusalReason(2500, 0)).toBe('This coupon has reached its redemption limit.');
     expect(coupon({ perBuyerLimit: 2 }).refusalReason(2500, 2)).toBe(
       'You have already used this coupon the maximum number of times.',
     );
@@ -129,7 +133,13 @@ describe('CouponAggregate redemption', () => {
 
   it('refuses a second redemption once the buyer limit is reached', () => {
     const aggregate = coupon();
-    aggregate.redeem({ buyerId: buyer, orderId, subtotal: 2500, buyerRedemptionCount: 0, actorId: buyer });
+    aggregate.redeem({
+      buyerId: buyer,
+      orderId,
+      subtotal: 2500,
+      buyerRedemptionCount: 0,
+      actorId: buyer,
+    });
 
     expect(() =>
       aggregate.redeem({
@@ -222,8 +232,166 @@ describe('CouponAggregate lifecycle', () => {
     aggregate.deleteCoupon(reason(), actor);
 
     expect(() =>
-      aggregate.redeem({ buyerId: buyer, orderId, subtotal: 2500, buyerRedemptionCount: 0, actorId: buyer }),
+      aggregate.redeem({
+        buyerId: buyer,
+        orderId,
+        subtotal: 2500,
+        buyerRedemptionCount: 0,
+        actorId: buyer,
+      }),
     ).toThrow(BadRequestError);
     expect(() => aggregate.deactivate(actor)).toThrow(BadRequestError);
+  });
+});
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile coupon numeric validation', () => {
+  it.failing('DOM-T3 create accepts NaN campaign limits', () => {
+    const valid = coupon();
+    expect(valid.minOrderAmount).toBe(1000);
+    expect(valid.maxDiscountAmount).toBe(500);
+    expect(valid.maxRedemptions).toBeNull();
+    expect(valid.perBuyerLimit).toBe(1);
+
+    const exploit = coupon({
+      minOrderAmount: Number.NaN,
+      maxDiscountAmount: Number.NaN,
+      maxRedemptions: Number.NaN,
+      perBuyerLimit: Number.NaN,
+    });
+
+    domainEvidence('T3-CREATE', {
+      minOrderAmount: String(exploit.minOrderAmount),
+      maxDiscountAmount: String(exploit.maxDiscountAmount),
+      maxRedemptions: String(exploit.maxRedemptions),
+      perBuyerLimit: String(exploit.perBuyerLimit),
+    });
+    expect(() => coupon({ minOrderAmount: Number.NaN })).toThrow(BadRequestError);
+    expect(() => coupon({ maxDiscountAmount: Number.NaN })).toThrow(BadRequestError);
+    expect(() => coupon({ maxRedemptions: Number.NaN })).toThrow(BadRequestError);
+    expect(() => coupon({ perBuyerLimit: Number.NaN })).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T3 update accepts NaN campaign limits', () => {
+    const exploit = coupon();
+    expect(exploit.minOrderAmount).toBe(1000);
+    const badDetails = {
+      code: CouponCodeVO.create('NANCOUPON'),
+      discountType: DiscountTypeVO.create('percentage'),
+      discountValue: 10,
+      minOrderAmount: Number.NaN,
+      maxDiscountAmount: Number.NaN,
+      maxRedemptions: Number.NaN,
+      perBuyerLimit: Number.NaN,
+      startsAt: PAST,
+      expiresAt: null,
+      active: true,
+    };
+
+    exploit.update(badDetails, actor);
+
+    domainEvidence('T3-UPDATE', {
+      minOrderAmount: String(exploit.minOrderAmount),
+      maxDiscountAmount: String(exploit.maxDiscountAmount),
+      maxRedemptions: String(exploit.maxRedemptions),
+      perBuyerLimit: String(exploit.perBuyerLimit),
+    });
+    expect(() => coupon().update(badDetails, actor)).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T3 rehydrate accepts NaN campaign limits', () => {
+    const valid = coupon();
+    expect(valid.minOrderAmount).toBe(1000);
+    const rehydrateWithNaN = () =>
+      CouponAggregate.rehydrate(
+        id(901),
+        valid.code,
+        valid.discountType,
+        valid.discountValue,
+        Number.NaN,
+        Number.NaN,
+        Number.NaN,
+        Number.NaN,
+        valid.redemptionCount,
+        valid.startsAt,
+        valid.expiresAt,
+        valid.active,
+        valid.delete,
+        valid.version,
+        valid.createdAt,
+      );
+
+    const exploit = rehydrateWithNaN();
+
+    domainEvidence('T3-REHYDRATE', {
+      minOrderAmount: String(exploit.minOrderAmount),
+      maxDiscountAmount: String(exploit.maxDiscountAmount),
+      maxRedemptions: String(exploit.maxRedemptions),
+      perBuyerLimit: String(exploit.perBuyerLimit),
+    });
+    expect(rehydrateWithNaN).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T3 refusalReason ignores NaN minimum, cap and per-buyer limit', () => {
+    expect(coupon().refusalReason(2500, 0)).toBeNull();
+    expect(coupon({ minOrderAmount: 1000 }).refusalReason(500, 0)).toContain('minimum order');
+
+    const minOrder = coupon({ minOrderAmount: Number.NaN });
+    const maxRedemptions = coupon({ maxRedemptions: Number.NaN });
+    const perBuyerLimit = coupon({ perBuyerLimit: Number.NaN });
+    maxRedemptions.redeem({
+      buyerId: buyer,
+      orderId,
+      subtotal: 2500,
+      buyerRedemptionCount: 0,
+      actorId: buyer,
+    });
+    const exploit = {
+      minOrder: minOrder.refusalReason(0, 0),
+      maxRedemptions: maxRedemptions.refusalReason(2500, 0),
+      perBuyerLimit: perBuyerLimit.refusalReason(2500, 5),
+    };
+
+    domainEvidence('T3-REFUSAL', exploit);
+    expect(exploit.minOrder).toContain('minimum order');
+    expect(exploit.maxRedemptions).toContain('redemption limit');
+    expect(exploit.perBuyerLimit).toContain('maximum number of times');
+  });
+
+  it.failing('DOM-T3 redeem pays an NaN discount and ignores NaN limits', () => {
+    expect(
+      coupon().redeem({
+        buyerId: buyer,
+        orderId,
+        subtotal: 2500,
+        buyerRedemptionCount: 0,
+        actorId: buyer,
+      }),
+    ).toBe(250);
+    const exploit = coupon({
+      minOrderAmount: Number.NaN,
+      maxDiscountAmount: Number.NaN,
+      maxRedemptions: Number.NaN,
+      perBuyerLimit: Number.NaN,
+    });
+    const discount = exploit.redeem({
+      buyerId: buyer,
+      orderId,
+      subtotal: 5,
+      buyerRedemptionCount: 99,
+      actorId: buyer,
+    });
+    const event = exploit.pullEvents().at(-1);
+
+    domainEvidence('T3-REDEEM', {
+      discount: String(discount),
+      redemptionCount: exploit.redemptionCount,
+      eventType: event?.type,
+    });
+    expect(Number.isFinite(discount)).toBe(true);
+    expect(exploit.redemptionCount).toBe(0);
   });
 });

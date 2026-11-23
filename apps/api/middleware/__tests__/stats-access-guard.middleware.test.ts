@@ -2,6 +2,8 @@ import { describe, expect, it } from 'bun:test';
 import type { Context, Next } from 'hono';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
+import { registerErrorHandler } from '../../errors/error-handler';
+import { NotFoundError } from '../../errors/app-error';
 import type { IStatsAccessGuard } from '../statsAccessGuard';
 import { createStatsAccessGuardMiddleware } from '../statsAccessGuard.middleware';
 
@@ -61,6 +63,7 @@ function buildApp(options: {
     );
   }
 
+  registerErrorHandler(app);
   return app;
 }
 
@@ -72,10 +75,10 @@ describe('createStatsAccessGuardMiddleware (mask mode)', () => {
     expect(await res.json()).toEqual({ full: true });
   });
 
-  it('masks non product/vendor entity types', async () => {
+  it('rejects unsupported stats entity types', async () => {
     const app = buildApp({ mode: 'mask', role: 'seller' });
     const res = await app.request('/page/home/lifetime');
-    expect(await res.json()).toEqual({ full: false });
+    expect(res.status).toBe(400);
   });
 
   it('shares full stats when the guard allows the owner', async () => {
@@ -93,6 +96,17 @@ describe('createStatsAccessGuardMiddleware (mask mode)', () => {
     });
     const res = await app.request('/vendor/vendor-1/lifetime');
     expect(await res.json()).toEqual({ full: false });
+  });
+
+  it('rejects unknown entities instead of masking them', async () => {
+    const app = buildApp({
+      mode: 'mask',
+      role: 'seller',
+      userId: 'owner-1',
+      guard: stubGuard({ entityError: new NotFoundError('Product not found.') }),
+    });
+    const res = await app.request('/product/missing/lifetime');
+    expect(res.status).toBe(404);
   });
 });
 

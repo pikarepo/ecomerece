@@ -63,6 +63,30 @@ export const tokens: Record<ApiRole, string> = {
   admin: 'integration-admin-token',
 };
 
+export type ExtraIdentity = {
+  token: string;
+  id: string;
+  email: string;
+  fullName: string;
+  role?: 'buyer' | 'vendor' | 'admin';
+};
+
+const extraIdentities: ExtraIdentity[] = [];
+
+/**
+ * Registers an additional tenant before the harness boots. Cross-tenant
+ * assertions need a second real identity: reusing the buyer token on both
+ * sides would make every ownership check vacuous.
+ */
+export function registerIntegrationIdentity(identity: ExtraIdentity): void {
+  fakeSupabaseUsers[identity.token] = {
+    id: identity.id,
+    email: identity.email,
+    user_metadata: { full_name: identity.fullName },
+  };
+  extraIdentities.push(identity);
+}
+
 export const userIds: Record<ApiRole, string> = {
   buyer: Id.create().value,
   vendor: Id.create().value,
@@ -129,7 +153,9 @@ if (integrationEnabled) {
 }
 
 export type ApiIntegrationHarness = {
+  app: Hono;
   events: string[];
+  requestWithToken: <T>(token: string, path: string, options?: RequestOptions) => Promise<ApiResult<T>>;
   runId: string;
   tokens: Record<ApiRole, string>;
   userIds: Record<ApiRole, string>;
@@ -196,10 +222,29 @@ export async function createApiIntegrationHarness(
   await UserModel.updateOne({ _id: userIds.admin }, { $set: { 'role.role': 'admin' } });
   await UserModel.updateOne({ _id: userIds.vendor }, { $set: { 'role.role': 'vendor' } });
 
+  for (const identity of extraIdentities) {
+    const response = await app.request('/users/init', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${identity.token}`,
+      },
+    });
+    if (response.status !== 202) {
+      throw new Error(
+        `Extra identity initialization failed: ${response.status} ${await response.text()}`,
+      );
+    }
+    if (identity.role !== undefined) {
+      await UserModel.updateOne({ _id: identity.id }, { $set: { 'role.role': identity.role } });
+    }
+  }
+
   const trackedIds: string[] = [];
   const customCleanups: Array<() => Promise<unknown>> = [];
 
   const harness: ApiIntegrationHarness = {
+    app,
     events,
     runId,
     tokens,
@@ -215,11 +260,14 @@ export async function createApiIntegrationHarness(
       return eventBus.publish(event as IEvent<unknown>);
     },
     async requestAs<T>(role: ApiRole, path: string, options: RequestOptions = {}) {
+      return harness.requestWithToken<T>(tokens[role], path, options);
+    },
+    async requestWithToken<T>(token: string, path: string, options: RequestOptions = {}) {
       const response = await app.request(path, {
         method: options.method ?? 'GET',
         headers: {
           'content-type': 'application/json',
-          authorization: `Bearer ${tokens[role]}`,
+          authorization: `Bearer ${token}`,
           ...options.headers,
         },
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -288,7 +336,9 @@ export async function createApiIntegrationHarness(
     },
     async close() {
       publishSpy.mockRestore();
-      await UserModel.deleteMany({ _id: { $in: Object.values(userIds) } });
+      await UserModel.deleteMany({
+        _id: { $in: [...Object.values(userIds), ...extraIdentities.map((identity) => identity.id)] },
+      });
       const { disconnectDB } = await import('../lib/mongo');
       await disconnectDB();
       mock.restore();

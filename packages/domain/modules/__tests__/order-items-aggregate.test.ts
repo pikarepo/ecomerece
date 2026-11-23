@@ -293,3 +293,71 @@ describe('StatusVo transition matrix', () => {
     expect(() => StatusVo.fromString('lost')).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile order line repricing', () => {
+  const revised = () => ({
+    quantity: Quantity.create(5),
+    waitingTime: ExpirationDate.fromDays(6),
+    price: Money.create(3),
+  });
+
+  const returned = () => {
+    const item = confirmed();
+    item.returnItem();
+    item.clearEvents();
+    return item;
+  };
+
+  const refunded = () => {
+    const item = confirmed();
+    item.refund();
+    item.clearEvents();
+    return item;
+  };
+
+  const cancelled = () => {
+    const item = orderItem();
+    item.cancel();
+    item.clearEvents();
+    return item;
+  };
+
+  it('DOM-T5-CONTROL repricing a pending line is allowed', () => {
+    const item = orderItem();
+    item.update(revised());
+
+    expect(item.totalPrice.value).toBe(15);
+  });
+
+  it.failing('DOM-T5 update reprices confirmed and terminal lines', () => {
+    expect(orderItem().status.value).toBe('pending');
+
+    const fixtures: [string, () => OrderItemsAggregate][] = [
+      ['confirmed', confirmed],
+      ['completed', completed],
+      ['returned', returned],
+      ['refunded', refunded],
+      ['cancelled', cancelled],
+    ];
+    const exploit = fixtures.map(([status, fixture]) => {
+      const item = fixture();
+      item.update(revised());
+
+      return {
+        status,
+        quantity: item.quantity.value,
+        totalPrice: item.totalPrice.value,
+        events: item.pullEvents().map((event) => event.type),
+      };
+    });
+
+    domainEvidence('T5', { exploit });
+    for (const [, fixture] of fixtures) {
+      expect(() => fixture().update(revised())).toThrow(BadRequestError);
+    }
+  });
+});

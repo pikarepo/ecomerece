@@ -37,20 +37,21 @@ app.use(
     allowHeaders: ['Content-Type', 'Authorization'],
   }),
 );
+app.use('*', rateLimiter);
 
 app.use(
   '*',
   ...requestGuards({
-    maxUrlLength: 200,
-    maxQueryLength: 200,
-    maxParamLength: 50,
-    maxBodyBytes: 7_000_000,
-    maxJsonDepth: 5,
-    maxJsonNodes: 50,
+    maxUrlLength: 2048,
+    maxQueryLength: 1024,
+    maxParamLength: 128,
+    maxBodyBytes: 1_048_576,
+    maxJsonDepth: 8,
+    maxJsonNodes: 1000,
   }),
 );
 
-app.use('*', rateLimiter);
+
 app.use('*', dbMiddleware);
 
 app.options('*', (c) => {

@@ -238,3 +238,72 @@ describe('InventoryAggregate deletion', () => {
     expect(() => aggregate.updateLowStockThreshold(quantity(1), id(9))).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile inventory transitions', () => {
+  it('DOM-T1-T2-CONTROL reserve then markSoldOut keeps the stock buckets consistent', () => {
+    const aggregate = inventory(5);
+
+    aggregate.reserve(quantity(3), id(9));
+    aggregate.markSoldOut(quantity(2), id(9));
+
+    expect(aggregate.available.value).toBe(2);
+    expect(aggregate.reserved.value).toBe(1);
+    expect(aggregate.soldOut.value).toBe(2);
+  });
+
+  it.failing('DOM-T1 reserve leaves reserved inflated when stock is insufficient', () => {
+    const aggregate = inventory(2);
+    expect(aggregate.available.value).toBe(2);
+    expect(aggregate.reserved.value).toBe(0);
+    expect(aggregate.soldOut.value).toBe(0);
+
+    const exploit = (() => {
+      try {
+        aggregate.reserve(quantity(3), id(9));
+        return 'accepted';
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    })();
+
+    domainEvidence('T1', {
+      exploit,
+      available: aggregate.available.value,
+      reserved: aggregate.reserved.value,
+      soldOut: aggregate.soldOut.value,
+    });
+    expect(aggregate.available.value).toBe(2);
+    expect(aggregate.reserved.value).toBe(0);
+    expect(aggregate.soldOut.value).toBe(0);
+  });
+
+  it.failing('DOM-T2 markSoldOut leaves soldOut inflated when reservation is insufficient', () => {
+    const aggregate = allocated();
+    expect(aggregate.available.value).toBe(2);
+    expect(aggregate.reserved.value).toBe(3);
+    expect(aggregate.soldOut.value).toBe(0);
+
+    const exploit = (() => {
+      try {
+        aggregate.markSoldOut(quantity(4), id(9));
+        return 'accepted';
+      } catch (error) {
+        return error instanceof Error ? error.message : String(error);
+      }
+    })();
+
+    domainEvidence('T2', {
+      exploit,
+      available: aggregate.available.value,
+      reserved: aggregate.reserved.value,
+      soldOut: aggregate.soldOut.value,
+    });
+    expect(aggregate.available.value).toBe(2);
+    expect(aggregate.reserved.value).toBe(3);
+    expect(aggregate.soldOut.value).toBe(0);
+  });
+});

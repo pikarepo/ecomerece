@@ -188,3 +188,57 @@ describe('ReviewAggregate moderation', () => {
     expect(() => aggregate.unblockReview(id(9))).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+function reviewWithRating(rating: number) {
+  return ReviewAggregate.create({
+    id: id(701),
+    productId: id(400),
+    authorId: id(7),
+    authorName: Name.create('Jane Doe'),
+    authorAvatar: image('avatar'),
+    rating: Quantity.create(rating),
+    title: Title.create('Rating probe'),
+    comment: comment(),
+  });
+}
+
+describe('hostile review ratings', () => {
+  it('DOM-H1-CONTROL keeps ratings within one to five', () => {
+    expect(reviewWithRating(1).rating.value).toBe(1);
+    expect(reviewWithRating(5).rating.value).toBe(5);
+  });
+
+  it.failing('DOM-H1 create accepts a rating above five', () => {
+    expect(review().rating.value).toBe(5);
+    const exploit = reviewWithRating(999);
+    const belowRange = reviewWithRating(0);
+
+    domainEvidence('H1-CREATE', {
+      high: exploit.rating.value,
+      low: belowRange.rating.value,
+      events: exploit.pullEvents().map((event) => event.type),
+    });
+    expect(() => reviewWithRating(999)).toThrow(BadRequestError);
+    expect(() => reviewWithRating(0)).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-H1 updateContent accepts a rating above five', () => {
+    const aggregate = review();
+    expect(aggregate.rating.value).toBe(5);
+    aggregate.clearEvents();
+
+    aggregate.updateContent(Title.create('Rating probe'), comment(), [], Quantity.create(999));
+
+    domainEvidence('H1-UPDATE', {
+      rating: aggregate.rating.value,
+      events: aggregate.pullEvents().map((event) => event.type),
+    });
+    expect(() =>
+      review().updateContent(Title.create('Rating probe'), comment(), [], Quantity.create(999)),
+    ).toThrow(BadRequestError);
+  });
+});

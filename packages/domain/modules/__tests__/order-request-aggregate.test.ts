@@ -187,3 +187,41 @@ describe('OrderRequestStatusVO and OrderRequestTypeVO', () => {
     expect(() => OrderRequestTypeVO.create('exchange')).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile order-request decisions and status rehydration', () => {
+  it.failing('DOM-T6 accept and reject let a foreign actor decide a pending request', () => {
+    const acceptTarget = request();
+    const rejectTarget = request();
+    const foreignVendorId = id(5);
+
+    expect(acceptTarget.status.isPending).toBe(true);
+    expect(rejectTarget.status.isPending).toBe(true);
+    expect(rejectTarget.vendorId.equals(foreignVendorId)).toBe(false);
+    expect(() => request().cancel(foreignVendorId)).toThrow(ForbiddenError);
+
+    acceptTarget.accept(foreignVendorId, 'decided elsewhere');
+    rejectTarget.reject(foreignVendorId, reason());
+
+    domainEvidence('T6', {
+      vendorId: rejectTarget.vendorId.value,
+      actorId: foreignVendorId.value,
+      acceptedStatus: acceptTarget.status.value,
+      rejectedStatus: rejectTarget.status.value,
+    });
+    expect(() => request().accept(foreignVendorId)).toThrow(ForbiddenError);
+    expect(() => request().reject(foreignVendorId, reason())).toThrow(ForbiddenError);
+  });
+
+  it.failing('DOM-T9A order request status rehydration accepts a bogus value', () => {
+    expect(OrderRequestStatusVO.create('rejected').isRejected).toBe(true);
+    expect(() => OrderRequestStatusVO.create('bogus')).toThrow(BadRequestError);
+    const exploit = OrderRequestStatusVO.rehydrate('bogus');
+
+    domainEvidence('T9A', { status: exploit.value, isPending: exploit.isPending });
+    expect(() => OrderRequestStatusVO.rehydrate('bogus')).toThrow(BadRequestError);
+  });
+});

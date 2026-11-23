@@ -352,3 +352,153 @@ describe('HomeAggregate product containers', () => {
     expect(() => aggregate.addProductContainer(container(99))).toThrow(BadRequestError);
   });
 });
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile home collection accessors', () => {
+  it('DOM-T11-CONTROL keeps sorted collection accessors defensive', () => {
+    const aggregate = home();
+    aggregate.addSlide(slide(1));
+    aggregate.addProductContainer(container(1));
+    expect(aggregate.slides.map((item) => item.id.value)).toEqual([id(2001).value]);
+
+    const slides = aggregate.slides as SlideVO[];
+    const containers = aggregate.productContainers as ProductContainerVO[];
+    slides.push(slide(9));
+    containers.push(container(9));
+
+    expect(aggregate.slides).toHaveLength(1);
+    expect(aggregate.productContainers).toHaveLength(1);
+  });
+
+  it.failing('DOM-T11 exposes mutable category, feature and promo arrays', () => {
+    expect(home().categories).toEqual([]);
+    const aggregate = home();
+    aggregate.addCategory(category(1));
+    aggregate.addFeature(feature(1));
+    aggregate.addPromo(promo(1));
+    aggregate.clearEvents();
+
+    const categories = aggregate.categories as CategoryVO[];
+    const features = aggregate.features as FeatureVO[];
+    const promos = aggregate.promos as PromoVO[];
+    categories.push(category(2));
+    features.push(feature(2));
+    promos.push(promo(2));
+
+    domainEvidence('T11-ARRAYS', {
+      categoryIds: aggregate.categories.map((item) => item.id.value),
+      featureIds: aggregate.features.map((item) => item.id.value),
+      promoIds: aggregate.promos.map((item) => item.id.value),
+      events: aggregate.pullEvents().map((event) => event.type),
+    });
+    expect(aggregate.categories).toHaveLength(1);
+    expect(aggregate.features).toHaveLength(1);
+    expect(aggregate.promos).toHaveLength(1);
+  });
+});
+
+describe('hostile home updates with mismatched ids', () => {
+  it('DOM-T12-CONTROL keeps the target id on a valid update', () => {
+    const aggregate = home();
+    aggregate.addCategory(category(1, 'Electronics'));
+    aggregate.addFeature(feature(1));
+    aggregate.addSlide(slide(1));
+    aggregate.addPromo(promo(1));
+
+    aggregate.updateCategory(id(1), category(1, 'Updated electronics'));
+    aggregate.updateFeature(id(1001), feature(1, 'Updated feature'));
+    aggregate.updateSlide(id(2001), slide(1));
+    aggregate.updatePromo(id(3001), promo(1));
+
+    expect(aggregate.categories.map((item) => item.id.value)).toEqual([id(1).value]);
+    expect(aggregate.features.map((item) => item.id.value)).toEqual([id(1001).value]);
+    expect(aggregate.slides.map((item) => item.id.value)).toEqual([id(2001).value]);
+    expect(aggregate.promos.map((item) => item.id.value)).toEqual([id(3001).value]);
+  });
+
+  it.failing('DOM-T12 updateCategory replaces the target with a different id', () => {
+    const aggregate = home();
+    aggregate.addCategory(category(1, 'Electronics'));
+    aggregate.addCategory(category(2, 'Books'));
+    expect(aggregate.categories.map((item) => item.id.value)).toEqual([id(1).value, id(2).value]);
+
+    aggregate.updateCategory(id(1), category(2, 'Media'));
+    const ids = aggregate.categories.map((item) => item.id.value);
+
+    domainEvidence('T12-CATEGORY', {
+      lookupId: id(1).value,
+      replacementId: id(2).value,
+      ids,
+      missing: !ids.includes(id(1).value),
+      duplicated: ids.filter((value) => value === id(2).value).length,
+    });
+    expect(ids).toContain(id(1).value);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it.failing('DOM-T12 updateFeature replaces the target with a different id', () => {
+    const aggregate = home();
+    aggregate.addFeature(feature(1));
+    aggregate.addFeature(feature(2));
+    expect(aggregate.features.map((item) => item.id.value)).toEqual([
+      id(1001).value,
+      id(1002).value,
+    ]);
+
+    aggregate.updateFeature(id(1001), feature(2, 'Replacement feature'));
+    const ids = aggregate.features.map((item) => item.id.value);
+
+    domainEvidence('T12-FEATURE', {
+      lookupId: id(1001).value,
+      replacementId: id(1002).value,
+      ids,
+      missing: !ids.includes(id(1001).value),
+      duplicated: ids.filter((value) => value === id(1002).value).length,
+    });
+    expect(ids).toContain(id(1001).value);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it.failing('DOM-T12 updateSlide replaces the target with a different id', () => {
+    const aggregate = home();
+    aggregate.addSlide(slide(1));
+    aggregate.addSlide(slide(2));
+    expect(aggregate.slides.map((item) => item.id.value)).toEqual([id(2001).value, id(2002).value]);
+
+    aggregate.updateSlide(id(2001), slide(2));
+    const ids = aggregate.slides.map((item) => item.id.value);
+
+    domainEvidence('T12-SLIDE', {
+      lookupId: id(2001).value,
+      replacementId: id(2002).value,
+      ids,
+      missing: !ids.includes(id(2001).value),
+      duplicated: ids.filter((value) => value === id(2002).value).length,
+    });
+    expect(ids).toContain(id(2001).value);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it.failing('DOM-T12 updatePromo replaces the target with a different id', () => {
+    const aggregate = home();
+    aggregate.addPromo(promo(1));
+    aggregate.addPromo(promo(2));
+    expect(aggregate.promos.map((item) => item.id.value)).toEqual([id(3001).value, id(3002).value]);
+
+    aggregate.updatePromo(id(3001), promo(2));
+    const ids = aggregate.promos.map((item) => item.id.value);
+
+    domainEvidence('T12-PROMO', {
+      lookupId: id(3001).value,
+      replacementId: id(3002).value,
+      ids,
+      missing: !ids.includes(id(3001).value),
+      duplicated: ids.filter((value) => value === id(3002).value).length,
+    });
+    expect(ids).toContain(id(3001).value);
+    expect(new Set(ids).size).toBe(2);
+  });
+});

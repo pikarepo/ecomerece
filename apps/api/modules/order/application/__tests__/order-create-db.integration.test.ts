@@ -24,7 +24,7 @@ import { OrderModel } from '../../infrastructure/order.model';
 const integrationEnabled = process.env.INTEGRATION_TESTS === '1';
 const runId = Id.create().value.replaceAll('-', '').slice(0, 12);
 
-type ApiRole = 'buyer' | 'vendor' | 'admin';
+type ApiRole = 'buyer' | 'buyerAlt' | 'vendor' | 'admin';
 type RequestOptions = { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown };
 type ApiData = { message?: string; updatedData?: { id?: string } };
 type ApiEnvelope<T> =
@@ -42,12 +42,14 @@ type OrderContext = {
 
 const tokens: Record<ApiRole, string> = {
   buyer: 'integration-buyer-token',
+  buyerAlt: 'integration-buyer-alt-token',
   vendor: 'integration-vendor-token',
   admin: 'integration-admin-token',
 };
 
 const userIds: Record<ApiRole, string> = {
   buyer: Id.create().value,
+  buyerAlt: Id.create().value,
   vendor: Id.create().value,
   admin: Id.create().value,
 };
@@ -65,6 +67,12 @@ const fakeRedis = {
 
 const fakeSupabaseUsers: Record<string, { id: string; email: string }> = {
   [tokens.buyer]: { id: userIds.buyer, email: 'buyer@example.com' },
+  // The init route derives the display name from the email and only accepts
+  // letters, so the collision-avoiding suffix cannot contain digits.
+  [tokens.buyerAlt]: {
+    id: userIds.buyerAlt,
+    email: `buyeralt${Math.random().toString(36).replaceAll(/[^a-z]/g, '').slice(0, 6)}@example.com`,
+  },
   [tokens.vendor]: { id: userIds.vendor, email: 'vendor@example.com' },
   [tokens.admin]: { id: userIds.admin, email: 'admin@example.com' },
 };
@@ -301,7 +309,7 @@ describe.skipIf(!integrationEnabled)('order creation API database integration', 
     app.route('/', createRoutes(application));
     registerErrorHandler(app);
 
-    for (const role of ['buyer', 'vendor', 'admin'] as const) {
+    for (const role of ['buyer', 'buyerAlt', 'vendor', 'admin'] as const) {
       expectSuccess(await requestAs(role, '/users/init', { method: 'POST' }), 202);
     }
     await UserModel.updateOne({ _id: userIds.admin }, { $set: { 'role.role': 'admin' } });
@@ -421,5 +429,284 @@ describe.skipIf(!integrationEnabled)('order creation API database integration', 
     expect(inventory?.available).toBe(1);
     expect(inventory?.reserved).toBe(0);
     expect(publishedEventTypes).toEqual([]);
+  }, 30_000);
+
+  // ------------------------------------------------------------- exploit set
+
+  it('ignores client-supplied prices and charges the catalog price', async () => {
+    const context = await seedOrderContext({ available: 5 });
+
+    const data = expectSuccess<ApiData>(
+      await requestAs('buyer', '/order/my', {
+        method: 'POST',
+        body: {
+          ...orderBody(context, Id.create().value, 1),
+          totalPrice: 1,
+          items: [
+            {
+              variantId: context.variantId,
+              quantity: 1,
+              price: 1,
+              unitPrice: 1,
+              totalPrice: 1,
+            },
+          ],
+        },
+      }),
+    );
+    const orderId = track(idFromData(data));
+
+    const order = await OrderModel.findById(orderId).lean();
+    const items = await OrderItemsModel.find({ orderId }).lean();
+    console.log(
+      `[ORD-01] clientPrice=1 storedTotal=${order?.totalPrice} storedItemTotal=${items[0]?.totalPrice}`,
+    );
+
+    expect(order?.totalPrice).toBe(100);
+    expect(items[0]?.totalPrice).toBe(100);
+  }, 30_000);
+
+  /**
+   * FINDING ORD-02 — quantity is validated as a positive number, not as a
+   * whole unit. An order for 1.5 units is accepted, reserves 1.5 units of
+   * stock and stores a fractional line total in the database.
+   */
+  it.failing('rejects fractional quantities without touching stock', async () => {
+    const context = await seedOrderContext({ available: 5 });
+    const statuses: number[] = [];
+
+    for (const quantity of [0, -1, 1.5]) {
+      const result = await requestAs<ApiData>('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, quantity),
+      });
+      statuses.push(result.response.status);
+      if (result.body.success) {
+        const body = result.body.data as ApiData;
+        if (body.updatedData?.id) track(body.updatedData.id);
+      }
+    }
+
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+    console.log(
+      `[ORD-02] quantities=0,-1,1.5 statuses=${statuses.join(',')} available=${inventory?.available} reserved=${inventory?.reserved}`,
+    );
+
+    expect(statuses.every((status) => status === 400), 'A fractional quantity created an order.').toBe(
+      true,
+    );
+    expect(Number.isInteger(inventory?.reserved)).toBe(true);
+  }, 30_000);
+
+  it('does not oversell when two orders race for the last unit', async () => {
+    const context = await seedOrderContext({ available: 1 });
+
+    const results = await Promise.all([
+      requestAs<ApiData>('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, 1),
+      }),
+      requestAs<ApiData>('buyerAlt', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, 1),
+      }),
+    ]);
+
+    for (const result of results) {
+      if (result.body.success) track((result.body.data as ApiData).updatedData?.id ?? '');
+    }
+    const accepted = results.filter((result) => result.response.status === 200).length;
+    const orders = await OrderModel.countDocuments({ idempotentKey: { $exists: true } });
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+
+    console.log(
+      `[ORD-03] availableBefore=1 statuses=${results.map((result) => result.response.status).join(',')} accepted=${accepted} availableAfter=${inventory?.available} reservedAfter=${inventory?.reserved}`,
+    );
+
+    expect(accepted, 'Both racing orders were accepted for one unit.').toBe(1);
+    expect(inventory?.available).toBe(0);
+    expect(inventory?.reserved).toBe(1);
+    expect(orders).toBeLessThanOrEqual(2);
+    for (const result of results) {
+      expect(result.response.status, 'A stock race must not be a server error.').toBeLessThan(500);
+    }
+  }, 60_000);
+
+  it('creates one order when the same idempotent key is submitted twice at once', async () => {
+    const context = await seedOrderContext({ available: 10 });
+    const idempotentKey = Id.create().value;
+    const payload = orderBody(context, idempotentKey, 1);
+
+    const results = await Promise.all([
+      requestAs<ApiData>('buyer', '/order/my', { method: 'POST', body: payload }),
+      requestAs<ApiData>('buyer', '/order/my', { method: 'POST', body: payload }),
+    ]);
+    for (const result of results) {
+      if (result.body.success) track((result.body.data as ApiData).updatedData?.id ?? '');
+    }
+
+    const rows = await OrderModel.countDocuments({ idempotentKey });
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+    console.log(
+      `[ORD-04] statuses=${results.map((result) => result.response.status).join(',')} orders=${rows} reserved=${inventory?.reserved}`,
+    );
+
+    expect(rows, 'One idempotency key produced two orders.').toBe(1);
+    expect(inventory?.reserved).toBe(1);
+  }, 60_000);
+
+  it('rejects an order that uses another buyer address', async () => {
+    const context = await seedOrderContext({ available: 5 });
+    const altAddress = expectSuccess<ApiData>(
+      await requestAs('buyerAlt', '/address/my', {
+        method: 'POST',
+        body: {
+          streetAddress: '3 Foreign Street',
+          city: 'Islamabad',
+          state: 'Federal',
+          postalCode: '44000',
+          country: 'Pakistan',
+        },
+      }),
+    );
+    const foreignAddressId = track(idFromData(altAddress));
+
+    const result = await requestAs<ApiData>('buyer', '/order/my', {
+      method: 'POST',
+      body: {
+        ...orderBody(context, Id.create().value, 1),
+        addressId: foreignAddressId,
+      },
+    });
+
+    console.log(`[ORD-05] foreignAddressStatus=${result.response.status}`);
+    expectError(result, 400);
+    expect(await OrderModel.countDocuments({ buyerId: userIds.buyer })).toBe(0);
+  }, 30_000);
+
+  it('does not restock twice when a cancelled order is cancelled again', async () => {
+    const context = await seedOrderContext({ available: 5 });
+    const data = expectSuccess<ApiData>(
+      await requestAs('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, 1),
+      }),
+    );
+    const orderId = track(idFromData(data));
+
+    expectSuccess<ApiData>(
+      await requestAs('buyer', `/order/my/${orderId}/cancel`, {
+        method: 'POST',
+        body: { reason: 'First cancellation.' },
+      }),
+    );
+    const afterFirst = await InventoryModel.findById(context.inventoryId).lean();
+
+    const second = await requestAs<ApiData>('buyer', `/order/my/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason: 'Second cancellation attempt.' },
+    });
+    const afterSecond = await InventoryModel.findById(context.inventoryId).lean();
+
+    console.log(
+      `[ORD-06] secondCancelStatus=${second.response.status} availableAfterFirst=${afterFirst?.available} availableAfterSecond=${afterSecond?.available} reservedAfterSecond=${afterSecond?.reserved}`,
+    );
+
+    expectError(second, 400);
+    expect(afterSecond?.available).toBe(5);
+    expect(afterSecond?.reserved).toBe(0);
+    expect(afterSecond?.soldOut).toBe(0);
+  }, 30_000);
+
+  it('refuses a buyer cancellation after the order is completed', async () => {
+    const context = await seedOrderContext({ available: 5 });
+    const data = expectSuccess<ApiData>(
+      await requestAs('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, 1),
+      }),
+    );
+    const orderId = track(idFromData(data));
+
+    expectSuccess<ApiData>(
+      await requestAs('vendor', `/order/vendor/${orderId}/confirm`, { method: 'POST' }),
+    );
+    expectSuccess<ApiData>(
+      await requestAs('vendor', `/order/vendor/${orderId}/complete`, { method: 'POST' }),
+    );
+
+    const cancel = await requestAs<ApiData>('buyer', `/order/my/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason: 'Buyer cancels a completed order.' },
+    });
+    const order = await OrderModel.findById(orderId).lean();
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+
+    console.log(
+      `[ORD-08] cancelStatus=${cancel.response.status} orderStatus=${order?.status} soldOut=${inventory?.soldOut} available=${inventory?.available}`,
+    );
+
+    expectError(cancel, 400);
+    expect(order?.status).toBe('completed');
+    expect(inventory?.soldOut).toBe(1);
+  }, 30_000);
+
+  it('refuses cancelling an order whose lines are already completed', async () => {
+    const context = await seedOrderContext({ available: 5 });
+    const data = expectSuccess<ApiData>(
+      await requestAs('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, Id.create().value, 1),
+      }),
+    );
+    const orderId = track(idFromData(data));
+    const item = await OrderItemsModel.findOne({ orderId }).lean();
+    if (item === null) throw new Error('Order item missing.');
+
+    expectSuccess<ApiData>(
+      await requestAs('vendor', `/order-items/vendor/${item._id}/confirm`, { method: 'POST' }),
+    );
+    expectSuccess<ApiData>(
+      await requestAs('vendor', `/order-items/vendor/${item._id}/complete`, { method: 'POST' }),
+    );
+
+    const cancel = await requestAs<ApiData>('buyer', `/order/my/${orderId}/cancel`, {
+      method: 'POST',
+      body: { reason: 'Cancel an order whose goods are already completed.' },
+    });
+
+    const order = await OrderModel.findById(orderId).lean();
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+    console.log(
+      `[ORD-09] itemCompletedCancelStatus=${cancel.response.status} orderStatus=${order?.status} available=${inventory?.available} reserved=${inventory?.reserved} soldOut=${inventory?.soldOut}`,
+    );
+
+    expect(cancel.response.status, 'A completed line must not be cancellable.').toBe(400);
+    expect(inventory?.available).toBe(4);
+    expect(inventory?.soldOut).toBe(1);
+  }, 30_000);
+
+  it('rejects an idempotency key reused for a different cart', async () => {
+    const context = await seedOrderContext({ available: 10 });
+    const idempotentKey = Id.create().value;
+
+    const first = expectSuccess<ApiData>(
+      await requestAs('buyer', '/order/my', {
+        method: 'POST',
+        body: orderBody(context, idempotentKey, 1),
+      }),
+    );
+    track(idFromData(first));
+
+    const replay = await requestAs<ApiData>('buyer', '/order/my', {
+      method: 'POST',
+      body: orderBody(context, idempotentKey, 2),
+    });
+
+    const inventory = await InventoryModel.findById(context.inventoryId).lean();
+    console.log(`[ORD-07] replayStatus=${replay.response.status} reserved=${inventory?.reserved}`);
+
+    expectError(replay, 400);
+    expect(inventory?.reserved).toBe(1);
   }, 30_000);
 });

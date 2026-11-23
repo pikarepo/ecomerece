@@ -142,4 +142,6 @@ apps/api/scripts/seed-assets/
 playwright-report/
 test-results/
 apps/e2e/.auth/
-
+report/*
+*/test-results/
+.auth

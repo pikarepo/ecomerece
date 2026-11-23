@@ -2,11 +2,11 @@ import { describe, expect, it } from 'bun:test';
 import { BadRequestError } from '../../errors/app-error';
 import { CartItemVO } from '../../modules/cart/value-objects/cart-item.vo';
 import { OrderItem } from '../../modules/order/value-objects/order-item.vo';
+import { NameInfoVO } from '../../modules/user/value-objects/name-info.vo';
+import { RoleInfoVO, UserRoleVO } from '../../modules/user/value-objects/role-info.vo';
 import { ContactInfoVO } from '../../modules/vendor/value-objects/contact-info.vo';
 import { ImageInfoVO } from '../../modules/vendor/value-objects/image-info.vo';
 import { VerificationInfoVO } from '../../modules/vendor/value-objects/verification-info.vo';
-import { NameInfoVO } from '../../modules/user/value-objects/name-info.vo';
-import { RoleInfoVO, UserRoleVO } from '../../modules/user/value-objects/role-info.vo';
 import { AppearanceVO } from '../appearance.vo';
 import { BanInfoVO } from '../ban-info.vo';
 import { BlockInfoVO } from '../block-info.vo';
@@ -417,5 +417,79 @@ describe('ColorVO and UrlVO helpers', () => {
     expect(url('image').hostname).toBe('cdn.example.com');
     expect(url('image').isHttps).toBe(true);
     expect(() => UrlVO.create('http://')).toThrow(BadRequestError);
+  });
+});
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+describe('hostile supporting value objects', () => {
+  it('DOM-H7-CONTROL create rejects an expired expiration date', () => {
+    const past = new Date(Date.now() - 60_000);
+    expect(() => ExpirationDate.create(past)).toThrow(BadRequestError);
+  });
+
+  it('DOM-H7 rehydrate deliberately preserves past expiration dates', () => {
+    const past = new Date(Date.now() - 60_000);
+    expect(() => ExpirationDate.create(past)).toThrow(BadRequestError);
+    const rehydrated = ExpirationDate.rehydrate(past);
+
+    domainEvidence('H7', {
+      timestamp: rehydrated.timestamp,
+      isPast: rehydrated.isPast,
+      remainingDays: rehydrated.remainingDays,
+    });
+    expect(rehydrated.timestamp).toBe(past.getTime());
+    expect(rehydrated.isPast).toBe(true);
+  });
+
+  it('DOM-H8-CONTROL create requires an actor and a reason to block', () => {
+    expect(BlockInfoVO.create(id(9), reason()).isBlocked).toBe(true);
+    expect(() => BlockInfoVO.create(null, reason())).toThrow(BadRequestError);
+    expect(() => BlockInfoVO.create(id(9), null)).toThrow(BadRequestError);
+  });
+
+  it('DOM-H8-CONTROL create builds complete delete and verification state', () => {
+    expect(DeleteInfoVO.create(id(9), reason()).isDeleted).toBe(true);
+    expect(VerificationInfoVO.verified(EffectiveDate.today()).isVerified).toBe(true);
+  });
+
+  it.failing('DOM-H8 block rehydrate accepts blocked state without actor, time or reason', () => {
+    expect(BlockInfoVO.create(id(9), reason()).isBlocked).toBe(true);
+    const exploit = BlockInfoVO.rehydrate(null, true, null, null);
+
+    domainEvidence('H8-BLOCK', {
+      isBlocked: exploit.isBlocked,
+      performedBy: exploit.performedBy,
+      from: exploit.from,
+      reason: exploit.reason,
+    });
+    expect(() => BlockInfoVO.rehydrate(null, true, null, null)).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-H8 delete rehydrate accepts deleted state without actor, time or reason', () => {
+    expect(DeleteInfoVO.create(id(9), reason()).isDeleted).toBe(true);
+    const exploit = DeleteInfoVO.rehydrate(null, true, null, null);
+
+    domainEvidence('H8-DELETE', {
+      isDeleted: exploit.isDeleted,
+      performedBy: exploit.performedBy,
+      from: exploit.from,
+      reason: exploit.reason,
+    });
+    expect(() => DeleteInfoVO.rehydrate(null, true, null, null)).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-H8 verification rehydrate accepts verified state without a timestamp', () => {
+    expect(VerificationInfoVO.verified(EffectiveDate.today()).isVerified).toBe(true);
+    const exploit = VerificationInfoVO.rehydrate(true, null, null);
+
+    domainEvidence('H8-VERIFY', {
+      isVerified: exploit.isVerified,
+      verifiedAt: exploit.verifiedAt,
+      rejectedReason: exploit.rejectedReason,
+    });
+    expect(() => VerificationInfoVO.rehydrate(true, null, null)).toThrow(BadRequestError);
   });
 });

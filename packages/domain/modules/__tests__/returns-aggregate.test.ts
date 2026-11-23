@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'bun:test';
 import { BadRequestError } from '../../errors/app-error';
-import { Id, Quantity, Reason } from '../../value-objects';
+import { DeleteInfoVO, EffectiveDate, Id, Quantity, Reason } from '../../value-objects';
 import { ReturnRequestAggregate } from '../returns/returns.aggregate';
+import { ReturnStatusVO } from '../returns/value-objects/return-status.vo';
 import { ReturnTypeVO } from '../returns/value-objects/return-type.vo';
 
 const id = (n: number) => Id.create(`00000000-0000-7000-8000-${String(n).padStart(12, '0')}`);
@@ -169,5 +170,141 @@ describe('ReturnRequestAggregate deletion and ownership', () => {
     expect(() => aggregate.ensureOwnedByVendor(id(5))).toThrow(BadRequestError);
     expect(aggregate.isOwnedByBuyer(id(4))).toBe(true);
     expect(aggregate.isOwnedByBuyer(id(6))).toBe(false);
+  });
+});
+
+function domainEvidence(tag: string, data: Record<string, unknown>) {
+  console.log(`[DOM-${tag}] ${JSON.stringify(data)}`);
+}
+
+function deletedReturn(status: ReturnStatusVO) {
+  return ReturnRequestAggregate.rehydrate(
+    id(800),
+    id(1),
+    id(2),
+    id(3),
+    id(4),
+    Quantity.create(2),
+    ReturnTypeVO.create('refund'),
+    reason(),
+    status,
+    null,
+    EffectiveDate.today(),
+    null,
+    null,
+    DeleteInfoVO.create(actor, reason()),
+    Quantity.create(1),
+    EffectiveDate.today(),
+  );
+}
+
+describe('hostile return decisions', () => {
+  it('DOM-T14-CONTROL rejects a wrong vendor through the ownership helper', () => {
+    const aggregate = request();
+    expect(aggregate.vendorId).toEqual(id(3));
+    expect(() => aggregate.ensureOwnedByVendor(id(3))).not.toThrow();
+    expect(() => aggregate.ensureOwnedByVendor(id(5))).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T14 approve accepts an actor who does not own the return', () => {
+    const aggregate = request();
+    expect(aggregate.vendorId).toEqual(id(3));
+    expect(aggregate.status.value).toBe('requested');
+    aggregate.clearEvents();
+
+    aggregate.approve(id(5));
+    const events = aggregate.pullEvents();
+
+    domainEvidence('T14-APPROVE', {
+      vendorId: aggregate.vendorId.value,
+      actorId: id(5).value,
+      status: aggregate.status.value,
+      events: events.map((event) => event.type),
+    });
+    expect(events.map((event) => event.type)).not.toContain('return.approved');
+    expect(() => request().approve(id(5))).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-T14 reject accepts an actor who does not own the return', () => {
+    const aggregate = request();
+    expect(aggregate.vendorId).toEqual(id(3));
+    expect(aggregate.status.value).toBe('requested');
+    aggregate.clearEvents();
+
+    aggregate.reject(reason(), id(5));
+    const events = aggregate.pullEvents();
+
+    domainEvidence('T14-REJECT', {
+      vendorId: aggregate.vendorId.value,
+      actorId: id(5).value,
+      status: aggregate.status.value,
+      decisionReason: aggregate.decisionReason?.value,
+      events: events.map((event) => event.type),
+    });
+    expect(events.map((event) => event.type)).not.toContain('return.rejected');
+    expect(() => request().reject(reason(), id(5))).toThrow(BadRequestError);
+  });
+});
+
+describe('hostile return recovery', () => {
+  it('DOM-T15-CONTROL keeps the delete and recover guards strict', () => {
+    expect(() => request().deleteRequest(reason(), actor)).toThrow(
+      'Only a closed return request can be deleted.',
+    );
+    expect(() => request().recoverRequest()).toThrow('Return request is not deleted.');
+  });
+
+  it.failing('DOM-T15 recoverRequest revives a deleted open request', () => {
+    const aggregate = deletedReturn(ReturnStatusVO.requested());
+    expect(aggregate.delete.isDeleted).toBe(true);
+    expect(aggregate.status.isFinal).toBe(false);
+    aggregate.clearEvents();
+
+    aggregate.recoverRequest();
+
+    domainEvidence('T15-OPEN', {
+      status: aggregate.status.value,
+      isFinal: aggregate.status.isFinal,
+      deleted: aggregate.delete.isDeleted,
+      events: aggregate.pullEvents().map((event) => event.type),
+    });
+    expect(aggregate.delete.isDeleted).toBe(true);
+    expect(() => deletedReturn(ReturnStatusVO.requested()).recoverRequest()).toThrow(
+      BadRequestError,
+    );
+  });
+
+  it.failing('DOM-T15 recoverRequest changes deletion state without an event', () => {
+    const aggregate = approved();
+    aggregate.markReceived(actor);
+    aggregate.deleteRequest(reason(), actor);
+    aggregate.clearEvents();
+    expect(aggregate.delete.isDeleted).toBe(true);
+    expect(aggregate.status.isFinal).toBe(true);
+
+    aggregate.recoverRequest();
+    const events = aggregate.pullEvents();
+
+    domainEvidence('T15-EVENT', {
+      status: aggregate.status.value,
+      deleted: aggregate.delete.isDeleted,
+      events: events.map((event) => event.type),
+    });
+    expect(events.length).toBeGreaterThan(0);
+  });
+});
+
+describe('hostile return quantities', () => {
+  it('DOM-H2-CONTROL rejects a zero-quantity request', () => {
+    expect(request(2).quantity.value).toBe(2);
+    expect(() => request(0)).toThrow(BadRequestError);
+  });
+
+  it.failing('DOM-H2 accepts a fractional return quantity', () => {
+    expect(request(2).quantity.value).toBe(2);
+    const exploit = request(1.5);
+
+    domainEvidence('H2', { quantity: exploit.quantity.value, status: exploit.status.value });
+    expect(() => request(1.5)).toThrow(BadRequestError);
   });
 });

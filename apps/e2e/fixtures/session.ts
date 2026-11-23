@@ -30,7 +30,7 @@ export const createRoleSession = async (
   role: E2ERole,
 ): Promise<RoleSession> => {
   const paths = roleArtifacts(role);
-  const token = env.apiToken ?? (await readStoredAccessToken(role));
+  const token = env.apiTokens[role] ?? (await readStoredAccessToken(role));
   const context = await browser.newContext({
     ...(env.authMode === 'refresh' ? { storageState: paths.storageStatePath } : {}),
     baseURL: env.baseURL,
@@ -47,7 +47,7 @@ export const createRoleApiContext = async (
   create: ApiContextFactory,
   role: E2ERole,
 ): Promise<APIRequestContext> => {
-  const token = env.apiToken ?? (await readStoredAccessToken(role));
+  const token = env.apiTokens[role] ?? (await readStoredAccessToken(role));
   return await buildApiContext(create, token, env.apiURL);
 };
 

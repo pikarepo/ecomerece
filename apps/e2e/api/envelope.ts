@@ -7,13 +7,15 @@ type CursorMeta = {
   hasMore: boolean;
 };
 
-type CursorPaginatedEnvelope<T> = { success: true; data: T[]; meta: CursorMeta } | ApiErrorResponse;
+type CursorPaginatedEnvelope<T> =
+  | { success: true; data: { data: T[]; meta: CursorMeta } }
+  | ApiErrorResponse;
 
 const readOkPayload = async <T>(response: APIResponse): Promise<T> => {
-  expect(
-    response.ok(),
-    `Expected a successful response, received ${response.status()}.`,
-  ).toBeTruthy();
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Expected a successful response, received ${response.status()}: ${body}`);
+  }
   const payload: unknown = await response.json();
   return payload as T;
 };
@@ -27,6 +29,14 @@ export const expectOk = async <T>(response: APIResponse): Promise<T> => {
     throw new Error(payload.error.message);
   }
   return payload.data;
+};
+
+export const expectRawOk = async <T>(response: APIResponse): Promise<T> => {
+  if (!response.ok()) {
+    const body = await response.text();
+    throw new Error(`Expected a successful response, received ${response.status()}: ${body}`);
+  }
+  return (await response.json()) as T;
 };
 
 export const expectError = async (
@@ -56,9 +66,9 @@ export const expectPaginated = async <T>(
   if (!payload.success) {
     throw new Error(payload.error.message);
   }
-  expect(Array.isArray(payload.data), 'Expected paginated data to be an array.').toBeTruthy();
-  expect(typeof payload.meta.hasMore, 'Expected paginated meta to include hasMore.').toBe(
+  expect(Array.isArray(payload.data.data), 'Expected paginated data to be an array.').toBeTruthy();
+  expect(typeof payload.data.meta.hasMore, 'Expected paginated meta to include hasMore.').toBe(
     'boolean',
   );
-  return { data: payload.data, meta: payload.meta };
+  return payload.data;
 };
